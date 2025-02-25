@@ -5,7 +5,7 @@ import struct
 
 HOST = "0.0.0.0"
 PORT = 65432
-FILENAME = "test.txt"
+FILENAME = "test_img.jpg"
 CHUNK_SIZE = 1024
 ACK_SIZE = 4
 
@@ -34,7 +34,8 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                         else:
                             #format: < = small endian (! for network = bigendian), integer, integer
                             packet = struct.pack("!ii", packet_index, len(data)) + data
-                            print(f"sending packet of size {len(data)}:\n" + data.decode("utf-8"))
+                            # print(f"sending packet of size {len(data)}:\n" + data.decode("utf-8"))
+                            print(f"sending packet of size {len(data)}:\n" + data.hex())
                             conn.sendall(packet)
 
                             #wait for the acknowledgement flag

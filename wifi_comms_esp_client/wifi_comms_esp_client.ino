@@ -3,22 +3,25 @@
 
 #define SD_CS 10
 #define CHUNK_SIZE 1024
-//I chose to have the desktop application to act as a server because i wanted multiple esp devices to be able to connect and interact with it via threads and tasks(so they are the clients)
+//I chose to have the desktop application to act as a server because i wanted multiple esp devices to be able to connect to and interact with it via threads and tasks(so the esps will serve as clients)
 WiFiClient client;
 File file_obj;
-const char* filename = "/testFile.txt";
+//name will be sent in the first package of the transfer. this is just a testing script alex:) (non passive-aggressive smile)
+const char* filename = "/test_img.jpg";
 
+//Wi-Fi network details. Both devices need to be connected to the same network
 const char* ssid = "DIGI-yWsT";
 const char* passwd = "74F8ghZw";
 
+//server information
 const char* server_ip = "192.168.100.63";
 const int   server_port = 65432;
 
-//every data packet received will have thge following format. the length attribute tells us how much data we ought to read from the socket, while the seq_index helps in the acknowledgment process
+//every data packet received will have the following format. the length attribute tells us how much data we ought to read from the socket, while the seq_index helps in the acknowledgment process
 struct Data{
   int seq_index;
   int length;
-  char contents[CHUNK_SIZE+1];
+  char contents[CHUNK_SIZE];
 }data;
 
 //create/open the file where we have to write the data
@@ -44,13 +47,13 @@ void connect_to_server() {
     Serial.println("Connected to server.");
   }
 }
-//reads will only occur when there is a header available to read from the socket. after that we will read the proper data and write it in the file opened previously omn the sd card
+//reads will only occur when there is a header available to read from the socket. after that we will read the proper data and write it in the file opened previously on the sd card
 void read_message() {
   //only read when the entire header has been sent
   int read_threshold = 2 * sizeof(int);
   if (client.connected() && client.available() >= read_threshold) {
     int seq_index, packet_len;
-    //read and parse the header data. we use ntohl because the data is sent in big-endian (networking standard) while the esp device operates in little-endian. ntohl coinvers integers to host byte order
+    //read and parse the header data. we use ntohl because the data is sent in big-endian (networking standard) while the esp device operates in little-endian. ntohl converts integers to host byte order
     client.readBytes((char*)&seq_index, sizeof(int));
     client.readBytes((char*)&packet_len, sizeof(int));
     seq_index = ntohl(seq_index);
@@ -74,7 +77,7 @@ void read_message() {
         return;
       }
     }
-    char* contents = (char*)malloc(packet_len + 1);
+    char* contents = (char*)malloc(packet_len);
     if(!contents){
       Serial.println("Malloc fail for contents allocation");
       return;
@@ -85,8 +88,8 @@ void read_message() {
     data.length = packet_len;
     
     memset(data.contents, 0, sizeof(data.contents));
-    //remove this before writing in file
-    contents[packet_len] = '\0';
+    // printing for debugging purposes. comment this out before writing to file
+    // contents[packet_len] = '\0';
     memcpy(data.contents, contents, packet_len);
 
     Serial.printf("Received packet %d, length: %d\n", data.seq_index, data.length);
@@ -98,10 +101,10 @@ void read_message() {
     int ack = htonl(seq_index);  // Convert to network byte order
     client.write((uint8_t*)&ack, sizeof(ack));
 
-    //  if (file_obj) {
-    //   file_obj.write((uint8_t*)data.contents, data.length);
-    //   file_obj.flush();
-    // }
+     if (file_obj) {
+      file_obj.write((uint8_t*)data.contents, data.length);
+      file_obj.flush();
+    }
   }
 }
 
