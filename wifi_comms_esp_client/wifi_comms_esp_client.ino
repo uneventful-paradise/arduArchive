@@ -18,7 +18,7 @@ const int   server_port = 65432;
 struct Data{
   int seq_index;
   int length;
-  char contents[CHUNK_SIZE];
+  char contents[CHUNK_SIZE+1];
 }data;
 
 //create/open the file where we have to write the data
@@ -57,6 +57,15 @@ void read_message() {
     packet_len = ntohl(packet_len);
 
     Serial.printf("Client received packet %d of size %d\n", seq_index, packet_len);
+    //checking for eof_packet
+    if(packet_len == 0) {
+      Serial.println("EOF reached. Closing connection.");
+      client.stop();
+      file_obj.flush();
+      file_obj.close();
+      return;
+    } 
+
     //set a timeout limit for reading a packet's contents
     unsigned long long int start = millis();
     while(client.available() < packet_len){
@@ -65,7 +74,7 @@ void read_message() {
         return;
       }
     }
-    char* contents = (char*)malloc(packet_len);
+    char* contents = (char*)malloc(packet_len + 1);
     if(!contents){
       Serial.println("Malloc fail for contents allocation");
       return;
@@ -74,6 +83,10 @@ void read_message() {
 
     data.seq_index = seq_index;
     data.length = packet_len;
+    
+    memset(data.contents, 0, sizeof(data.contents));
+    //remove this before writing in file
+    contents[packet_len] = '\0';
     memcpy(data.contents, contents, packet_len);
 
     Serial.printf("Received packet %d, length: %d\n", data.seq_index, data.length);

@@ -27,6 +27,9 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                         #read data in chunks
                         data = file_obj.read(CHUNK_SIZE)
                         if not data:
+                            #signaling end of file on the server side
+                            eof_packet = struct.pack("!ii", packet_index, 0)
+                            conn.sendall(eof_packet)
                             break
                         else:
                             #format: < = small endian (! for network = bigendian), integer, integer
