@@ -1,0 +1,30 @@
+void vATaskFunction( void *pvParameters )
+{
+    for( ;; )
+    {
+        /* Psudeo code showing a task waiting for an event
+           with a block time. If the event occurs, process it.
+           If the timeout expires before the event occurs, then
+           the system may be in an error state, so handle the
+           error. Here the pseudo code "WaitForEvent()" could
+           replaced with xQueueReceive(), ulTaskNotifyTake(),
+           xEventGroupWaitBits(), or any of the other FreeRTOS
+           communication and synchronisation primitives. */
+        if( WaitForEvent( EventObject, TimeOut ) == pdPASS )
+        {
+            -- Handle event here. --
+        }
+        else
+        {
+            -- Clear errors, or take actions here. --
+        }
+    }
+
+    /* As per the first code listing above. */
+    vTaskDelete( NULL );
+}
+
+task1: upon gettouch -> draw an icon at pre set coordinates
+task2: print text at 4 different locations
+
+

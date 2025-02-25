@@ -19,18 +19,12 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     print(f"Connected by {addr}")
     with conn:
         try:
-            #send random numbers to the client
-            # while True:
-            #     data = str(random.randint(1, 100)) + "\n"
-            #     conn.sendall(data.encode())
-            #     print(f"Sent: {data.strip()}")
-            #     time.sleep(1)
-
-            #opening in rb so no image character can interrupt the exchange?
+            #opening in read binary mode because we are (eventually) sending an image.
             try:
                 with open(FILENAME, "rb") as file_obj:
                     packet_index = 0
                     while True:
+                        #read data in chunks
                         data = file_obj.read(CHUNK_SIZE)
                         if not data:
                             break
@@ -39,6 +33,8 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                             packet = struct.pack("!ii", packet_index, len(data)) + data
                             print(f"sending packet of size {len(data)}:\n" + data.decode("utf-8"))
                             conn.sendall(packet)
+
+                            #wait for the acknowledgement flag
                             ack_bytes = conn.recv(ACK_SIZE)
                             ack = struct.unpack("!i", ack_bytes)[0]
                             if int(ack) == packet_index:

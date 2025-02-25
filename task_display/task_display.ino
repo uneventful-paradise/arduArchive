@@ -75,10 +75,7 @@ int get_pos()
         pos[0] = ts.points[0].x;
         pos[1] = ts.points[0].y;
         Serial.println("atins");
-        // Serial.print("ox = ");
-        // Serial.print(ts.points[0].x);
-        // Serial.print(", oy = ");
-        // Serial.print(ts.points[0].y);
+
         Serial.print(",x = ");
         Serial.print(pos[0]);
         Serial.print(", y = ");
@@ -154,11 +151,7 @@ void setup() {
   {
     Serial.print("Free Heap before loading image: ");
     Serial.println(ESP.getFreeHeap());
-    // Button *button = new Button(gfx);
-    // button->set(19, 7, 70, 70, "", 1, 0);
-    // button->setFilename(VSCODE);
-    // button->setPath(VSCODE);
-    // button->draw(jpegDrawCallback);
+
 
     for(int i = 0; i < BUTTON_COUNT; ++i){ //define loadIcon()
       if(icon_x + 85 > gfx->width()){
@@ -172,32 +165,59 @@ void setup() {
       buttons[i]->setPath(paths[i]);
       Serial.println(paths[i]);
       buttons[i]->setGFX(gfx);
-      buttons[i]->draw(jpegDrawCallback);
+      // buttons[i]->draw(jpegDrawCallback);
       icon_x += 100;
 
     }
 
     init_paths("/configs/path_config_2.txt");
-    
+    //https://www.esp32.com/viewtopic.php?t=2663
+    //https://www.freertos.org/Documentation/02-Kernel/04-API-references/01-Task-creation/01-xTaskCreate
+    xTaskCreatePinnedToCore(
+      display_text_task,  //function that implemenets the task
+      "display text",     //display name for task
+      4096,               //stack size in words, not in bytes
+      (void*)gfx,                //parameter passed into the task      
+      3,                  //priority at which task is created        
+      NULL,               //used to pass out the created task's handle
+      1                  //core where the task shsould run
+              );
+            
 
+    Task2_params t2p = {
+      gfx,
+      jpegDrawCallback,
+      buttons,
+      BUTTON_COUNT
+    };
+
+    xTaskCreatePinnedToCore(
+      display_icon_task,  //function that implemenets the task
+      "display icon",     //display name for task
+      4096,               //stack size in words, not in bytes
+      (void*)&t2p,                //parameter passed into the task      
+      3,                  //priority at which task is created        
+      NULL,               //used to pass out the created task's handle
+      1                  //core where the task shsould run
+              );
   }
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  if (get_pos() == 1){
-    for (int i = 0; i < BUTTON_COUNT; i++)
-    {
-        int button_value = UNABLE;
-        if ((button_value = buttons[i]->checkTouch(pos[0], pos[1])) != UNABLE)
-        {
-          Serial.printf("Pos is :%d,%d\n", pos[0], pos[1]);
-          Serial.printf("Value is :%d\n", button_value%6);
-          Serial.printf("Text is :");
-          Serial.println(paths[button_value]);
-          access_path(button_value);
-          delay(200);
-      }
-    }
-  }
+  // if (get_pos() == 1){
+  //   for (int i = 0; i < BUTTON_COUNT; i++)
+  //   {
+  //       int button_value = UNABLE;
+  //       if ((button_value = buttons[i]->checkTouch(pos[0], pos[1])) != UNABLE)
+  //       {
+  //         Serial.printf("Pos is :%d,%d\n", pos[0], pos[1]);
+  //         Serial.printf("Value is :%d\n", button_value%6);
+  //         Serial.printf("Text is :");
+  //         Serial.println(paths[button_value]);
+  //         access_path(button_value);
+  //         delay(200);
+  //     }
+  //   }
+  // }
 }

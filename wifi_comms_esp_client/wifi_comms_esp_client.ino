@@ -3,7 +3,7 @@
 
 #define SD_CS 10
 #define CHUNK_SIZE 1024
-
+//I chose to have the desktop application to act as a server because i wanted multiple esp devices to be able to connect and interact with it via threads and tasks(so they are the clients)
 WiFiClient client;
 File file_obj;
 const char* filename = "/testFile.txt";
@@ -11,18 +11,17 @@ const char* filename = "/testFile.txt";
 const char* ssid = "DIGI-yWsT";
 const char* passwd = "74F8ghZw";
 
-// const char* ssid = "testesp32";
-// const char* passwd = "javabanana";
-
 const char* server_ip = "192.168.100.63";
 const int   server_port = 65432;
 
+//every data packet received will have thge following format. the length attribute tells us how much data we ought to read from the socket, while the seq_index helps in the acknowledgment process
 struct Data{
   int seq_index;
   int length;
   char contents[CHUNK_SIZE];
 }data;
 
+//create/open the file where we have to write the data
 File get_file_obj(const char* filename){
   if(!SD.begin(SD_CS)){
     Serial.println("Failed to open SD card");
@@ -45,22 +44,24 @@ void connect_to_server() {
     Serial.println("Connected to server.");
   }
 }
-
+//reads will only occur when there is a header available to read from the socket. after that we will read the proper data and write it in the file opened previously omn the sd card
 void read_message() {
+  //only read when the entire header has been sent
   int read_threshold = 2 * sizeof(int);
   if (client.connected() && client.available() >= read_threshold) {
     int seq_index, packet_len;
+    //read and parse the header data. we use ntohl because the data is sent in big-endian (networking standard) while the esp device operates in little-endian. ntohl coinvers integers to host byte order
     client.readBytes((char*)&seq_index, sizeof(int));
     client.readBytes((char*)&packet_len, sizeof(int));
     seq_index = ntohl(seq_index);
     packet_len = ntohl(packet_len);
 
     Serial.printf("Client received packet %d of size %d\n", seq_index, packet_len);
-
+    //set a timeout limit for reading a packet's contents
     unsigned long long int start = millis();
     while(client.available() < packet_len){
       if(millis() - start > 5000){
-        Serial.println("Time limit exceeded for package await");
+        Serial.println("Time limit exceeded for packet await");
         return;
       }
     }
@@ -80,7 +81,7 @@ void read_message() {
     Serial.println(data.contents);
 
     free(contents);
-
+    //send the packet index as an acknowledgement flag. convert it to bigendian representation before sending. we need to send aknowledgements so that the server doesn't immediately shut down after sending all the packets.
     int ack = htonl(seq_index);  // Convert to network byte order
     client.write((uint8_t*)&ack, sizeof(ack));
 
@@ -93,7 +94,7 @@ void read_message() {
 
 void setup() {
   Serial.begin(115200);
-  
+  //station more for end user device
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, passwd);
 
