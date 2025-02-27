@@ -1,5 +1,5 @@
-#ifndef _Button_H_
-#define _Button_H_
+#ifndef _Sprite_H_
+#define _Sprite_H_
 #include <SD.h>
 #include <arduino.h>
 #include <Arduino_GFX_Library.h>
@@ -10,7 +10,7 @@
 #define DEFAULT_TEXT_SIZE 2
 
 //define a button class
-class Button
+class Sprite
 {
 private:
   //Button Position
@@ -30,9 +30,9 @@ private:
   int value;
 
 public:
-  Button();
-  Button(int x, int y, int w, int h, String text, int value, int textSize = DEFAULT_TEXT_SIZE);
-  Button(Arduino_RPi_DPI_RGBPanel * gfx);
+  Sprite();
+  Sprite(int x, int y, int w, int h, String text, int value, int textSize = DEFAULT_TEXT_SIZE);
+  Sprite(Arduino_RPi_DPI_RGBPanel * gfx);
 
   void set(int x, int y, int w, int h, String text, int value, int textSize = DEFAULT_TEXT_SIZE);
   void getFoDraw(int *x, int *y, int *w, int *h, String *text, int *textSize);
@@ -48,6 +48,8 @@ public:
   void setTextSize(int textSize);
   int checkTouch(int x, int y);
   void setGFX(Arduino_RPi_DPI_RGBPanel * gfx);
+  int getWidth();
+  int getHeight();
 
   void draw(JPEG_DRAW_CALLBACK *jpegDrawCallback);
 };

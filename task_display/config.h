@@ -1,10 +1,14 @@
+#ifndef _CONFIG_H_
+#define _CONFIG_H_
+
 #include <USB.h>
 #include <USBHIDKeyboard.h>
 #include <SPI.h>
 #include <Wire.h>
 
 #include <TAMC_GT911.h>
-#include "Tasks.h"
+// #include "Tasks.h"
+#include "Sprite.h"
 
 #define TOUCH_SDA 17
 #define TOUCH_SCL 18
@@ -24,8 +28,10 @@
 #define BUTTON_POS_X 10
 #define BUTTON_POS_Y 90
 
-#define BUTTON_COUNT 9
+#define SPRITE_COUNT 10
 #define BUTTON_DELAY 150
+#define BUTTON_WIDTH 85
+#define BUTTON_HEIGHT 85
 
 #define VSCODE      "/jpg_icons/vscode.jpg"
 #define CHROME      "/jpg_icons/chrome.jpg"
@@ -78,4 +84,4 @@
 #define PWM_FREQ 5000 // Hz
 #define pwm_resolution_bits 10
 
-
+#endif

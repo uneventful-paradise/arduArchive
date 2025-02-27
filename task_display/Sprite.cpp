@@ -1,6 +1,6 @@
-#include "Button.h"
+#include "Sprite.h"
 
-Button::Button()
+Sprite::Sprite()
 {
     this->x = 0;
     this->y = 0;
@@ -12,7 +12,7 @@ Button::Button()
 }
 
 
-Button::Button(int x, int y, int w, int h, String text, int value, int textSize)
+Sprite::Sprite(int x, int y, int w, int h, String text, int value, int textSize)
 {
     this->x = x;
     this->y = y;
@@ -23,11 +23,11 @@ Button::Button(int x, int y, int w, int h, String text, int value, int textSize)
     this->value = value;
 }
 
-Button::Button(Arduino_RPi_DPI_RGBPanel * gfx){
+Sprite::Sprite(Arduino_RPi_DPI_RGBPanel * gfx){
   this->gfx = gfx;
 }
 
-void Button::set(int x, int y, int w, int h, String text, int value, int textSize)
+void Sprite::set(int x, int y, int w, int h, String text, int value, int textSize)
 {
     this->x = x;
     this->y = y;
@@ -38,7 +38,7 @@ void Button::set(int x, int y, int w, int h, String text, int value, int textSiz
     this->value = value;
 }
 
-void Button::getFoDraw(int *x, int *y, int *w, int *h, String *text, int *textSize)
+void Sprite::getFoDraw(int *x, int *y, int *w, int *h, String *text, int *textSize)
 {
     *x = this->x;
     *y = this->y;
@@ -48,7 +48,7 @@ void Button::getFoDraw(int *x, int *y, int *w, int *h, String *text, int *textSi
     *textSize = this->textSize;
 }
 
-int Button::checkTouch(int x, int y)
+int Sprite::checkTouch(int x, int y)
 {
     if (value == UNABLE)
     {
@@ -62,52 +62,62 @@ int Button::checkTouch(int x, int y)
         return UNABLE;
 }
 
-void Button::setText(String t)
+void Sprite::setText(String t)
 {
     this->text = t;
 }
 
-String Button::getText()
+String Sprite::getText()
 {
     return this->text;
 }
 //? this->attr
-void Button::setPath(String p){
+void Sprite::setPath(String p){
   this->path = p;
 }
 
-String Button::getPath(){
+String Sprite::getPath(){
   return this->path;
 }
 
-void Button::setValue(int v)
+void Sprite::setValue(int v)
 {
     this->value = v;
 }
 
-int Button::getValue()
+int Sprite::getValue()
 {
     return this->value;
 }
 
-void Button::setTextSize(int textSize)
+int Sprite::getWidth()
+{
+    return this->w;
+}
+
+int Sprite::getHeight()
+{
+    return this->h;
+}
+
+void Sprite::setTextSize(int textSize)
 {
     this->textSize = textSize;
 }
 
-void Button::setFilename(char* filename){
+void Sprite::setFilename(char* filename){
   this->filename = filename;
 }
 
-char* Button::getFilename(){
+char* Sprite::getFilename(){
   return this->filename;
 }
 
-void Button::setGFX(Arduino_RPi_DPI_RGBPanel * gfx){
+void Sprite::setGFX(Arduino_RPi_DPI_RGBPanel * gfx){
   this -> gfx = gfx;
 }
 
-void Button::draw(JPEG_DRAW_CALLBACK *jpegDrawCallback){
+void Sprite::draw(JPEG_DRAW_CALLBACK *jpegDrawCallback){
 
   jpegDraw(this->filename, jpegDrawCallback, true /* useBigEndian */,
           this-> x /* x */, this->y /* y */, this->gfx->width() /* widthLimit */, this->gfx->height() /* heightLimit */);
