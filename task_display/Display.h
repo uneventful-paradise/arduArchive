@@ -5,19 +5,12 @@
 #include "Sprite.h"
 // #include <TAMC_GT911.h>
 
-struct TouchEvent{
-  int x;
-  int y;
-  int buttonId;
-};
-
 int touch_last_x = 0, touch_last_y = 0;
 int pos[2] = {0, 0};
 Sprite* sprites[SPRITE_COUNT];
 char* icons[SPRITE_COUNT] = {NOTEPAD_85, CHROME_85, YOUTUBE_85, SPOTIFY_85, ADOBE_85, PYCHARM_85, VSCODE_85, STEAM_85, GIT_85, NOTEPAD_85};
 char* paths[SPRITE_COUNT];
 
-QueueHandle_t touchQueue;
 
 Arduino_ESP32RGBPanel *bus = new Arduino_ESP32RGBPanel(
     GFX_NOT_DEFINED /* CS */, GFX_NOT_DEFINED /* SCK */, GFX_NOT_DEFINED /* SDA */,
@@ -70,25 +63,5 @@ int get_pos()
       return 0;
     }
 }
-
-
-void touch_check_task(void* params){
-  while(true){
-    if (get_pos() == 1){                                                        //screen has been touched
-      for (int i = 0; i < SPRITE_COUNT; i++){
-        int button_value = UNABLE;
-        if ((button_value = sprites[i]->checkTouch(pos[0], pos[1])) != UNABLE){ //checking if button is bound to command
-          Serial.printf("Pos is :%d,%d\n", pos[0], pos[1]);
-          Serial.printf("Value is :%d\n", button_value);
-
-          TouchEvent event = {pos[0], pos[1], button_value};                    //creating event and sending it to queue to trigger the toiuch_handle task
-          xQueueSend(touchQueue, &event, portMAX_DELAY);
-        }
-      }
-    }
-    vTaskDelay(200/portTICK_PERIOD_MS);
-  }
-}
-
 
 #endif

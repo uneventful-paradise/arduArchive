@@ -1,5 +1,4 @@
-#include "Display.h"
-#include "WiFi_comms.h"
+#include "Tasks.h"
 
 static TaskHandle_t touch_task_handle = NULL;
 
@@ -52,18 +51,6 @@ void drawLog(const char* filename, int x, int y){
   Serial.printf("Drawing image %s at x = %d, y = %d\n", filename, x, y);
 }
 
-
-void handle_command(void* params){
-  TouchEvent event;
-  while(true){
-    if(xQueueReceive(touchQueue, &event, portMAX_DELAY) == pdTRUE){
-      Serial.printf("Button with id %d has been selected and path is %s\n", event.buttonId, paths[event.buttonId]);
-      //update display 
-      access_path(event.buttonId);
-    }
-    // vTaskDelay(100/portTick_PERIOD_MS);    //do i need to delay or is this event driven?
-  }
-}
 
 void setup() {
   Serial.begin(115200);
@@ -136,9 +123,13 @@ void setup() {
 
     //practice tasks
     //creating task queue. the queue takes event size as parameter so it can manage the memory blocks allocated for each instance of the event
-    touchQueue = xQueueCreate(10, sizeof(TouchEvent));
-    if(touchQueue == NULL){
-      Serial.println("Failed to create touchQueue");
+    selection_queue = xQueueCreate(10, sizeof(TouchEvent));
+    macro_queue = xQueueCreate(10, sizeof(TouchEvent));
+    if(selection_queue == NULL){
+      Serial.println("Failed to create selection_queue");
+    }
+    if(macro_queue == NULL){
+      Serial.println("Failed to create macro_queue");
     }
     // xTaskCreatePinnedToCore(
     //   display_text_task,  //function that implemenets the task
@@ -188,8 +179,8 @@ void setup() {
       1
     );
     xTaskCreatePinnedToCore(
-      communicate,
-      "communicate",
+      wifi_comms_task,
+      "wifi_comms_task",
       4096,
       NULL,
       1,

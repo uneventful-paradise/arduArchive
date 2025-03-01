@@ -2,11 +2,12 @@
 #TODO:acknowledgements after each message? also maybe msg ids should be 3chars strings
 #TODO: 2 queues for tasks vs peeking and taking
 #TODO: make send/receive an interface
-
+#TODO: retest/build connection checking loop
 import binascii
 import socket
 import struct
 import threading
+import subprocess
 
 MAX_CLIENTS = 5
 threads = []
@@ -49,8 +50,19 @@ def handle_request(request, client_socket):
     req_len = int(header[3])
     print(f'REQUEST has type {command_type}, id {command_id}, fid {file_id}, len {req_len}')
     req_contents = client_socket.recv(req_len)
-    # print(f'Command contents was {req_contents.decode("utf-8")}')
-    print(f'REQUEST_CONTENTS: {req_contents}\n')
+    print(f'REQUEST_CONTENTS: {req_contents.decode("utf-8")}\n')
+
+    path = req_contents.decode("utf-8")
+    if 'http' in path:
+        subprocess.Popen(["start", path], shell=True)
+        #webbrowser.open(path)
+    else:
+        path = path.rstrip('\r\n')
+        escaped_path = path.encode('unicode_escape').decode()
+        escaped_path= escaped_path.rstrip('\r\n')
+        print(path)
+        print(escaped_path)
+        subprocess.Popen(escaped_path)
 
 def handle_new_connection(client_socket, client_addr):
     print(f'Created new thread for client {client_addr}')
@@ -69,10 +81,11 @@ def handle_new_connection(client_socket, client_addr):
         responses = ["hey dude thanks for letting me know",
                      "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum",
                      "hyaimamanannanan"]
-        # hex_msg = binascii.hexlify(msg)
-        if index < 3:
-            send_request(client_socket, 12, index, 55, len(responses[index]), responses[index])
-            index+=1
+
+        # if index < 3:
+        #     send_request(client_socket, 12, index, 55, len(responses[index]), responses[index])
+        #     index+=1
+
 
 while True:
     conn, addr = s.accept()

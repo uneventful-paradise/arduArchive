@@ -120,48 +120,7 @@ void connect_to_server() {
   }
 }
 //2.0.17
-void communicate(void*params){
-  //connect to wifi network
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PWD);
 
-  Serial.print("Connecting to WiFi...");
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
-    vTaskDelay(500/portTICK_PERIOD_MS);
-  }
-
-  Serial.println("\nWiFi Connected!");
-  printWifiStatus();
-
-  int cmd_id = 0;
-  char* messages[3]={
-    "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum",
-    "mama face mere nihahaha cal cal cal cal cal",
-    "salutari osteni"
-  };
-
-  //connect to server
-  while(1){
-    if (WiFi.status() != WL_CONNECTED) {
-      Serial.println("WiFi disconnected! Reconnecting...");
-      WiFi.begin(WIFI_SSID, WIFI_PWD);
-    }
-
-    if (!client.connected()) {
-      Serial.println("Server disconnected! Reconnecting...");
-      connect_to_server();
-    }
-    if(cmd_id < 3 && client.connected()){
-      char*msg = messages[cmd_id];
-      send_request(0, cmd_id, 69, strlen(msg), msg);
-      cmd_id++;
-    }
-    handle_request();
-    // Serial.println("later entry");
-    vTaskDelay(500/portTICK_PERIOD_MS);
-  }
-}
 
 #endif
 //for tasks - a. 2 queues for the same touch event so display and send can manage the event independently
