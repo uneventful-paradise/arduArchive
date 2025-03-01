@@ -10,13 +10,19 @@
 // #include "Tasks.h"
 #include "Sprite.h"
 
-#define TOUCH_SDA 17
-#define TOUCH_SCL 18
-#define TOUCH_INT -1
-#define TOUCH_RST 38
-#define TOUCH_WIDTH 800
-#define TOUCH_HEIGHT 480
+#define WIFI_SSID        "DIGI-yWsT"
+#define WIFI_PWD         "74F8ghZw"
+#define SERVER_IP   "192.168.100.63"
+#define PORT        65432
+#define CHUNK_SIZE  1024
+#define HEADER_SIZE 16
 
+#define TOUCH_SDA     17
+#define TOUCH_SCL     18
+#define TOUCH_INT     -1
+#define TOUCH_RST     38
+#define TOUCH_WIDTH   800
+#define TOUCH_HEIGHT  480
 
 #define COLOR_BACKGROUND BLACK
 #define COLOR_BUTTON BLACK

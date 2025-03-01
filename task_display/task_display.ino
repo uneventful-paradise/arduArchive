@@ -1,4 +1,5 @@
 #include "Display.h"
+#include "WiFi_comms.h"
 
 static TaskHandle_t touch_task_handle = NULL;
 
@@ -117,12 +118,12 @@ void setup() {
         icon_y += 100;
         icon_x = 0;
       }
-      Serial.println("printing paths");
+      // Serial.println("printing paths");
       sprites[i] = new Sprite();
       sprites[i]->set(icon_x, icon_y, BUTTON_WIDTH, BUTTON_HEIGHT, "", i, 0);
       sprites[i]->setFilename(icons[i]);
       sprites[i]->setPath(paths[i]);
-      Serial.println(paths[i]);
+      // Serial.println(paths[i]);
       sprites[i]->setGFX(gfx);
       sprites[i]->draw(jpegDrawCallback);
       icon_x += 100;
@@ -180,6 +181,15 @@ void setup() {
     xTaskCreatePinnedToCore(
       handle_command,
       "handle_command",
+      4096,
+      NULL,
+      1,
+      NULL,
+      1
+    );
+    xTaskCreatePinnedToCore(
+      communicate,
+      "communicate",
       4096,
       NULL,
       1,
