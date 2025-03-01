@@ -40,7 +40,7 @@ void send_request(int cmd_type, int cmd_id, int file_id, int req_len, char* req)
   while(client.write((uint8_t*)&data, packet_size) != packet_size){
     Serial.printf("Send %d failed. Retrying\n", cmd_id);
   }
-  Serial.printf("Send %d successful\n", cmd_id);
+  Serial.printf("Send %d %d %d %d successful\n\n", cmd_type, cmd_id, file_id, req_len);
 }
 
 void handle_request() {
@@ -58,7 +58,7 @@ void handle_request() {
     file_id   = ntohl(file_id);
     req_len   = ntohl(req_len);
 
-    Serial.printf("Client received packet %d of size %d\n", cmd_id, req_len);
+    Serial.printf("RECEIVED type %d id %d fid %d size %d\n", cmd_type, cmd_id, file_id, req_len);
     //checking for eof_packet
     // if(packet_len == 0) {
     //   Serial.println("EOF reached. Closing connection.");
@@ -94,8 +94,9 @@ void handle_request() {
     memcpy(data.contents, req, req_len);
 
     // Serial.printf("Received content %d, length: %d\n", data.cmd_id, data.length);
-    Serial.print("Received message: ");
+    Serial.print("RECEIVED: ");
     Serial.println(data.contents);
+    Serial.println("");
 
     free(req);
     //send the packet index as an acknowledgement flag. convert it to bigendian representation before sending. we need to send aknowledgements so that the server doesn't immediately shut down after sending all the packets.
@@ -134,7 +135,12 @@ void communicate(void*params){
   printWifiStatus();
 
   int cmd_id = 0;
-  
+  char* messages[3]={
+    "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum",
+    "mama face mere nihahaha cal cal cal cal cal",
+    "salutari osteni"
+  };
+
   //connect to server
   while(1){
     if (WiFi.status() != WL_CONNECTED) {
@@ -146,13 +152,9 @@ void communicate(void*params){
       Serial.println("Server disconnected! Reconnecting...");
       connect_to_server();
     }
-    if(cmd_id == 0 && client.connected()){
-      Serial.println("first send");
-      // PackageData data = {0, 1, 2, 4, "sal"};
-      char* msg = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum";
-      send_request(0, 530, 69, strlen(msg), msg);
-      Serial.println("Sent first data packet");
-
+    if(cmd_id < 3 && client.connected()){
+      char*msg = messages[cmd_id];
+      send_request(0, cmd_id, 69, strlen(msg), msg);
       cmd_id++;
     }
     handle_request();
@@ -162,3 +164,5 @@ void communicate(void*params){
 }
 
 #endif
+//for tasks - a. 2 queues for the same touch event so display and send can manage the event independently
+//b. same queue but one peeks with higher priority and the other takes 
