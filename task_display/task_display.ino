@@ -121,7 +121,6 @@ void setup() {
     //https://www.esp32.com/viewtopic.php?t=2663
     //https://www.freertos.org/Documentation/02-Kernel/04-API-references/01-Task-creation/01-xTaskCreate
 
-    //practice tasks
     //creating task queue. the queue takes event size as parameter so it can manage the memory blocks allocated for each instance of the event
     selection_queue = xQueueCreate(10, sizeof(TouchEvent));
     macro_queue = xQueueCreate(10, sizeof(TouchEvent));
@@ -131,34 +130,7 @@ void setup() {
     if(macro_queue == NULL){
       Serial.println("Failed to create macro_queue");
     }
-    // xTaskCreatePinnedToCore(
-    //   display_text_task,  //function that implemenets the task
-    //   "display text",     //display name for task
-    //   4096,               //stack size in words, not in bytes
-    //   (void*)gfx,                //parameter passed into the task      
-    //   3,                  //priority at which task is created        
-    //   NULL,               //used to pass out the created task's handle
-    //   1                  //core where the task shsould run
-    //           );
-            
-
-    // Task2_params t2p = {
-    //   gfx,
-    //   jpegDrawCallback,
-    //   buttons,
-    //   BUTTON_COUNT
-    // };
-
-    // xTaskCreatePinnedToCore(
-    //   display_icon_task,  //function that implemenets the task
-    //   "display icon",     //display name for task
-    //   4096,               //stack size in words, not in bytes
-    //   (void*)&t2p,                //parameter passed into the task      
-    //   3,                  //priority at which task is created        
-    //   NULL,               //used to pass out the created task's handle
-    //   1                  //core where the task shsould run
-    //           );
-
+  
     xTaskCreatePinnedToCore(
       touch_check_task,
       "touch_check",

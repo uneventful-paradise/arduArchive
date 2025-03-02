@@ -3,22 +3,31 @@
 #TODO: 2 queues for tasks vs peeking and taking
 #TODO: make send/receive an interface
 #TODO: retest/build connection checking loop
-import binascii
+
+#TODO: is popen communicate blocking or is it fine
 import socket
 import struct
 import threading
-import subprocess
+import json
+
+from utils.execute_funcs import *
+
+#download/upload        command_code = 1(int)| command_id = cid(int)| file_id = fid(int) | message_length = len(int)| contents = ...(byte array)
+#macro_command          command_code = 0(int)| command_id = cid(int)| __________________ | message_length = len(int)| filename = ...(char array)
+CONFIG_FILE = "config/configs.json"
+with open(CONFIG_FILE, "r") as f:
+    CMD_DICT = json.load(f)
 
 MAX_CLIENTS = 5
 threads = []
 HOST = "0.0.0.0"
 PORT = 65432
-FILENAME = "test_img.jpg"
+
+FILENAME = "media/test_img.jpg"
 CHUNK_SIZE = 1024
 HEADER_SIZE = 16
-#download/upload        command_code = 1(int)| command_id = cid(int)| file_id = fid(int) | message_length = len(int)| contents = ...(byte array)
-#macro_command          command_code = 0(int)| command_id = cid(int)| __________________ | message_length = len(int)| filename = ...(char array)
 ACK_SIZE = 4
+
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind((HOST, PORT))
@@ -42,27 +51,37 @@ def send_request(client_socket, cmd_type, cmd_id, file_id, req_len, req):
     print(f"SENT packet of type {cmd_type} id {cmd_id} fid {file_id} size {len(req)}\nSEND CONTENTS: " + req + "\n")
     client_socket.sendall(packet)
 
+def execute_command(cmd_dict, command_id, request_contents):
+    if not any(button["button_id"] == request_contents for button in cmd_dict["buttons"]):
+        print("Invalid command")
+        return
+
+    actions = []
+    for button in cmd_dict["buttons"]:
+        if button["button_id"] == request_contents:
+            actions = button["actions"]
+            break
+
+    for action in actions:
+        ACT_DICT[action["command_id"]](command_id, *action["command_args"])
+
+
 def handle_request(request, client_socket):
     header = struct.unpack("!iiii", request)
     command_type = int(header[0])
     command_id = int(header[1])
     file_id = int(header[2])
     req_len = int(header[3])
+
     print(f'REQUEST has type {command_type}, id {command_id}, fid {file_id}, len {req_len}')
     req_contents = client_socket.recv(req_len)
-    print(f'REQUEST_CONTENTS: {req_contents.decode("utf-8")}\n')
+    readable_req_contents = req_contents.decode("utf-8")
+    print(f'REQUEST_CONTENTS: {readable_req_contents}\n')
 
-    path = req_contents.decode("utf-8")
-    if 'http' in path:
-        subprocess.Popen(["start", path], shell=True)
-        #webbrowser.open(path)
-    else:
-        path = path.rstrip('\r\n')
-        escaped_path = path.encode('unicode_escape').decode()
-        escaped_path= escaped_path.rstrip('\r\n')
-        print(path)
-        print(escaped_path)
-        subprocess.Popen(escaped_path)
+    #executing command associated to the button id
+    execute_command(CMD_DICT, command_id, command_type)
+
+
 
 def handle_new_connection(client_socket, client_addr):
     print(f'Created new thread for client {client_addr}')
@@ -87,14 +106,17 @@ def handle_new_connection(client_socket, client_addr):
         #     index+=1
 
 
-while True:
-    conn, addr = s.accept()
-    print(f"Connected by {addr}")
-    thread = threading.Thread(target=handle_new_connection, args=(conn, addr))
-    threads.append(thread)
 
-    thread.start()
+if __name__ == '__main__':
 
-for thread in threads:
-    thread.join()
-s.close()
+    while True:
+        conn, addr = s.accept()
+        print(f"Connected by {addr}")
+        thread = threading.Thread(target=handle_new_connection, args=(conn, addr))
+        threads.append(thread)
+
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+    s.close()

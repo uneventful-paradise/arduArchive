@@ -1,0 +1,43 @@
+{
+  "buttons": [
+    {
+        "button_id": 0,
+        "actions": [
+            {
+                "command_id": "START_PROCESS",
+                "command_args": ["C:\\Users\\dante\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"]
+            }
+        ]
+    },
+
+    {
+      "button_id": 1,
+      "actions": [
+        {
+          "command_id": "START_URL",
+          "command_args": ["https://www.dw.com/en/top-stories/s-9097"]
+        }
+      ]
+    },
+    
+    {
+        "button_id": 5,
+        "actions": [
+            {
+                "command_id": 1,
+                "command_args": ["<file_path>"]
+            },
+
+            {
+                "command_id": 2,
+                "command_args": ["<url>"]
+            },
+
+            {
+                "command_id": 5,
+                "command_args": ["<url>", "", ""]
+            }
+        ]
+    }
+  ]
+}
