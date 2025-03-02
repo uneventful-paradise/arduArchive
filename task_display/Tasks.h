@@ -81,13 +81,13 @@ void wifi_comms_task(void*params){
     //   send_request(0, cmd_id, 69, strlen(msg), msg);
     //   cmd_id++;
     // }
+    handle_request();
     TouchEvent event;
     if(xQueueReceive(macro_queue, &event, portMAX_DELAY) == pdTRUE){
       Serial.printf("SENDING command for %s to server\n", paths[event.buttonId]);
       char* req = paths[event.buttonId];
       send_request(event.buttonId, cmd_id, 0, strlen(req), req);
       cmd_id++;
-    handle_request();
     // Serial.println("later entry");
     vTaskDelay(500/portTICK_PERIOD_MS);
     }

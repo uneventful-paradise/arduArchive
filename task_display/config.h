@@ -13,7 +13,7 @@
 #define WIFI_SSID        "DIGI-yWsT"
 #define WIFI_PWD         "74F8ghZw"
 #define SERVER_IP   "192.168.100.63"
-#define PORT        65432
+#define PORT        65431
 #define CHUNK_SIZE  1024
 #define HEADER_SIZE 16
 

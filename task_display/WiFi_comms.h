@@ -12,7 +12,12 @@ struct PackageData{
   char contents[CHUNK_SIZE];
 }data;
 
+//change types to short unsigned etc to better match their purpose
+
 WiFiClient client;
+File file_obj = File();
+int final_file_size = 0;
+int current_file_size = 0;
 
 void printWifiStatus() {
   Serial.print("\nSSID: ");
@@ -43,6 +48,47 @@ void send_request(int cmd_type, int cmd_id, int file_id, int req_len, char* req)
   Serial.printf("Send %d %d %d %d successful\n\n", cmd_type, cmd_id, file_id, req_len);
 }
 
+//create/open the file where we have to write the data
+File get_file_obj(const char* filename){
+  if(!SD.begin(SD_CS)){
+    Serial.println("Failed to open SD card");
+    return File();
+  }
+  File file_obj = SD.open(filename, FILE_WRITE);
+  if(!file_obj){
+    Serial.println("Error opening or creating file");
+    return File();
+  }
+  return file_obj;
+}
+
+void handle_download(PackageData pd){
+  //file_obj will be true only while a transfer is active and right when it is initiated
+  if(pd.command_type == 1){       //initiate download. initiation package contains the path to which the content ought to be written
+    file_obj = get_file_obj(pd.contents);
+    // Serial.printf("INITIATED DOWNLOAD. Final file size must be %d\n", final_file_size);
+    // current_file_size = 0;
+  }
+  else if(pd.command_type == 3){  //end of download
+    //checking for eof_packet
+    Serial.println("EOF reached. Ending download.");
+    file_obj.flush();
+    file_obj.close();
+    file_obj = File();            //resetting file obj to evaluate to false once the download is complete
+    // final_file_size = 0;
+    // current_file_size = 0;
+    Serial.println("DOWNLOAD STOPPED");
+    return;
+  }else if(pd.command_type == 2){
+     if (file_obj) {
+      file_obj.write((uint8_t*)pd.contents, pd.length);
+      file_obj.flush();
+      // current_file_size += pd.length;
+      // Serial.printf("Current progress %d", int(current_file_size/final_file_size * 100));
+    }
+  }
+}
+
 void handle_request() {
   //only read when the entire header has been sent
   int read_threshold = 4 * sizeof(int);
@@ -59,14 +105,6 @@ void handle_request() {
     req_len   = ntohl(req_len);
 
     Serial.printf("RECEIVED type %d id %d fid %d size %d\n", cmd_type, cmd_id, file_id, req_len);
-    //checking for eof_packet
-    // if(packet_len == 0) {
-    //   Serial.println("EOF reached. Closing connection.");
-    //   client.stop();
-    //   file_obj.flush();
-    //   file_obj.close();
-    //   return;
-    // } 
 
     //set a timeout limit for reading a packet's contents
     unsigned long long int start = millis();
@@ -76,6 +114,12 @@ void handle_request() {
         return;
       }
     }
+    //only read the data if it follows the protocol defined maximum length
+    if(req_len > CHUNK_SIZE){
+      Serial.println("Chunk size exceeded for received data. Skipping request");
+      return;
+    }
+
     char* req = (char*)malloc(req_len);
     if(!req){
       Serial.println("Malloc fail for request contents allocation");
@@ -90,7 +134,6 @@ void handle_request() {
     data.length = req_len;
     
     memset(data.contents, 0, sizeof(data.contents));
-    // contents[packet_len] = '\0';
     memcpy(data.contents, req, req_len);
 
     // Serial.printf("Received content %d, length: %d\n", data.cmd_id, data.length);
@@ -98,15 +141,14 @@ void handle_request() {
     Serial.println(data.contents);
     Serial.println("");
 
+    if(data.command_type >= 1 && data.command_type <= 3){
+      handle_download(data);
+    }
+
     free(req);
     //send the packet index as an acknowledgement flag. convert it to bigendian representation before sending. we need to send aknowledgements so that the server doesn't immediately shut down after sending all the packets.
     // int ack = htonl(seq_index);  // Convert to network byte order
     // client.write((uint8_t*)&ack, sizeof(ack));
-
-    //  if (file_obj) {
-    //   file_obj.write((uint8_t*)data.contents, data.length);
-    //   file_obj.flush();
-    // }
   }
 }
 
@@ -119,9 +161,6 @@ void connect_to_server() {
     Serial.println("Connected to server.");
   }
 }
-//2.0.17
 
 
 #endif
-//for tasks - a. 2 queues for the same touch event so display and send can manage the event independently
-//b. same queue but one peeks with higher priority and the other takes 

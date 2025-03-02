@@ -9,11 +9,16 @@ import socket
 import struct
 import threading
 import json
+import os
 
 from utils.execute_funcs import *
 
-#download/upload        command_code = 1(int)| command_id = cid(int)| file_id = fid(int) | message_length = len(int)| contents = ...(byte array)
-#macro_command          command_code = 0(int)| command_id = cid(int)| __________________ | message_length = len(int)| filename = ...(char array)
+MCCF = 0    #MACRO COMMAND FLAG
+SDCF = 1    #START DOWNLOAD COMMAND FLAG
+FTCF = 2    #FILE TRANSFER COMMAND FLAG
+EDCF = 3    #END OF DOWNLOAD COMMAND FLAG
+INTF = 4    #INITIALIZATION FLAG (start of routine)
+
 CONFIG_FILE = "config/configs.json"
 with open(CONFIG_FILE, "r") as f:
     CMD_DICT = json.load(f)
@@ -21,9 +26,9 @@ with open(CONFIG_FILE, "r") as f:
 MAX_CLIENTS = 5
 threads = []
 HOST = "0.0.0.0"
-PORT = 65432
+PORT = 65431
 
-FILENAME = "media/test_img.jpg"
+FILENAME = "media/test_steam_img.jpg"
 CHUNK_SIZE = 1024
 HEADER_SIZE = 16
 ACK_SIZE = 4
@@ -42,13 +47,38 @@ def recv_all(sock, num_bytes):
             break
         buf += chunk
     return buf
+#should this be blocking or nonblocking?
+def handle_upload(client_socket, filename):
+    file_size = str(os.path.getsize(filename))
+    send_request(client_socket, SDCF, 0, 0, len(filename), filename)
+    try:
+        with open(filename, "rb") as file_obj:
+            while True:
+                data = file_obj.read(CHUNK_SIZE)
+                if not data:
+                    send_request(client_socket, EDCF, 0, 0, 0, "")
+                    break
+                else:
+                    send_request(client_socket, FTCF, 0, 0, len(data), data)
+                    #resend packet if lost??
 
-#what about confirmations?
+    except IOError as e:
+        print("Could not open or read file.\n" + e.strerror)
+
+
 def send_request(client_socket, cmd_type, cmd_id, file_id, req_len, req):
-    #format: < = small endian (! for network = bigendian)
-    packet = struct.pack("!iiii", cmd_type, cmd_id, file_id, req_len) + str.encode(req)
-    # print(f"sending packet of size {req_len}:\n" + req.decode("utf-8"))
-    print(f"SENT packet of type {cmd_type} id {cmd_id} fid {file_id} size {len(req)}\nSEND CONTENTS: " + req + "\n")
+    #format: < = small endian (! for network = big endian)
+    enc_type = "hex"
+    if isinstance(req, str):
+        req = req.encode('utf-8')
+        enc_type = "str"
+    packet = struct.pack("!iiii", cmd_type, cmd_id, file_id, req_len) + req
+
+    if enc_type == "str":
+        print(f"SENT packet of type {cmd_type} id {cmd_id} fid {file_id} size {len(req)}\nSEND CONTENTS: " + req.decode() + "\n")
+    else:
+        print(f"SENT packet of type {cmd_type} id {cmd_id} fid {file_id} size {len(req)}\nSEND CONTENTS: " + req.hex() + "\n")
+
     client_socket.sendall(packet)
 
 def execute_command(cmd_dict, command_id, request_contents):
@@ -87,31 +117,32 @@ def handle_new_connection(client_socket, client_addr):
     print(f'Created new thread for client {client_addr}')
     index = 0
     while True:
-        req = client_socket.recv(HEADER_SIZE)
-        # req = recv_all(client_socket, HEADER_SIZE)
-        if not req:
-            client_socket.close()
-            print("Client has requested disconnect")
-            return None
-        print(f'Client {client_addr} requested: {req}')
-        #make this an interface
-        handle_request(req, client_socket)
+        # req = client_socket.recv(HEADER_SIZE)
+        # # req = recv_all(client_socket, HEADER_SIZE)
+        # if not req:
+        #     client_socket.close()
+        #     print("Client has requested disconnect")
+        #     return None
+        # print(f'Client {client_addr} requested: {req}')
+        # #make this an interface
+        # handle_request(req, client_socket)
 
-        responses = ["hey dude thanks for letting me know",
-                     "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum",
-                     "hyaimamanannanan"]
+        # responses = ["hey dude thanks for letting me know",
+        #              "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum",
+        #              "hyaimamanannanan"]
 
-        # if index < 3:
-        #     send_request(client_socket, 12, index, 55, len(responses[index]), responses[index])
-        #     index+=1
+        if index < 1:
+            handle_upload(client_socket, FILENAME)
+            index+=1
 
 
 
 if __name__ == '__main__':
 
     while True:
+        print("waiting for clients")
         conn, addr = s.accept()
-        print(f"Connected by {addr}")
+        print(f"Connected by {addr}\n")
         thread = threading.Thread(target=handle_new_connection, args=(conn, addr))
         threads.append(thread)
 
