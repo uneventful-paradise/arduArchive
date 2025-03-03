@@ -1,8 +1,8 @@
 #multithreaded server : https://stackoverflow.com/questions/10810249/python-socket-multiple-clients
 #TODO:acknowledgements after each message? also maybe msg ids should be 3chars strings
-#TODO: 2 queues for tasks vs peeking and taking
-#TODO: make send/receive an interface
 #TODO: retest/build connection checking loop
+#TODO: consume garbage content if the send was too slow?
+#TODO: client sync for reads and writes?
 
 #TODO: is popen communicate blocking or is it fine
 import socket
@@ -10,6 +10,7 @@ import struct
 import threading
 import json
 import os
+import random
 
 from utils.execute_funcs import *
 
@@ -118,27 +119,32 @@ def handle_request(request, client_socket):
 
 def handle_new_connection(client_socket, client_addr):
     print(f'Created new thread for client {client_addr}')
-    index = 0
     while True:
-        # req = client_socket.recv(HEADER_SIZE)
-        # # req = recv_all(client_socket, HEADER_SIZE)
-        # if not req:
-        #     client_socket.close()
-        #     print("Client has requested disconnect")
-        #     return None
-        # print(f'Client {client_addr} requested: {req}')
-        #make this an interface
+        req = client_socket.recv(HEADER_SIZE)
 
-        # responses = ["hey dude thanks for letting me know",
-        #              "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum",
-        #              "hyaimamanannanan"]
+        if not req:
+            client_socket.close()
+            print("Client has requested disconnect")
+            return None
+        print(f'Client {client_addr} requested: {req}')
+        handle_request(req, client_socket)
 
-        if index < 1:
+def handle_server_send(client_socket, client_addr):
+    index = 0
+    responses = ["hey dude thanks for letting me know",
+                 "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum",
+                 "hyaimamanannanan"]
+    while True:
+        user_input = input(">")
+
+        if index < 1 and user_input == "upload":
             handle_upload(client_socket, FILENAME)
-            index+=1
-
-        # handle_request(req, client_socket)
-
+            index += 1
+        if user_input == "fetch":
+            print("Fetching data")
+        if user_input == "message":
+            msg_index = random.randint(0, len(responses) - 1)
+            send_request(client_socket, MCCF, msg_index, 0, len(responses[msg_index]), responses[msg_index])
 
 if __name__ == '__main__':
 
@@ -146,10 +152,13 @@ if __name__ == '__main__':
         # print("waiting for clients")
         conn, addr = s.accept()
         print(f"Connected by {addr}\n")
-        thread = threading.Thread(target=handle_new_connection, args=(conn, addr))
-        threads.append(thread)
+        listener_thread = threading.Thread(target=handle_new_connection, args=(conn, addr))
+        threads.append(listener_thread)
+        sender_thread = threading.Thread(target=handle_server_send, args=(conn, addr))
+        threads.append(sender_thread)
 
-        thread.start()
+        listener_thread.start()
+        sender_thread.start()
 
     for thread in threads:
         thread.join()

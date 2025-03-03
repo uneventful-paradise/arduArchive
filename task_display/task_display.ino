@@ -151,9 +151,28 @@ void setup() {
       1
     );
     xTaskCreatePinnedToCore(
-      wifi_comms_task,
-      "wifi_comms_task",
+      establish_connection_task,
+      "establish_connection_task",
+      4096, //was 8192 because of insufficient stack space durin upload
+      NULL,
+      1,
+      NULL,
+      0
+    );
+
+    xTaskCreatePinnedToCore(
+      send_request_task,
+      "send_request_task",
       8192,
+      NULL,
+      1,
+      NULL,
+      1
+    );
+    xTaskCreatePinnedToCore(
+      handle_requests_task,
+      "handle_requests_task",
+      4096,
       NULL,
       1,
       NULL,

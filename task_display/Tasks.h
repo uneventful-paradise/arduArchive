@@ -44,7 +44,7 @@ void handle_command(void* params){
   }
 }
 
-void wifi_comms_task(void*params){
+void establish_connection_task(void*params){
   //connect to wifi network
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PWD);
@@ -58,13 +58,6 @@ void wifi_comms_task(void*params){
   Serial.println("\nWiFi Connected!");
   printWifiStatus();
 
-  int cmd_id = 0;
-  char* messages[3]={
-    "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum",
-    "mama face mere nihahaha cal cal cal cal cal",
-    "salutari osteni"
-  };
-
   //connect to server
   while(1){
     if (WiFi.status() != WL_CONNECTED) {
@@ -76,24 +69,106 @@ void wifi_comms_task(void*params){
       Serial.println("Server disconnected! Reconnecting...");
       connect_to_server();
     }
-    // if(cmd_id < 3 && client.connected()){
-    //   char*msg = messages[cmd_id];
-    //   send_request(0, cmd_id, 69, strlen(msg), msg);
-    //   cmd_id++;
-    // }
-    if(client.connected()){
-      // TouchEvent event;
-      // if(xQueueReceive(macro_queue, &event, portMAX_DELAY) == pdTRUE){
-      //   Serial.printf("SENDING command for %s to server\n", paths[event.buttonId]);
-      //   char* req = paths[event.buttonId];
-      //   send_request(event.buttonId, cmd_id, 0, strlen(req), req);
-      //   cmd_id++;
-      // Serial.println("later entry");
-      handle_request();
-    }
-    vTaskDelay(500/portTICK_PERIOD_MS);
+    vTaskDelay(100/portTICK_PERIOD_MS);
   }
 }
 
+void send_request_task(void* params){
+  TouchEvent event;
+  
+  int cmd_id = 0;
+  char* messages[3]={
+    "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum",
+    "mama face mere nihahaha cal cal cal cal cal",
+    "salutari osteni"
+  };
+
+  while(1){
+    if(client.connected()){
+      // if(cmd_id < 3 && client.connected()){
+      //   char*msg = messages[cmd_id];
+      //   send_request(0, cmd_id, 69, strlen(msg), msg);
+      //   cmd_id++;
+      // }
+      if(xQueueReceive(macro_queue, &event, portMAX_DELAY) == pdTRUE){
+        Serial.printf("SENDING command for %s to server\n", paths[event.buttonId]);
+        char* req = paths[event.buttonId];
+        send_request(event.buttonId, cmd_id, 0, strlen(req), req);
+        cmd_id++;
+        // Serial.println("later entry");
+        // handle_request();
+      }
+      //if response queue has something in it then send it
+    }
+    //no need to block since we are waiting for queue entries
+  }
+}
+
+void handle_requests_task(void* params){  //check for commands and responses from server and push them to receiver queue
+  //do we need to wait for connec,tion with mutexes?
+
+  int read_threshold = 4 * sizeof(int);
+  while(1){
+    //only read when the entire header has been sent
+    if (client.connected() && client.available() >= read_threshold) {
+      int cmd_type, cmd_id, file_id, req_len;
+      //read and parse the header data. we use ntohl because the data is sent in big-endian (networking standard) while the esp device operates in little-endian. ntohl converts integers to host byte order
+      client.readBytes((char*)&cmd_type, sizeof(int));
+      client.readBytes((char*)&cmd_id, sizeof(int));
+      client.readBytes((char*)&file_id, sizeof(int));
+      client.readBytes((char*)&req_len, sizeof(int));
+      cmd_type  = ntohl(cmd_type);
+      cmd_id    = ntohl(cmd_id);
+      file_id   = ntohl(file_id);
+      req_len   = ntohl(req_len);
+
+      Serial.printf("RECEIVED type %d id %d fid %d size %d\n", cmd_type, cmd_id, file_id, req_len);
+
+      //set a timeout limit for reading a packet's contents. ?needs to be consumed later??
+      unsigned long long int start = millis();
+      while(client.available() < req_len){
+        if(millis() - start > 5000){
+          Serial.println("Time limit exceeded for packet await");
+          return;
+        }
+      }
+      //only read the data if it follows the protocol defined maximum length
+      if(req_len > CHUNK_SIZE){
+        Serial.println("Chunk size exceeded for received data. Skipping request");
+        return;
+      }
+
+
+      char* req = (char*)malloc(req_len);
+      if(!req){
+        Serial.println("Malloc fail for request contents allocation");
+        return;
+      }
+      client.readBytes(req, req_len);
+
+      PackageData data;
+      data.command_type = cmd_type;
+      data.command_id = cmd_id;
+      data.file_id = file_id;
+      data.length = req_len;
+      
+      memset(data.contents, 0, sizeof(data.contents));
+      memcpy(data.contents, req, req_len);
+
+      // Serial.printf("Received content %d, length: %d\n", data.cmd_id, data.length);
+      Serial.print("RECEIVED: ");
+      Serial.println(data.contents);
+      Serial.println("");
+
+      if(data.command_type >= 1 && data.command_type <= 3){
+        handle_download(data);
+      }
+
+      free(req);
+      // xQueueSend(receive_queue, (void*)data, portMAX_DELAY);
+    }
+    vTaskDelay(200/portTICK_PERIOD_MS); //is this needed?
+  }
+}
 
 #endif

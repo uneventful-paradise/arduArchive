@@ -95,69 +95,16 @@ void handle_download(PackageData pd){
   }
 }
 
-void handle_request() {
-  //only read when the entire header has been sent
-  int read_threshold = 4 * sizeof(int);
-  if (client.connected() && client.available() >= read_threshold) {
-    int cmd_type, cmd_id, file_id, req_len;
-    //read and parse the header data. we use ntohl because the data is sent in big-endian (networking standard) while the esp device operates in little-endian. ntohl converts integers to host byte order
-    client.readBytes((char*)&cmd_type, sizeof(int));
-    client.readBytes((char*)&cmd_id, sizeof(int));
-    client.readBytes((char*)&file_id, sizeof(int));
-    client.readBytes((char*)&req_len, sizeof(int));
-    cmd_type  = ntohl(cmd_type);
-    cmd_id    = ntohl(cmd_id);
-    file_id   = ntohl(file_id);
-    req_len   = ntohl(req_len);
+// void handle_request() {
+//   PackageData data;
 
-    Serial.printf("RECEIVED type %d id %d fid %d size %d\n", cmd_type, cmd_id, file_id, req_len);
-
-    //set a timeout limit for reading a packet's contents
-    unsigned long long int start = millis();
-    while(client.available() < req_len){
-      if(millis() - start > 5000){
-        Serial.println("Time limit exceeded for packet await");
-        return;
-      }
-    }
-    //only read the data if it follows the protocol defined maximum length
-    if(req_len > CHUNK_SIZE){
-      Serial.println("Chunk size exceeded for received data. Skipping request");
-      return;
-    }
-
-
-    char* req = (char*)malloc(req_len);
-    if(!req){
-      Serial.println("Malloc fail for request contents allocation");
-      return;
-    }
-    client.readBytes(req, req_len);
-
-    PackageData data;
-    data.command_type = cmd_type;
-    data.command_id = cmd_id;
-    data.file_id = file_id;
-    data.length = req_len;
-    
-    memset(data.contents, 0, sizeof(data.contents));
-    memcpy(data.contents, req, req_len);
-
-    // Serial.printf("Received content %d, length: %d\n", data.cmd_id, data.length);
-    Serial.print("RECEIVED: ");
-    Serial.println(data.contents);
-    Serial.println("");
-
-    if(data.command_type >= 1 && data.command_type <= 3){
-      handle_download(data);
-    }
-
-    free(req);
-    //send the packet index as an acknowledgement flag. convert it to bigendian representation before sending. we need to send aknowledgements so that the server doesn't immediately shut down after sending all the packets.
-    // int ack = htonl(seq_index);  // Convert to network byte order
-    // client.write((uint8_t*)&ack, sizeof(ack));
-  }
-}
+//   if()
+  
+  
+//   //send the packet index as an acknowledgement flag. convert it to bigendian representation before sending. we need to send aknowledgements so that the server doesn't immediately shut down after sending all the packets.
+//   // int ack = htonl(seq_index);  // Convert to network byte order
+//   // client.write((uint8_t*)&ack, sizeof(ack));
+// }
 
 void connect_to_server() {
   Serial.println("\nConnecting to server...");
