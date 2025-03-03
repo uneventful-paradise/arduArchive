@@ -153,7 +153,7 @@ void setup() {
     xTaskCreatePinnedToCore(
       wifi_comms_task,
       "wifi_comms_task",
-      4096,
+      8192,
       NULL,
       1,
       NULL,

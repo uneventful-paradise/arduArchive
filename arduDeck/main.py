@@ -49,14 +49,17 @@ def recv_all(sock, num_bytes):
     return buf
 #should this be blocking or nonblocking?
 def handle_upload(client_socket, filename):
+    print("STARTED UPLOAD\n")
     file_size = str(os.path.getsize(filename))
-    send_request(client_socket, SDCF, 0, 0, len(filename), filename)
+    client_filename = "/"+filename.split('/')[-1]
+    send_request(client_socket, SDCF, 0, 0, len(client_filename), client_filename)
     try:
         with open(filename, "rb") as file_obj:
             while True:
                 data = file_obj.read(CHUNK_SIZE)
                 if not data:
-                    send_request(client_socket, EDCF, 0, 0, 0, "")
+                    data = "EOF"
+                    send_request(client_socket, EDCF, 0, 0, len(data), data)
                     break
                 else:
                     send_request(client_socket, FTCF, 0, 0, len(data), data)
@@ -124,8 +127,7 @@ def handle_new_connection(client_socket, client_addr):
         #     print("Client has requested disconnect")
         #     return None
         # print(f'Client {client_addr} requested: {req}')
-        # #make this an interface
-        # handle_request(req, client_socket)
+        #make this an interface
 
         # responses = ["hey dude thanks for letting me know",
         #              "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum",
@@ -135,12 +137,13 @@ def handle_new_connection(client_socket, client_addr):
             handle_upload(client_socket, FILENAME)
             index+=1
 
+        # handle_request(req, client_socket)
 
 
 if __name__ == '__main__':
 
     while True:
-        print("waiting for clients")
+        # print("waiting for clients")
         conn, addr = s.accept()
         print(f"Connected by {addr}\n")
         thread = threading.Thread(target=handle_new_connection, args=(conn, addr))

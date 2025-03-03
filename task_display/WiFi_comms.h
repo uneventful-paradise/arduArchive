@@ -50,15 +50,21 @@ void send_request(int cmd_type, int cmd_id, int file_id, int req_len, char* req)
 
 //create/open the file where we have to write the data
 File get_file_obj(const char* filename){
-  if(!SD.begin(SD_CS)){
-    Serial.println("Failed to open SD card");
-    return File();
+  // if(!SD.begin(SD_CS)){
+  //   Serial.println("Failed to open SD card");
+  //   return File();
+  // }
+  //needs a / at the start
+  Serial.printf("Attempting to open or create %s\n", filename);
+  if(SD.exists(filename)){
+    Serial.println("File already exists");
   }
-  File file_obj = SD.open(filename, FILE_WRITE);
+  file_obj = SD.open(filename, FILE_WRITE);
   if(!file_obj){
     Serial.println("Error opening or creating file");
     return File();
   }
+  Serial.println("File opened successfully");
   return file_obj;
 }
 
@@ -66,7 +72,7 @@ void handle_download(PackageData pd){
   //file_obj will be true only while a transfer is active and right when it is initiated
   if(pd.command_type == 1){       //initiate download. initiation package contains the path to which the content ought to be written
     file_obj = get_file_obj(pd.contents);
-    // Serial.printf("INITIATED DOWNLOAD. Final file size must be %d\n", final_file_size);
+    Serial.println("INITIATED DOWNLOAD");
     // current_file_size = 0;
   }
   else if(pd.command_type == 3){  //end of download
@@ -119,6 +125,7 @@ void handle_request() {
       Serial.println("Chunk size exceeded for received data. Skipping request");
       return;
     }
+
 
     char* req = (char*)malloc(req_len);
     if(!req){
