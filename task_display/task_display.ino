@@ -172,7 +172,7 @@ void setup() {
     xTaskCreatePinnedToCore(
       handle_requests_task,
       "handle_requests_task",
-      4096,
+      8192,
       NULL,
       1,
       NULL,

@@ -1,10 +1,11 @@
 #multithreaded server : https://stackoverflow.com/questions/10810249/python-socket-multiple-clients
 #TODO:acknowledgements after each message? also maybe msg ids should be 3chars strings
 #TODO: retest/build connection checking loop
-#TODO: consume garbage content if the send was too slow?
-#TODO: client sync for reads and writes?
-
 #TODO: is popen communicate blocking or is it fine
+
+#TODO: add error handling to new functions via try catch blocks
+#TODO: add file percentage transfer
+#TODO: CLIENT add mutex and eliminate busy waiting in handle_request
 import socket
 import struct
 import threading
@@ -39,20 +40,30 @@ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind((HOST, PORT))
 s.listen(5)
 
-def recv_all(sock, num_bytes):
-    buf = b""
-    while len(buf) < num_bytes:
-        chunk = sock.recv(num_bytes - len(buf))
+def read_all(client_socket, req_len):
+    chunks = []
+    bytes_received = 0
+    while bytes_received < req_len:
+        chunk = client_socket.recv(min(CHUNK_SIZE, req_len - bytes_received))
         if not chunk:
-            # Connection closed or error occurred
-            break
-        buf += chunk
-    return buf
-#should this be blocking or nonblocking?
+            raise RuntimeError("socket connection broken")
+        chunks.append(chunk)
+        bytes_received += len(chunk)
+    return b''.join(chunks)
+
+def send_all(client_socket, data):
+    total_sent = 0
+    while total_sent < len(data):
+        sent = client_socket.send(data[total_sent:])
+        if not sent:
+            raise RuntimeError("socket connection broken")
+        total_sent += sent
+
 def handle_upload(client_socket, filename):
     print("STARTED UPLOAD\n")
     file_size = str(os.path.getsize(filename))
-    client_filename = "/"+filename.split('/')[-1]
+    # client_filename = "/"+filename.split('/')[-1]
+    client_filename = "/test_2_steam.jpg"
     send_request(client_socket, SDCF, 0, 0, len(client_filename), client_filename)
     try:
         with open(filename, "rb") as file_obj:
@@ -72,6 +83,9 @@ def handle_upload(client_socket, filename):
 
 def send_request(client_socket, cmd_type, cmd_id, file_id, req_len, req):
     #format: < = small endian (! for network = big endian)
+    if req_len > CHUNK_SIZE:
+        print(f"send {cmd_id} exceeded size limit")
+
     enc_type = "hex"
     if isinstance(req, str):
         req = req.encode('utf-8')
@@ -83,7 +97,8 @@ def send_request(client_socket, cmd_type, cmd_id, file_id, req_len, req):
     else:
         print(f"SENT packet of type {cmd_type} id {cmd_id} fid {file_id} size {len(req)}\nSEND CONTENTS: " + req.hex() + "\n")
 
-    client_socket.sendall(packet)
+    send_all(client_socket, packet)
+    # client_socket.sendall(packet)
 
 def execute_command(cmd_dict, command_id, request_contents):
     if not any(button["button_id"] == request_contents for button in cmd_dict["buttons"]):
@@ -108,7 +123,8 @@ def handle_request(request, client_socket):
     req_len = int(header[3])
 
     print(f'REQUEST has type {command_type}, id {command_id}, fid {file_id}, len {req_len}')
-    req_contents = client_socket.recv(req_len)
+    # req_contents = client_socket.recv(req_len)
+    req_contents = read_all(client_socket, req_len)
     readable_req_contents = req_contents.decode("utf-8")
     print(f'REQUEST_CONTENTS: {readable_req_contents}\n')
 
@@ -116,12 +132,12 @@ def handle_request(request, client_socket):
     execute_command(CMD_DICT, command_id, command_type)
 
 
-
 def handle_new_connection(client_socket, client_addr):
     print(f'Created new thread for client {client_addr}')
     while True:
-        req = client_socket.recv(HEADER_SIZE)
-
+        # req = client_socket.recv(HEADER_SIZE)
+        req = read_all(client_socket, HEADER_SIZE)
+        #try catch here?
         if not req:
             client_socket.close()
             print("Client has requested disconnect")

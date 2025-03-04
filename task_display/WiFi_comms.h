@@ -42,19 +42,34 @@ void send_request(int cmd_type, int cmd_id, int file_id, int req_len, char* req)
   int packet_size = sizeof(data.command_type) + sizeof(data.command_id) 
   + sizeof(data.file_id) + sizeof(data.length) + req_len;
 
-  while(client.write((uint8_t*)&data, packet_size) != packet_size){
-    Serial.printf("Send %d failed. Retrying\n", cmd_id);
+  // int bytes_sent = client.write((uint8_t*)&data, packet_size) != packet_size
+  // Serial.printf("Sent % of %d bytes for %d request.\n", bytes_sent, packet_size, cmd_id);
+
+  int bytes_sent = 0;
+
+  while (bytes_sent < packet_size) {
+    int sent = client.write(((uint8_t*)&data) + bytes_sent, packet_size - bytes_sent);
+    if (sent > 0) {
+      bytes_sent += sent;  // move forward in the buffer
+    } else {
+      Serial.printf("Send %d failed at byte %d. Retrying...\n", cmd_id, bytes_sent);
+      delay(10); 
+    }
   }
+
   Serial.printf("Send %d %d %d %d successful\n\n", cmd_type, cmd_id, file_id, req_len);
 }
 
 //create/open the file where we have to write the data
 File get_file_obj(const char* filename){
+  //way to check this?
+
   // if(!SD.begin(SD_CS)){
   //   Serial.println("Failed to open SD card");
   //   return File();
   // }
-  //needs a / at the start
+
+  //filename must start with '/'
   Serial.printf("Attempting to open or create %s\n", filename);
   if(SD.exists(filename)){
     Serial.println("File already exists");

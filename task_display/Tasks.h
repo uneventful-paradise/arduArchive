@@ -108,11 +108,11 @@ void handle_requests_task(void* params){  //check for commands and responses fro
   //do we need to wait for connec,tion with mutexes?
 
   int read_threshold = 4 * sizeof(int);
-  while(1){
-    //only read when the entire header has been sent
-    if (client.connected() && client.available() >= read_threshold) {
+  while(1){ 
+    if(client.connected() && client.available() >= read_threshold){   
       int cmd_type, cmd_id, file_id, req_len;
-      //read and parse the header data. we use ntohl because the data is sent in big-endian (networking standard) while the esp device operates in little-endian. ntohl converts integers to host byte order
+      //read and parse the header data. readbytes blocks until the specified number of bytes is available to read from the socket
+      //we use ntohl because the data is sent in big-endian (networking standard) while the esp device operates in little-endian. ntohl converts integers to host byte order
       client.readBytes((char*)&cmd_type, sizeof(int));
       client.readBytes((char*)&cmd_id, sizeof(int));
       client.readBytes((char*)&file_id, sizeof(int));
@@ -124,14 +124,14 @@ void handle_requests_task(void* params){  //check for commands and responses fro
 
       Serial.printf("RECEIVED type %d id %d fid %d size %d\n", cmd_type, cmd_id, file_id, req_len);
 
-      //set a timeout limit for reading a packet's contents. ?needs to be consumed later??
-      unsigned long long int start = millis();
-      while(client.available() < req_len){
-        if(millis() - start > 5000){
-          Serial.println("Time limit exceeded for packet await");
-          return;
-        }
-      }
+      //set a timeout limit for reading a packet's contents. readBytes has a builting timer (defaulting to 1000ms) can be changed using client.setTimeout()
+      // unsigned long long int start = millis();
+      // while(client.available() < req_len){
+      //   if(millis() - start > 5000){
+      //     Serial.println("Time limit exceeded for packet await");
+      //     return;
+      //   }
+      // }
       //only read the data if it follows the protocol defined maximum length
       if(req_len > CHUNK_SIZE){
         Serial.println("Chunk size exceeded for received data. Skipping request");
