@@ -4,7 +4,7 @@
 #include "Display.h"
 #include "WiFi_comms.h"
 
-struct TouchEvent{
+struct Touch_event{
   int x;
   int y;
   int buttonId;
@@ -22,7 +22,7 @@ void touch_check_task(void* params){
           Serial.printf("Pos is :%d,%d\n", pos[0], pos[1]);
           Serial.printf("Value is :%d\n", button_value);
 
-          TouchEvent event = {pos[0], pos[1], button_value};                    //creating event and sending it to queue to trigger the toiuch_handle task
+          Touch_event event = {pos[0], pos[1], button_value};                    //creating event and sending it to queue to trigger the toiuch_handle task
           xQueueSend(selection_queue, &event, portMAX_DELAY);
           xQueueSend(macro_queue, &event, portMAX_DELAY);
         }
@@ -33,7 +33,7 @@ void touch_check_task(void* params){
 }
 
 void handle_command(void* params){
-  TouchEvent event;
+  Touch_event event;
   while(true){
     if(xQueueReceive(selection_queue, &event, portMAX_DELAY) == pdTRUE){
       Serial.printf("Button with id %d has been selected and path is %s\n", event.buttonId, paths[event.buttonId]);
@@ -41,6 +41,51 @@ void handle_command(void* params){
       // access_path(event.buttonId);
     }
     // vTaskDelay(100/portTick_PERIOD_MS);    //do i need to delay or is this event driven?
+  }
+}
+
+void update_screen_task(void*params){
+  UI_update update;
+  int screenWidth = gfx->width();
+  int screenHeight = gfx->height();
+  int barWidth = (screenWidth * 80) / 100;
+  int barHeight = 10;
+  int barX = (screenWidth - barWidth) / 2;
+  int barY = screenHeight / 2 + 30;  // for example, 30 pixels below the centered text
+
+  gfx->setTextSize(3);
+  gfx->setTextColor(WHITE);
+  int textWidth = strlen(update.message) * 3; // rough approximation
+  int textX = (screenWidth - textWidth) / 2;
+  int textY = screenHeight / 2 - 20;
+  while(true){
+    if(xQueueReceive(ui_updates_queue, &update, portMAX_DELAY) == pdTRUE){
+      if(update.type == 0){ //dealing with download file screen update
+        if(update.status == 0){
+          gfx->fillScreen(BLACK);
+
+          gfx->setCursor(textX, textY);
+          gfx->println(update.message);
+
+          gfx->drawRect(barX, barY, barWidth, barHeight, WHITE);
+          delay(100);
+        }else if(update.status == 2){
+          gfx->setCursor(textX, textY + 100);
+          gfx->println(update.message);
+          delay(500);
+          gfx->fillScreen(BLACK);
+          draw_main_screen();
+        }
+        else if(update.status == 1){
+          // gfx->fillRect(barX, barY, barWidth, barHeight, BLACK);
+          // Calculate filled width based on update.arg (percentage 0 to 100)
+          int filledWidth = (barWidth * update.arg) / 100;
+          gfx->fillRect(barX, barY, filledWidth, barHeight, WHITE);
+          delay(100);
+        }
+      }
+    }
+    vTaskDelay(10 / portTICK_PERIOD_MS);
   }
 }
 
@@ -74,7 +119,7 @@ void establish_connection_task(void*params){
 }
 
 void send_request_task(void* params){
-  TouchEvent event;
+  Touch_event event;
   
   int cmd_id = 0;
   char* messages[3]={

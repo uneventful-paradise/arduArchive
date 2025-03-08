@@ -11,6 +11,7 @@ Sprite* sprites[SPRITE_COUNT];
 char* icons[SPRITE_COUNT] = {NOTEPAD_85, CHROME_85, YOUTUBE_85, SPOTIFY_85, ADOBE_85, PYCHARM_85, VSCODE_85, STEAM_85, GIT_85, NOTEPAD_85};
 char* paths[SPRITE_COUNT];
 
+int icon_x = 0, icon_y = 0;
 
 Arduino_ESP32RGBPanel *bus = new Arduino_ESP32RGBPanel(
     GFX_NOT_DEFINED /* CS */, GFX_NOT_DEFINED /* SCK */, GFX_NOT_DEFINED /* SDA */,
@@ -28,6 +29,18 @@ Arduino_RPi_DPI_RGBPanel *gfx = new Arduino_RPi_DPI_RGBPanel(
     1 /* pclk_active_neg */, 16000000 /* prefer_speed */, true /* auto_flush */);
 
 TAMC_GT911 ts = TAMC_GT911(TOUCH_SDA, TOUCH_SCL, TOUCH_INT, TOUCH_RST, TOUCH_WIDTH, TOUCH_HEIGHT);
+
+
+static int jpegDrawCallback(JPEGDRAW *pDraw)
+{
+  // Serial.printf("Draw pos = %d,%d. size = %d x %d\n", pDraw->x, pDraw->y, pDraw->iWidth, pDraw->iHeight);
+  gfx->draw16bitBeRGBBitmap(pDraw->x, pDraw->y, pDraw->pPixels, pDraw->iWidth, pDraw->iHeight);
+  return 1;
+}
+
+void drawLog(const char* filename, int x, int y){
+  Serial.printf("Drawing image %s at x = %d, y = %d\n", filename, x, y);
+}
 
 void touch_init(void)
 {
@@ -61,6 +74,28 @@ int get_pos()
       pos[0] = -1;
       pos[1] = -1;
       return 0;
+    }
+}
+
+void draw_main_screen(){
+  gfx->setCursor(0,0);
+  icon_x = 0;
+  icon_y = 0;
+  for(int i = 0; i < SPRITE_COUNT; ++i){ //define loadIcon()
+      if(icon_x + 85 > gfx->width()){
+        icon_y += 100;
+        icon_x = 0;
+      }
+      // Serial.println("printing paths");
+      sprites[i] = new Sprite();
+      sprites[i]->set(icon_x, icon_y, BUTTON_WIDTH, BUTTON_HEIGHT, "", i, 0);
+      sprites[i]->setFilename(icons[i]);
+      sprites[i]->setPath(paths[i]);
+      // Serial.println(paths[i]);
+      sprites[i]->setGFX(gfx);
+      sprites[i]->draw(jpegDrawCallback);
+      icon_x += 100;
+
     }
 }
 

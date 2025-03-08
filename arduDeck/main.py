@@ -1,10 +1,8 @@
 #multithreaded server : https://stackoverflow.com/questions/10810249/python-socket-multiple-clients
-#TODO:acknowledgements after each message? also maybe msg ids should be 3chars strings
+#TODO:acknowledgements after each message? also maybe msg ids should be 3chars strings (CLI_numb)
 #TODO: retest/build connection checking loop
 #TODO: is popen communicate blocking or is it fine
 
-#TODO: add error handling to new functions via try catch blocks
-#TODO: add file percentage transfer
 #TODO: CLIENT add mutex and eliminate busy waiting in handle_request
 
 #TODO: add docs
@@ -32,11 +30,12 @@ threads = []
 HOST = "0.0.0.0"
 PORT = 65431
 
-FILENAME = "media/test_steam_img.jpg"
-CHUNK_SIZE = 1024
+FILENAME = "media/wanda.jpg"
+CHUNK_SIZE = 2048
 HEADER_SIZE = 16
 ACK_SIZE = 4
 
+cnt_id = 0
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind((HOST, PORT))
@@ -78,22 +77,24 @@ def write_all(client_socket, data):
         print(e)
 
 def handle_upload(client_socket, filename):
+    global cnt_id
     print("STARTED UPLOAD\n")
     file_size = os.path.getsize(filename)
     # client_filename = "/"+filename.split('/')[-1]
-    client_filename = "/test_2_steam.jpg"
-    send_request(client_socket, SDCF, 0, file_size, len(client_filename), client_filename)
+    client_filename = "/wanda.jpg"
+    send_request(client_socket, SDCF, cnt_id, file_size, len(client_filename), client_filename)
     try:
         file_obj = open(filename, 'rb')
         while True:
             data = file_obj.read(CHUNK_SIZE)
             if not data:
                 data = "EOF"
-                send_request(client_socket, EDCF, 0, 0, len(data), data)
+                send_request(client_socket, EDCF, cnt_id, 0, len(data), data)
                 break
             else:
-                send_request(client_socket, FTCF, 0, 0, len(data), data)
+                send_request(client_socket, FTCF, cnt_id, 0, len(data), data)
                 #resend packet if lost??
+            cnt_id+=1
     except IOError as e:
         print("Could not open or read file.\n" + e.strerror)
 

@@ -4,7 +4,6 @@ static TaskHandle_t touch_task_handle = NULL;
 
 USBHIDKeyboard Keyboard;
 
-int icon_x = 0, icon_y = 0;
 
 void init_paths(char* filename){
   if(!SD.exists(filename)){
@@ -38,17 +37,6 @@ void access_path(int icon_index){
   Keyboard.press(KEY_RETURN);
   delay(100);
   Keyboard.releaseAll();
-}
-
-static int jpegDrawCallback(JPEGDRAW *pDraw)
-{
-  // Serial.printf("Draw pos = %d,%d. size = %d x %d\n", pDraw->x, pDraw->y, pDraw->iWidth, pDraw->iHeight);
-  gfx->draw16bitBeRGBBitmap(pDraw->x, pDraw->y, pDraw->pPixels, pDraw->iWidth, pDraw->iHeight);
-  return 1;
-}
-
-void drawLog(const char* filename, int x, int y){
-  Serial.printf("Drawing image %s at x = %d, y = %d\n", filename, x, y);
 }
 
 
@@ -99,35 +87,25 @@ void setup() {
     Serial.print("Free Heap before loading image: ");
     Serial.println(ESP.getFreeHeap());
 
-
-    for(int i = 0; i < SPRITE_COUNT; ++i){ //define loadIcon()
-      if(icon_x + 85 > gfx->width()){
-        icon_y += 100;
-        icon_x = 0;
-      }
-      // Serial.println("printing paths");
-      sprites[i] = new Sprite();
-      sprites[i]->set(icon_x, icon_y, BUTTON_WIDTH, BUTTON_HEIGHT, "", i, 0);
-      sprites[i]->setFilename(icons[i]);
-      sprites[i]->setPath(paths[i]);
-      // Serial.println(paths[i]);
-      sprites[i]->setGFX(gfx);
-      sprites[i]->draw(jpegDrawCallback);
-      icon_x += 100;
-
-    }
-
+    draw_main_screen();
+    
     init_paths("/configs/path_config_2.txt");
     //https://www.esp32.com/viewtopic.php?t=2663
     //https://www.freertos.org/Documentation/02-Kernel/04-API-references/01-Task-creation/01-xTaskCreate
 
     //creating task queue. the queue takes event size as parameter so it can manage the memory blocks allocated for each instance of the event
-    selection_queue = xQueueCreate(10, sizeof(TouchEvent));
-    macro_queue = xQueueCreate(10, sizeof(TouchEvent));
+    selection_queue = xQueueCreate(10, sizeof(Touch_event));
+    macro_queue = xQueueCreate(10, sizeof(Touch_event));
+    ui_updates_queue = xQueueCreate(10, sizeof(UI_update));
+    
     if(selection_queue == NULL){
       Serial.println("Failed to create selection_queue");
     }
     if(macro_queue == NULL){
+      Serial.println("Failed to create macro_queue");
+    }
+  
+    if(ui_updates_queue == NULL){
       Serial.println("Failed to create macro_queue");
     }
   
@@ -142,6 +120,16 @@ void setup() {
     );
 
     xTaskCreatePinnedToCore(
+      update_screen_task,
+      "update_screen_task",
+      4096,
+      NULL,
+      1,
+      NULL,
+      1
+    );
+
+    xTaskCreatePinnedToCore(
       handle_command,
       "handle_command",
       4096,
@@ -150,6 +138,7 @@ void setup() {
       NULL,
       1
     );
+
     xTaskCreatePinnedToCore(
       establish_connection_task,
       "establish_connection_task",
@@ -169,6 +158,7 @@ void setup() {
       NULL,
       1
     );
+
     xTaskCreatePinnedToCore(
       handle_requests_task,
       "handle_requests_task",

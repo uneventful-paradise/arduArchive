@@ -10,12 +10,13 @@
 // #include "Tasks.h"
 #include "Sprite.h"
 
-#define WIFI_SSID        "DIGI-yWsT"
-#define WIFI_PWD         "74F8ghZw"
-#define SERVER_IP   "192.168.100.63"
-#define PORT        65431
-#define CHUNK_SIZE  1024
-#define HEADER_SIZE 16
+#define WIFI_SSID           "DIGI-yWsT"
+#define WIFI_PWD            "74F8ghZw"
+#define SERVER_IP           "192.168.100.63"
+#define PORT                65431
+#define CHUNK_SIZE          2048
+#define HEADER_SIZE         16
+#define UPDATE_BUFFER_SIZE  256
 
 #define TOUCH_SDA     17
 #define TOUCH_SCL     18
