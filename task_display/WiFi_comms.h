@@ -7,7 +7,7 @@
 struct PackageData{
   int command_type;
   int command_id;
-  int file_id;
+  int opt_arg;
   int length;
   char contents[CHUNK_SIZE];
 }data;
@@ -18,6 +18,7 @@ WiFiClient client;
 File file_obj = File();
 int final_file_size = 0;
 int current_file_size = 0;
+float download_percentage = 0;
 
 void printWifiStatus() {
   Serial.print("\nSSID: ");
@@ -31,16 +32,16 @@ void printWifiStatus() {
   Serial.println(" dBm");
 }
 
-void send_request(int cmd_type, int cmd_id, int file_id, int req_len, char* req){
+void send_request(int cmd_type, int cmd_id, int opt_arg, int req_len, char* req){
   PackageData data;
   data.command_type = htonl(cmd_type);
   data.command_id = htonl(cmd_id);
-  data.file_id = htonl(file_id);
+  data.opt_arg = htonl(opt_arg);
   data.length = htonl(req_len);
   memcpy(data.contents, req, req_len);
 
   int packet_size = sizeof(data.command_type) + sizeof(data.command_id) 
-  + sizeof(data.file_id) + sizeof(data.length) + req_len;
+  + sizeof(data.opt_arg) + sizeof(data.length) + req_len;
 
   // int bytes_sent = client.write((uint8_t*)&data, packet_size) != packet_size
   // Serial.printf("Sent % of %d bytes for %d request.\n", bytes_sent, packet_size, cmd_id);
@@ -57,7 +58,7 @@ void send_request(int cmd_type, int cmd_id, int file_id, int req_len, char* req)
     }
   }
 
-  Serial.printf("Send %d %d %d %d successful\n\n", cmd_type, cmd_id, file_id, req_len);
+  Serial.printf("Send %d %d %d %d successful\n\n", cmd_type, cmd_id, opt_arg, req_len);
 }
 
 //create/open the file where we have to write the data
@@ -87,8 +88,9 @@ void handle_download(PackageData pd){
   //file_obj will be true only while a transfer is active and right when it is initiated
   if(pd.command_type == 1){       //initiate download. initiation package contains the path to which the content ought to be written
     file_obj = get_file_obj(pd.contents);
-    Serial.println("INITIATED DOWNLOAD");
-    // current_file_size = 0;
+    current_file_size = 0;
+    final_file_size = pd.opt_arg;
+    Serial.printf("INITIATED DOWNLOAD. Final size will be %d\n", final_file_size);
   }
   else if(pd.command_type == 3){  //end of download
     //checking for eof_packet
@@ -96,16 +98,17 @@ void handle_download(PackageData pd){
     file_obj.flush();
     file_obj.close();
     file_obj = File();            //resetting file obj to evaluate to false once the download is complete
-    // final_file_size = 0;
-    // current_file_size = 0;
+    final_file_size = 0;
+    current_file_size = 0;
     Serial.println("DOWNLOAD STOPPED");
     return;
   }else if(pd.command_type == 2){
      if (file_obj) {
       file_obj.write((uint8_t*)pd.contents, pd.length);
       file_obj.flush();
-      // current_file_size += pd.length;
-      // Serial.printf("Current progress %d", int(current_file_size/final_file_size * 100));
+      current_file_size += pd.length;
+      download_percentage =  round(((float)current_file_size/(float)final_file_size) * 100);
+      Serial.printf("Current progress %f\n", download_percentage);
     }
   }
 }

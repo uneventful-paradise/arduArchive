@@ -110,19 +110,19 @@ void handle_requests_task(void* params){  //check for commands and responses fro
   int read_threshold = 4 * sizeof(int);
   while(1){ 
     if(client.connected() && client.available() >= read_threshold){   
-      int cmd_type, cmd_id, file_id, req_len;
+      int cmd_type, cmd_id, opt_arg, req_len;
       //read and parse the header data. readbytes blocks until the specified number of bytes is available to read from the socket
       //we use ntohl because the data is sent in big-endian (networking standard) while the esp device operates in little-endian. ntohl converts integers to host byte order
       client.readBytes((char*)&cmd_type, sizeof(int));
       client.readBytes((char*)&cmd_id, sizeof(int));
-      client.readBytes((char*)&file_id, sizeof(int));
+      client.readBytes((char*)&opt_arg, sizeof(int));
       client.readBytes((char*)&req_len, sizeof(int));
       cmd_type  = ntohl(cmd_type);
       cmd_id    = ntohl(cmd_id);
-      file_id   = ntohl(file_id);
+      opt_arg   = ntohl(opt_arg);
       req_len   = ntohl(req_len);
 
-      Serial.printf("RECEIVED type %d id %d fid %d size %d\n", cmd_type, cmd_id, file_id, req_len);
+      Serial.printf("RECEIVED type %d id %d opt_arg %d size %d\n", cmd_type, cmd_id, opt_arg, req_len);
 
       //set a timeout limit for reading a packet's contents. readBytes has a builting timer (defaulting to 1000ms) can be changed using client.setTimeout()
       // unsigned long long int start = millis();
@@ -149,7 +149,7 @@ void handle_requests_task(void* params){  //check for commands and responses fro
       PackageData data;
       data.command_type = cmd_type;
       data.command_id = cmd_id;
-      data.file_id = file_id;
+      data.opt_arg = opt_arg;
       data.length = req_len;
       
       memset(data.contents, 0, sizeof(data.contents));

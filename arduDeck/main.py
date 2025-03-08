@@ -6,6 +6,8 @@
 #TODO: add error handling to new functions via try catch blocks
 #TODO: add file percentage transfer
 #TODO: CLIENT add mutex and eliminate busy waiting in handle_request
+
+#TODO: add docs
 import socket
 import struct
 import threading
@@ -40,70 +42,85 @@ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind((HOST, PORT))
 s.listen(5)
 
+#TCP might not send an entire message at once.
+#the function makes sure to send the entire chunk of information
+#by looping until there is nothing left to send
 def read_all(client_socket, req_len):
+    if req_len > CHUNK_SIZE:
+        raise ValueError("Payload length exceeds chunk size")
+    #TODO: use byte arrays instead of lists for speed
     chunks = []
     bytes_received = 0
-    while bytes_received < req_len:
-        chunk = client_socket.recv(min(CHUNK_SIZE, req_len - bytes_received))
-        if not chunk:
-            raise RuntimeError("socket connection broken")
-        chunks.append(chunk)
-        bytes_received += len(chunk)
+    try:
+        while bytes_received < req_len:
+            chunk = client_socket.recv(min(CHUNK_SIZE, req_len - bytes_received))
+            if not chunk:
+                print("socket connection broken")
+                break
+            chunks.append(chunk)
+            bytes_received += len(chunk)
+    except socket.error as e:
+        print(e)
+
     return b''.join(chunks)
 
-def send_all(client_socket, data):
-    total_sent = 0
-    while total_sent < len(data):
-        sent = client_socket.send(data[total_sent:])
-        if not sent:
-            raise RuntimeError("socket connection broken")
-        total_sent += sent
+#Similar to read_all. Loop until all data has been sent
+def write_all(client_socket, data):
+    try:
+        total_sent = 0
+        while total_sent < len(data):
+            sent = client_socket.send(data[total_sent:])
+            if not sent:
+                print("socket connection broken")
+                break
+            total_sent += sent
+    except socket.error as e:
+        print(e)
 
 def handle_upload(client_socket, filename):
     print("STARTED UPLOAD\n")
-    file_size = str(os.path.getsize(filename))
+    file_size = os.path.getsize(filename)
     # client_filename = "/"+filename.split('/')[-1]
     client_filename = "/test_2_steam.jpg"
-    send_request(client_socket, SDCF, 0, 0, len(client_filename), client_filename)
+    send_request(client_socket, SDCF, 0, file_size, len(client_filename), client_filename)
     try:
-        with open(filename, "rb") as file_obj:
-            while True:
-                data = file_obj.read(CHUNK_SIZE)
-                if not data:
-                    data = "EOF"
-                    send_request(client_socket, EDCF, 0, 0, len(data), data)
-                    break
-                else:
-                    send_request(client_socket, FTCF, 0, 0, len(data), data)
-                    #resend packet if lost??
-
+        file_obj = open(filename, 'rb')
+        while True:
+            data = file_obj.read(CHUNK_SIZE)
+            if not data:
+                data = "EOF"
+                send_request(client_socket, EDCF, 0, 0, len(data), data)
+                break
+            else:
+                send_request(client_socket, FTCF, 0, 0, len(data), data)
+                #resend packet if lost??
     except IOError as e:
         print("Could not open or read file.\n" + e.strerror)
 
 
-def send_request(client_socket, cmd_type, cmd_id, file_id, req_len, req):
+def send_request(client_socket, cmd_type, cmd_id, opt_arg, req_len, req):
     #format: < = small endian (! for network = big endian)
     if req_len > CHUNK_SIZE:
         print(f"send {cmd_id} exceeded size limit")
+        raise ValueError("Payload length exceeds chunk size")
 
     enc_type = "hex"
     if isinstance(req, str):
         req = req.encode('utf-8')
         enc_type = "str"
-    packet = struct.pack("!iiii", cmd_type, cmd_id, file_id, req_len) + req
+    packet = struct.pack("!iiii", cmd_type, cmd_id, opt_arg, req_len) + req
 
     if enc_type == "str":
-        print(f"SENT packet of type {cmd_type} id {cmd_id} fid {file_id} size {len(req)}\nSEND CONTENTS: " + req.decode() + "\n")
+        print(f"SENT packet of type {cmd_type} id {cmd_id} opt_arg {opt_arg} size {len(req)}\nSEND CONTENTS: " + req.decode() + "\n")
     else:
-        print(f"SENT packet of type {cmd_type} id {cmd_id} fid {file_id} size {len(req)}\nSEND CONTENTS: " + req.hex() + "\n")
+        print(f"SENT packet of type {cmd_type} id {cmd_id} opt_arg {opt_arg} size {len(req)}\nSEND CONTENTS: " + req.hex() + "\n")
 
-    send_all(client_socket, packet)
+    write_all(client_socket, packet)
     # client_socket.sendall(packet)
 
 def execute_command(cmd_dict, command_id, request_contents):
     if not any(button["button_id"] == request_contents for button in cmd_dict["buttons"]):
-        print("Invalid command")
-        return
+        raise ValueError("Invalid command id")
 
     actions = []
     for button in cmd_dict["buttons"]:
@@ -119,18 +136,22 @@ def handle_request(request, client_socket):
     header = struct.unpack("!iiii", request)
     command_type = int(header[0])
     command_id = int(header[1])
-    file_id = int(header[2])
+    opt_arg = int(header[2])
     req_len = int(header[3])
 
-    print(f'REQUEST has type {command_type}, id {command_id}, fid {file_id}, len {req_len}')
-    # req_contents = client_socket.recv(req_len)
-    req_contents = read_all(client_socket, req_len)
-    readable_req_contents = req_contents.decode("utf-8")
-    print(f'REQUEST_CONTENTS: {readable_req_contents}\n')
-
     #executing command associated to the button id
-    execute_command(CMD_DICT, command_id, command_type)
+    try:
+        print(f'REQUEST has type {command_type}, id {command_id}, opt_arg {opt_arg}, len {req_len}')
+        # req_contents = client_socket.recv(req_len)
 
+        req_contents = read_all(client_socket, req_len)
+        readable_req_contents = req_contents.decode("utf-8")
+
+        print(f'REQUEST_CONTENTS: {readable_req_contents}\n')
+
+        execute_command(CMD_DICT, command_id, command_type)
+    except ValueError as e:
+        print(e)
 
 def handle_new_connection(client_socket, client_addr):
     print(f'Created new thread for client {client_addr}')
@@ -153,12 +174,12 @@ def handle_server_send(client_socket, client_addr):
     while True:
         user_input = input(">")
 
-        if index < 1 and user_input == "upload":
+        if user_input == "u":
             handle_upload(client_socket, FILENAME)
             index += 1
-        if user_input == "fetch":
+        if user_input == "f":
             print("Fetching data")
-        if user_input == "message":
+        if user_input == "m":
             msg_index = random.randint(0, len(responses) - 1)
             send_request(client_socket, MCCF, msg_index, 0, len(responses[msg_index]), responses[msg_index])
 
