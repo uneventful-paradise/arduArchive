@@ -4,7 +4,6 @@ static TaskHandle_t touch_task_handle = NULL;
 
 USBHIDKeyboard Keyboard;
 
-
 void init_paths(char* filename){
   if(!SD.exists(filename)){
     Serial.println("File does not exist");
@@ -97,6 +96,7 @@ void setup() {
     selection_queue = xQueueCreate(10, sizeof(Touch_event));
     macro_queue = xQueueCreate(10, sizeof(Touch_event));
     ui_updates_queue = xQueueCreate(10, sizeof(UI_update));
+    wifi_request_queue = xQueueCreate(20, sizeof(PackageData));
     
     if(selection_queue == NULL){
       Serial.println("Failed to create selection_queue");

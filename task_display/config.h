@@ -18,6 +18,13 @@
 #define HEADER_SIZE         16
 #define UPDATE_BUFFER_SIZE  256
 
+#define MCCF  0     //MACRO COMMAND FLAG
+#define SDCF  1     //START DOWNLOAD COMMAND FLAG
+#define FTCF  2     //FILE TRANSFER COMMAND FLAG
+#define EDCF  3     //END OF DOWNLOAD COMMAND FLAG
+#define INTF  4     //INITIALIZATION FLAG (start of routine)
+#define CFCF  5     //CONFIRMATION COMMAND FLAG
+
 #define TOUCH_SDA     17
 #define TOUCH_SCL     18
 #define TOUCH_INT     -1

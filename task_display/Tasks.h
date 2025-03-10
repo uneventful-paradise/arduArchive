@@ -12,6 +12,7 @@ struct Touch_event{
 
 QueueHandle_t selection_queue;
 QueueHandle_t macro_queue;
+QueueHandle_t wifi_request_queue;
 
 void touch_check_task(void* params){
   while(true){
@@ -120,26 +121,15 @@ void establish_connection_task(void*params){
 
 void send_request_task(void* params){
   Touch_event event;
-  
-  int cmd_id = 0;
-  char* messages[3]={
-    "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum",
-    "mama face mere nihahaha cal cal cal cal cal",
-    "salutari osteni"
-  };
-
+  int client_cmd_id;
   while(1){
     if(client.connected()){
-      // if(cmd_id < 3 && client.connected()){
-      //   char*msg = messages[cmd_id];
-      //   send_request(0, cmd_id, 69, strlen(msg), msg);
-      //   cmd_id++;
-      // }
+
       if(xQueueReceive(macro_queue, &event, portMAX_DELAY) == pdTRUE){
         Serial.printf("SENDING command for %s to server\n", paths[event.buttonId]);
         char* req = paths[event.buttonId];
-        send_request(event.buttonId, cmd_id, 0, strlen(req), req);
-        cmd_id++;
+        send_request(MCCF, client_cmd_id, event.buttonId, strlen(req), req); //send request of press
+        client_cmd_id++;
         // Serial.println("later entry");
         // handle_request();
       }
@@ -170,13 +160,6 @@ void handle_requests_task(void* params){  //check for commands and responses fro
       Serial.printf("RECEIVED type %d id %d opt_arg %d size %d\n", cmd_type, cmd_id, opt_arg, req_len);
 
       //set a timeout limit for reading a packet's contents. readBytes has a builting timer (defaulting to 1000ms) can be changed using client.setTimeout()
-      // unsigned long long int start = millis();
-      // while(client.available() < req_len){
-      //   if(millis() - start > 5000){
-      //     Serial.println("Time limit exceeded for packet await");
-      //     return;
-      //   }
-      // }
       //only read the data if it follows the protocol defined maximum length
       if(req_len > CHUNK_SIZE){
         Serial.println("Chunk size exceeded for received data. Skipping request");
@@ -207,11 +190,22 @@ void handle_requests_task(void* params){  //check for commands and responses fro
 
       if(data.command_type >= 1 && data.command_type <= 3){
         handle_download(data);
+        
+        char ACK[50];
+        if(sprintf(ACK, "%d", data.command_id) < 0){
+        Serial.println("Acknowledgement message creation failed");
+        }
+        send_request(CFCF, cmd_id, 0, strlen(ACK), ACK);
       }
+      //send request to queue to be processed
+      // xQueueSend(wifi_request_queue, &data, portMAX_DELAY);
+      // xQueueSend(receive_queue, (void*)data, portMAX_DELAY);
+
+      //sending acknowledgement that message with id cmd_id has been received and processed;
 
       free(req);
-      // xQueueSend(receive_queue, (void*)data, portMAX_DELAY);
     }
+
     vTaskDelay(200/portTICK_PERIOD_MS); //is this needed?
   }
 }

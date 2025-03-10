@@ -19,6 +19,26 @@
         }
       ]
     },
+
+    {
+      "button_id": 2,
+      "actions": [
+        {
+          "command_id": "HARD_PRESS_KEY",
+          "command_args": ["A"]
+        }
+      ]
+    },
+
+    {
+      "button_id": 3,
+      "actions": [
+        {
+          "command_id": "PRESS_KEY",
+          "command_args": ["B"]
+        }
+      ]
+    },
     
     {
         "button_id": 5,
