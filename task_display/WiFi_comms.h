@@ -4,7 +4,7 @@
 #include <WiFi.h>
 #include "config.h"
 
-struct PackageData{
+struct Package_data{
   int command_type;
   int command_id;
   int opt_arg;
@@ -19,7 +19,7 @@ File file_obj = File();
 int final_file_size = 0;
 int current_file_size = 0;
 float download_percentage = 0;
-
+int client_cmd_id;
 
 struct UI_update{   //what other data should update messages have?
   int type;
@@ -29,6 +29,8 @@ struct UI_update{   //what other data should update messages have?
 };
 
 QueueHandle_t ui_updates_queue;
+
+USBHIDKeyboard Keyboard;
 
 void printWifiStatus() {
   Serial.print("\nSSID: ");
@@ -43,7 +45,7 @@ void printWifiStatus() {
 }
 
 void send_request(int cmd_type, int cmd_id, int opt_arg, int req_len, char* req){
-  PackageData data;
+  Package_data data;
   data.command_type = htonl(cmd_type);
   data.command_id = htonl(cmd_id);
   data.opt_arg = htonl(opt_arg);
@@ -94,7 +96,7 @@ File get_file_obj(const char* filename){
   return file_obj;
 }
 
-void handle_download(PackageData pd){
+void handle_download(Package_data pd){
   //file_obj will be true only while a transfer is active and right when it is initiated
   UI_update update;
 
@@ -167,5 +169,19 @@ void connect_to_server() {
   }
 }
 
+void hard_press(char* sequence){
+  //sequence cointains kdKEY_NAME + ....
+  //first we split the string by '+' using thread safe strtok
+  char* save_ptr = sequence;
+  char* token;
+
+  token = strtok_r(sequence, "+", &save_ptr);
+  Serial.printf("tokens are:\n");
+  while(token){
+
+    // printf("%s\n", token);
+    token = strtok_r(NULL, "+", &save_ptr);
+  }
+}
 
 #endif

@@ -2,8 +2,6 @@
 
 static TaskHandle_t touch_task_handle = NULL;
 
-USBHIDKeyboard Keyboard;
-
 void init_paths(char* filename){
   if(!SD.exists(filename)){
     Serial.println("File does not exist");
@@ -94,19 +92,19 @@ void setup() {
 
     //creating task queue. the queue takes event size as parameter so it can manage the memory blocks allocated for each instance of the event
     selection_queue = xQueueCreate(10, sizeof(Touch_event));
-    macro_queue = xQueueCreate(10, sizeof(Touch_event));
+    send_queue = xQueueCreate(20, sizeof(Package_data));
     ui_updates_queue = xQueueCreate(10, sizeof(UI_update));
-    wifi_request_queue = xQueueCreate(20, sizeof(PackageData));
+    wifi_request_queue = xQueueCreate(20, sizeof(Package_data));
     
     if(selection_queue == NULL){
       Serial.println("Failed to create selection_queue");
     }
-    if(macro_queue == NULL){
-      Serial.println("Failed to create macro_queue");
+    if(send_queue == NULL){
+      Serial.println("Failed to create send_queue");
     }
   
     if(ui_updates_queue == NULL){
-      Serial.println("Failed to create macro_queue");
+      Serial.println("Failed to create ui_updates_queue");
     }
   
     xTaskCreatePinnedToCore(
@@ -160,14 +158,25 @@ void setup() {
     );
 
     xTaskCreatePinnedToCore(
-      handle_requests_task,
-      "handle_requests_task",
+      receive_request_task,
+      "receive_request_task",
+      4096,
+      NULL,
+      1,
+      NULL,
+      1
+    );
+
+    xTaskCreatePinnedToCore(
+      wifi_request_handling_task,
+      "wifi_request_handling_task",
       8192,
       NULL,
       1,
       NULL,
       1
     );
+    
   }
 }
 
