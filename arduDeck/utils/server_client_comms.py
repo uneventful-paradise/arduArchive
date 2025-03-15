@@ -1,6 +1,5 @@
 import os
 import queue
-import json
 import random
 
 from utils.execute_funcs import *
@@ -12,7 +11,7 @@ with open(CONFIG_FILE, "r") as f:
 MAX_CLIENTS = 5
 threads = []
 HOST = "0.0.0.0"
-PORT = 65431
+PORT = 65432
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind((HOST, PORT))
@@ -29,17 +28,18 @@ def check_ack(req_id):
         print("ack successful")
         return True
     else:
-        print(f"ACK process failed!! for packet {server_cmd_id} expected {ack}")
+        print(f"ACK process failed!! for packet {server_cmd_id} expected {req_id} got {ack} instead")
         return False
 
 def handle_upload(client_socket, filename):
-    global server_cmd_id
+
     print("STARTED UPLOAD\n")
     file_size = os.path.getsize(filename)
     # client_filename = "/"+filename.split('/')[-1]
     client_filename = "/wanda_Test_2048.jpg"
+    current_server_cmd_id = server_cmd_id
     send_request(client_socket, SDCF, server_cmd_id, file_size, len(client_filename), client_filename)
-    if not check_ack(server_cmd_id-1):
+    if not check_ack(current_server_cmd_id):
         return
     try:
         file_obj = open(filename, 'rb')
@@ -50,15 +50,16 @@ def handle_upload(client_socket, filename):
                 send_request(client_socket, EDCF, server_cmd_id, 0, len(data), data)
                 break
             else:
+                current_server_cmd_id = server_cmd_id
                 send_request(client_socket, FTCF, server_cmd_id, 0, len(data), data)
                 #resend packet if lost??
-                if not check_ack(server_cmd_id-1):
+                if not check_ack(current_server_cmd_id):
                     break
     except IOError as e:
         print("Could not open or read file.\n" + e.strerror)
 
 def execute_command(client_socket, cmd_dict, command_id, request_contents):
-    print(ACT_DICT.keys())
+    # print(ACT_DICT.keys())
     if not any(button["button_id"] == request_contents for button in cmd_dict["buttons"]):
         raise ValueError("Invalid command id")
 
@@ -71,6 +72,7 @@ def execute_command(client_socket, cmd_dict, command_id, request_contents):
     for action in actions:
         print(action["command_id"])
         if action["command_id"] in ACT_DICT.keys():
+            print(action["command_args"])
             ACT_DICT[action["command_id"]](client_socket, command_id, *action["command_args"])
         else:
             print("Invalid command id in dictionary")

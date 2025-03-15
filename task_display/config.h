@@ -13,10 +13,10 @@
 #define WIFI_SSID           "DIGI-yWsT"
 #define WIFI_PWD            "74F8ghZw"
 #define SERVER_IP           "192.168.100.63"
-#define PORT                65431
+#define PORT                65432
 #define CHUNK_SIZE          2048
 #define HEADER_SIZE         16
-#define UPDATE_BUFFER_SIZE  256
+#define BUFFER_SIZE         256
 
 #define MCCF  0     //MACRO COMMAND FLAG
 #define SDCF  1     //START DOWNLOAD COMMAND FLAG
@@ -24,6 +24,7 @@
 #define EDCF  3     //END OF DOWNLOAD COMMAND FLAG
 #define INTF  4     //INITIALIZATION FLAG (start of routine)
 #define CFCF  5     //CONFIRMATION COMMAND FLAG
+#define LGCF  6     //LOG MESSAGE COMMAND FLAG
 
 #define TOUCH_SDA     17
 #define TOUCH_SCL     18

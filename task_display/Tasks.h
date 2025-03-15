@@ -11,7 +11,6 @@ struct Touch_event{
 };
 
 QueueHandle_t selection_queue;
-QueueHandle_t send_queue;
 QueueHandle_t wifi_request_queue;
 
 void touch_check_task(void* params){

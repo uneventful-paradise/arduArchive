@@ -12,6 +12,7 @@ FTCF = 2    #FILE TRANSFER COMMAND FLAG
 EDCF = 3    #END OF DOWNLOAD COMMAND FLAG
 INTF = 4    #INITIALIZATION FLAG (start of routine)
 CFCF = 5    #CONFIRMATION COMMAND FLAG
+LGCF = 6    #LOG MESSAGE COMMAND FLAG
 
 #TCP might not send an entire message at once.
 #the function makes sure to send the entire chunk of information

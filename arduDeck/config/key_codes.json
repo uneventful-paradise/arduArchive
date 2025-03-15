@@ -1,0 +1,13 @@
+{
+  "keys": [
+    {
+      "key_name": "LEFT_CTRL",
+      "key_code": 128
+    },
+
+    {
+      "key_name": "LEFT_GUI",
+      "key_code": 131
+    }
+  ]
+}

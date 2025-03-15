@@ -2,20 +2,9 @@
 #define _WIFI_H
 
 #include <WiFi.h>
-#include "config.h"
-
-struct Package_data{
-  int command_type;
-  int command_id;
-  int opt_arg;
-  int length;
-  char contents[CHUNK_SIZE];
-}data;
-
-//change types to short unsigned etc to better match their purpose
+#include "Utilities.h"
 
 WiFiClient client;
-File file_obj = File();
 int final_file_size = 0;
 int current_file_size = 0;
 float download_percentage = 0;
@@ -25,12 +14,10 @@ struct UI_update{   //what other data should update messages have?
   int type;
   int status;       //0 = start, 1 = in progress, 2 = finished
   float arg;
-  char message[UPDATE_BUFFER_SIZE];
+  char message[BUFFER_SIZE];
 };
 
 QueueHandle_t ui_updates_queue;
-
-USBHIDKeyboard Keyboard;
 
 void printWifiStatus() {
   Serial.print("\nSSID: ");
@@ -71,29 +58,6 @@ void send_request(int cmd_type, int cmd_id, int opt_arg, int req_len, char* req)
   }
 
   Serial.printf("Send %d %d %d %d successful\n\n", cmd_type, cmd_id, opt_arg, req_len);
-}
-
-//create/open the file where we have to write the data
-File get_file_obj(const char* filename){
-  //way to check this?
-
-  // if(!SD.begin(SD_CS)){
-  //   Serial.println("Failed to open SD card");
-  //   return File();
-  // }
-
-  //filename must start with '/'
-  Serial.printf("Attempting to open or create %s\n", filename);
-  if(SD.exists(filename)){
-    Serial.println("File already exists");
-  }
-  file_obj = SD.open(filename, FILE_WRITE);
-  if(!file_obj){
-    Serial.println("Error opening or creating file");
-    return File();
-  }
-  Serial.println("File opened successfully");
-  return file_obj;
 }
 
 void handle_download(Package_data pd){
@@ -150,7 +114,12 @@ void handle_download(Package_data pd){
 
       xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
   
-      file_obj.write((uint8_t*)pd.contents, pd.length);
+      // file_obj.write((uint8_t*)pd.contents, pd.length);
+      size_t written = file_obj.write((uint8_t*)pd.contents, pd.length);
+      if (written != pd.length) {
+          Serial.printf("Error: Expected to write %d bytes but wrote %d bytes\n", pd.length, written);
+          // Handle error (e.g., retry, abort transfer, etc.)
+      }
       file_obj.flush();
       Serial.printf("Current progress %f\n", download_percentage);
     }else{
@@ -166,21 +135,6 @@ void connect_to_server() {
     delay(1000);
   } else {
     Serial.println("Connected to server.");
-  }
-}
-
-void hard_press(char* sequence){
-  //sequence cointains kdKEY_NAME + ....
-  //first we split the string by '+' using thread safe strtok
-  char* save_ptr = sequence;
-  char* token;
-
-  token = strtok_r(sequence, "+", &save_ptr);
-  Serial.printf("tokens are:\n");
-  while(token){
-
-    // printf("%s\n", token);
-    token = strtok_r(NULL, "+", &save_ptr);
   }
 }
 

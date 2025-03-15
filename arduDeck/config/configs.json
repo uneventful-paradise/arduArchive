@@ -25,7 +25,7 @@
       "actions": [
         {
           "command_id": "HARD_KEY_PRESS",
-          "command_args": ["cA+d500+cB+d500+cc"]
+          "command_args": ["dA+w500+dB+w500+uA+uB"]
         }
       ]
     },
@@ -34,12 +34,22 @@
       "button_id": 3,
       "actions": [
         {
-          "command_id": "PRESS_KEY",
-          "command_args": ["B"]
+          "command_id": "HARD_KEY_PRESS",
+          "command_args": ["dLEFT_CTRL+dR+r"]
         }
       ]
     },
-    
+
+    {
+      "button_id": 4,
+      "actions": [
+        {
+          "command_id": "HARD_KEY_PRESS",
+          "command_args": ["pSalut Frate"]
+        }
+      ]
+    },
+
     {
         "button_id": 5,
         "actions": [
