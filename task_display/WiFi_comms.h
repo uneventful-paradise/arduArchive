@@ -8,7 +8,7 @@ WiFiClient client;
 int final_file_size = 0;
 int current_file_size = 0;
 float download_percentage = 0;
-int client_cmd_id;
+int client_cmd_id = 0;
 
 struct UI_update{   //what other data should update messages have?
   int type;
@@ -31,16 +31,17 @@ void printWifiStatus() {
   Serial.println(" dBm");
 }
 
-void send_request(int cmd_type, int cmd_id, int opt_arg, int req_len, char* req){
+void send_request(int cmd_type, int cmd_id, int opt_arg, int req_len, unsigned int crc_value, char* req){
   Package_data data;
   data.command_type = htonl(cmd_type);
   data.command_id = htonl(cmd_id);
   data.opt_arg = htonl(opt_arg);
   data.length = htonl(req_len);
+  data.crc_value = htonl(crc_value);
   memcpy(data.contents, req, req_len);
 
   int packet_size = sizeof(data.command_type) + sizeof(data.command_id) 
-  + sizeof(data.opt_arg) + sizeof(data.length) + req_len;
+  + sizeof(data.opt_arg) + sizeof(data.length) + sizeof(data.crc_value) + req_len;
 
   // int bytes_sent = client.write((uint8_t*)&data, packet_size) != packet_size
   // Serial.printf("Sent % of %d bytes for %d request.\n", bytes_sent, packet_size, cmd_id);
@@ -57,7 +58,8 @@ void send_request(int cmd_type, int cmd_id, int opt_arg, int req_len, char* req)
     }
   }
 
-  Serial.printf("Send %d %d %d %d successful\n\n", cmd_type, cmd_id, opt_arg, req_len);
+  Serial.printf("Send %d %d %d %d %s successful\n\n", cmd_type, cmd_id, opt_arg, req_len, req);
+  client_cmd_id++;
 }
 
 void handle_download(Package_data pd){

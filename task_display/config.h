@@ -13,9 +13,9 @@
 #define WIFI_SSID           "DIGI-yWsT"
 #define WIFI_PWD            "74F8ghZw"
 #define SERVER_IP           "192.168.100.63"
-#define PORT                65432
+#define PORT                65431
 #define CHUNK_SIZE          2048
-#define HEADER_SIZE         16
+#define HEADER_SIZE         20    //int cmd_type | int cmd_id | int opt_arg | int length | unsigned int crc_value
 #define BUFFER_SIZE         256
 
 #define MCCF  0     //MACRO COMMAND FLAG

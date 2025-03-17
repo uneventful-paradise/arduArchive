@@ -2,6 +2,7 @@ import os
 import queue
 import random
 
+import basic_comms
 from utils.execute_funcs import *
 
 CONFIG_FILE = "config/configs.json"
@@ -11,7 +12,7 @@ with open(CONFIG_FILE, "r") as f:
 MAX_CLIENTS = 5
 threads = []
 HOST = "0.0.0.0"
-PORT = 65432
+PORT = 65431
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind((HOST, PORT))
@@ -25,36 +26,42 @@ ack_queue = queue.Queue()
 def check_ack(req_id):
     ack = ack_queue.get()
     if int(ack) == req_id:
-        print("ack successful")
+        print(f"ack successful for req_id {req_id} and server_id {basic_comms.server_cmd_id}\n")
         return True
+    elif int(ack) == -1:
+        print(f"ACK process failed! Requesting resend")
+        return False
     else:
-        print(f"ACK process failed!! for packet {server_cmd_id} expected {req_id} got {ack} instead")
+        print(f"ACK got unexpected value {ack} while expecting {req_id} / {basic_comms.server_cmd_id}")
         return False
 
 def handle_upload(client_socket, filename):
-
     print("STARTED UPLOAD\n")
     file_size = os.path.getsize(filename)
     # client_filename = "/"+filename.split('/')[-1]
-    client_filename = "/wanda_Test_2048.jpg"
-    current_server_cmd_id = server_cmd_id
-    send_request(client_socket, SDCF, server_cmd_id, file_size, len(client_filename), client_filename)
-    if not check_ack(current_server_cmd_id):
-        return
+    client_filename = "/acktest3.jpg"
+
+    req_cmd = basic_comms.server_cmd_id
+    send_request(client_socket, SDCF, req_cmd, file_size, len(client_filename), client_filename)
+    #ack could be on each message so the resending could happen withing the send_request function
+    while not check_ack(req_cmd):
+        send_request(client_socket, SDCF, req_cmd,  file_size, len(client_filename), client_filename)
     try:
         file_obj = open(filename, 'rb')
         while True:
             data = file_obj.read(CHUNK_SIZE)
+            req_cmd = basic_comms.server_cmd_id
             if not data:
                 data = "EOF"
-                send_request(client_socket, EDCF, server_cmd_id, 0, len(data), data)
+                send_request(client_socket, EDCF, req_cmd, 0, len(data), data)
+                while not check_ack(req_cmd):   #retry how many times?
+                    send_request(client_socket, EDCF, req_cmd, 0, len(data), data)
                 break
             else:
-                current_server_cmd_id = server_cmd_id
-                send_request(client_socket, FTCF, server_cmd_id, 0, len(data), data)
-                #resend packet if lost??
-                if not check_ack(current_server_cmd_id):
-                    break
+                send_request(client_socket, FTCF, req_cmd, 0, len(data), data)
+                while not check_ack(req_cmd):
+                    send_request(client_socket, FTCF, req_cmd, 0, len(data), data)
+
     except IOError as e:
         print("Could not open or read file.\n" + e.strerror)
 
@@ -79,21 +86,22 @@ def execute_command(client_socket, cmd_dict, command_id, request_contents):
 
 
 def handle_request(request, client_socket):
-    header = struct.unpack("!iiii", request)
+    header = struct.unpack("!iiiiI", request)
     command_type = int(header[0])
     command_id = int(header[1])
     opt_arg = int(header[2])
     req_len = int(header[3])
+    crc_value = int(header[4])
 
     #executing command associated to the button id
     try:
-        print(f'REQUEST has type {command_type}, id {command_id}, opt_arg {opt_arg}, len {req_len}')
+        print(f'REQUEST has type {command_type}, id {command_id}, opt_arg {opt_arg}, len {req_len}, CRC {hex(crc_value)}')
         # req_contents = client_socket.recv(req_len)
 
         req_contents = read_all(client_socket, req_len)
         readable_req_contents = req_contents.decode("utf-8")
 
-        print(f'REQUEST_CONTENTS: {readable_req_contents}\n')
+        print(f'REQUEST_CONTENTS: {readable_req_contents}')
         if command_type == CFCF:
             ack_queue.put(readable_req_contents)
             # print(f"put {readable_req_contents} in queue")
@@ -116,7 +124,6 @@ def handle_new_connection(client_socket, client_addr):
         handle_request(req, client_socket)
 
 def handle_server_send(client_socket, client_addr):
-    global server_cmd_id
     responses = ["hey dude thanks for letting me know",
                  "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum",
                  "hyaimamanannanan"]
@@ -128,6 +135,10 @@ def handle_server_send(client_socket, client_addr):
         if user_input == "f":
             print("Fetching data")
         if user_input == "m":
-            server_cmd_id += 1
             msg_index = random.randint(0, len(responses) - 1)
-            send_request(client_socket, INTF, server_cmd_id, 0, len(responses[msg_index]), responses[msg_index])
+            print(f'server cmd id = {basic_comms.server_cmd_id}')
+            send_request(client_socket, INTF, basic_comms.server_cmd_id, 0, len(responses[msg_index]), responses[msg_index])
+            # print(hex(binascii.crc32(responses[msg_index].encode()) & 0xffffffff))
+
+
+            #todo fix jeg de crc cu jegul asta de server_index

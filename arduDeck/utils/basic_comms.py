@@ -1,8 +1,9 @@
 import socket
 import struct
+import binascii
 
 CHUNK_SIZE = 2048
-HEADER_SIZE = 16
+HEADER_SIZE = 20
 
 server_cmd_id = 0
 
@@ -60,13 +61,17 @@ def send_request(client_socket, cmd_type, cmd_id, opt_arg, req_len, req):
     if isinstance(req, str):
         req = req.encode('utf-8')
         enc_type = "str"
-    packet = struct.pack("!iiii", cmd_type, cmd_id, opt_arg, req_len) + req
+
+    crc_value = binascii.crc32(req) & 0xffffffff
+    packet = struct.pack("!iiiiI", cmd_type, cmd_id, opt_arg, req_len, crc_value) + req
 
     if enc_type == "str":
-        print(f"SENT packet of type {cmd_type} id {cmd_id} opt_arg {opt_arg} size {len(req)}\nSEND CONTENTS: " + req.decode() + "\n")
+        print(f"SENT packet of type {cmd_type} id {cmd_id} opt_arg {opt_arg} size {len(req)} CRC {hex(crc_value)}\nSEND CONTENTS: " + req.decode() + "\n")
     else:
-        print(f"SENT packet of type {cmd_type} id {cmd_id} opt_arg {opt_arg} size {len(req)}\nSEND CONTENTS: " + req.hex() + "\n")
+        print(f"SENT packet of type {cmd_type} id {cmd_id} opt_arg {opt_arg} size {len(req)} CRC {hex(crc_value)}\nSEND CONTENTS: " + req.hex() + "\n")
 
     write_all(client_socket, packet)
-    server_cmd_id+=1
+    # server_cmd_id+=1
+    server_cmd_id = cmd_id + 1
+    # print(f"incrementing srv_id = {server_cmd_id}")
     # client_socket.sendall(packet)

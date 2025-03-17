@@ -14,8 +14,8 @@ QueueHandle_t selection_queue;
 QueueHandle_t wifi_request_queue;
 
 void touch_check_task(void* params){
-    BaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
-    Serial.printf("touch_check_task stack high water mark: %u\n", watermark);
+    // BaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
+    // Serial.printf("touch_check_task stack high water mark: %u\n", watermark);
 
   while(true){
     if (get_pos() == 1){                                                          //screen has been touched
@@ -27,13 +27,14 @@ void touch_check_task(void* params){
 
           Touch_event event = {pos[0], pos[1], button_value};                     //creating event and sending it to queue to trigger the touch_handle task
           Package_data data;
+
+          Serial.printf("SENDING command for %s to server\n", paths[event.buttonId]);
+          strcpy(data.contents, paths[event.buttonId]);
           data.command_type = MCCF;
           data.command_id = 0;                                                    //cmd_id will be updated by sender task
           data.opt_arg = event.buttonId;
-          
-          Serial.printf("SENDING command for %s to server\n", paths[event.buttonId]);
-          strcpy(data.contents, paths[event.buttonId]);
           data.length = strlen(data.contents);
+          data.crc_value = crc_string(data.contents, data.length);
 
           xQueueSend(selection_queue, &event, portMAX_DELAY);
           xQueueSend(send_queue, &data, portMAX_DELAY);
@@ -57,8 +58,8 @@ void handle_command(void* params){
 }
 
 void update_screen_task(void*params){
-  UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
-  Serial.printf("update_screen_tasl stack high water mark: %u\n", watermark);
+  // UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
+  // Serial.printf("update_screen_tasl stack high water mark: %u\n", watermark);
 
   UI_update update;
   int screenWidth = gfx->width();
@@ -134,17 +135,13 @@ void establish_connection_task(void*params){
 }
 
 void send_request_task(void* params){                                                       //sender task deals with all client sends.
-  UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);                                //no 2 tasks can attempt to send information simultaneously on the client socket
-  Serial.printf("send_request_task stack high water mark: %u\n", watermark);
+  // UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);                                //no 2 tasks can attempt to send information simultaneously on the client socket
+  // Serial.printf("send_request_task stack high water mark: %u\n", watermark);
   Touch_event event;
   while(1){
     if(client.connected()){
-
       if(xQueueReceive(send_queue, &data, portMAX_DELAY) == pdTRUE){
-        
-        send_request(data.command_type, client_cmd_id, data.opt_arg, data.length, data.contents); //send request to server
-        client_cmd_id++;
-
+        send_request(data.command_type, client_cmd_id, data.opt_arg, data.length, data.crc_value, data.contents); //send request to server
       }
     }
     //no need to block since we are waiting for queue entries?
@@ -152,25 +149,34 @@ void send_request_task(void* params){                                           
 }
 
 void receive_request_task(void* params){  //check for commands and responses from server and push them to receiver queue
-  UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
-  Serial.printf("receive_request_task stack high water mark: %u\n", watermark);
+  // UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
+  // Serial.printf("receive_request_task stack high water mark: %u\n", watermark);
 
-  int read_threshold = 4 * sizeof(int);
+  int read_threshold = HEADER_SIZE;
   while(1){ 
     if(client.connected() && client.available() >= read_threshold){   
       int cmd_type, cmd_id, opt_arg, req_len;
+      unsigned int received_crc = 0;
       //read and parse the header data. readbytes blocks until the specified number of bytes is available to read from the socket
       //we use ntohl because the data is sent in big-endian (networking standard) while the esp device operates in little-endian. ntohl converts integers to host byte order
       client.readBytes((char*)&cmd_type, sizeof(int));
       client.readBytes((char*)&cmd_id, sizeof(int));
       client.readBytes((char*)&opt_arg, sizeof(int));
       client.readBytes((char*)&req_len, sizeof(int));
+      client.readBytes((char*)&received_crc, sizeof(int));
       cmd_type  = ntohl(cmd_type);
       cmd_id    = ntohl(cmd_id);
       opt_arg   = ntohl(opt_arg);
       req_len   = ntohl(req_len);
+      received_crc   = ntohl(received_crc);
 
-      Serial.printf("RECEIVED type %d id %d opt_arg %d size %d\n", cmd_type, cmd_id, opt_arg, req_len);
+      Serial.printf("RECEIVED type %d id %d opt_arg %d size %d CRC %04x\n", cmd_type, cmd_id, opt_arg, req_len, received_crc);
+      // if(cmd_type >= 1 && cmd_type <= 3){
+      //   unsigned int received_crc = 0;
+      //   client.readBytes((char*)&received_crc, sizeof(int));
+      //   received_crc = ntohl(received_crc);
+      //   printf("CRC IS %04x\n", received_crc);
+      // }
 
       //set a timeout limit for reading a packet's contents. readBytes has a builting timer (defaulting to 1000ms) can be changed using client.setTimeout()
       //only read the data if it follows the protocol defined maximum length
@@ -192,6 +198,7 @@ void receive_request_task(void* params){  //check for commands and responses fro
       data.command_id = cmd_id;
       data.opt_arg = opt_arg;
       data.length = req_len;
+      data.crc_value = received_crc;
       
       memset(data.contents, 0, sizeof(data.contents));
       memcpy(data.contents, req, req_len);
@@ -199,14 +206,10 @@ void receive_request_task(void* params){  //check for commands and responses fro
       // Serial.printf("Received content %d, length: %d\n", data.cmd_id, data.length);
       Serial.print("RECEIVED: ");
       Serial.println(data.contents);
-      Serial.println("");
+      // Serial.println("");
 
       //send request to queue to be processed
       xQueueSend(wifi_request_queue, &data, portMAX_DELAY);
-      // xQueueSend(receive_queue, (void*)data, portMAX_DELAY);
-
-      //sending acknowledgement that message with id cmd_id has been received and processed;
-
       free(req);
     }
 
@@ -215,17 +218,28 @@ void receive_request_task(void* params){  //check for commands and responses fro
 }
 
 void wifi_request_handling_task(void* params){
-  UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
-  Serial.printf("wifi_request_task high water mark: %u\n", watermark);
+  // UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
+  // Serial.printf("wifi_request_task high water mark: %u\n", watermark);
   Package_data data;
+  char ACK[50];
+  int ack = 0;
   while(1){
     if(xQueueReceive(wifi_request_queue, &data, portMAX_DELAY) == pdTRUE){
+      unsigned int expected_crc = crc_string(data.contents, data.length);
+      Serial.printf("Expected CRC value of request is %04x\n", expected_crc);
+
       if(data.command_type >= 1 && data.command_type <= 3){
-        handle_download(data);
+        if(expected_crc != data.crc_value){
+          Serial.println("CRC32 check failed! Skipping packet processing");
+          ack = -1;
+        }else{
+          ack = data.command_id;
+          Serial.println("CRC32 check successful! processing packet");
+          handle_download(data);
+        }
 
         //creating acknowledgment message and sending it
-        char ACK[50];
-        if(sprintf(ACK, "%d", data.command_id) < 0){
+        if(sprintf(ACK, "%d", ack) < 0){
           Serial.println("Acknowledgement message creation failed");
         }
         // send_request(CFCF, 0, 0, strlen(ACK), ACK); 
@@ -233,6 +247,7 @@ void wifi_request_handling_task(void* params){
         data.command_id = 0;
         data.opt_arg = 0;
         data.length = strlen(ACK);
+        data.crc_value = crc_string(ACK, data.length);
         strcpy(data.contents, ACK);
 
         xQueueSend(send_queue, &data, portMAX_DELAY);
