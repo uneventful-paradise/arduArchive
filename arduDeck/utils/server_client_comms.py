@@ -139,6 +139,3 @@ def handle_server_send(client_socket, client_addr):
             print(f'server cmd id = {basic_comms.server_cmd_id}')
             send_request(client_socket, INTF, basic_comms.server_cmd_id, 0, len(responses[msg_index]), responses[msg_index])
             # print(hex(binascii.crc32(responses[msg_index].encode()) & 0xffffffff))
-
-
-            #todo fix jeg de crc cu jegul asta de server_index
