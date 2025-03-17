@@ -226,7 +226,7 @@ void wifi_request_handling_task(void* params){
   while(1){
     if(xQueueReceive(wifi_request_queue, &data, portMAX_DELAY) == pdTRUE){
       unsigned int expected_crc = crc_string(data.contents, data.length);
-      Serial.printf("Expected CRC value of request is %04x\n", expected_crc);
+      // Serial.printf("Expected CRC value of request is %04x\n", expected_crc);
 
       if(data.command_type >= 1 && data.command_type <= 3){
         if(expected_crc != data.crc_value){
@@ -234,7 +234,7 @@ void wifi_request_handling_task(void* params){
           ack = -1;
         }else{
           ack = data.command_id;
-          Serial.println("CRC32 check successful! processing packet");
+          Serial.printf("CRC32 check %04xn successful! processing packet\n", expected_crc);
           handle_download(data);
         }
 

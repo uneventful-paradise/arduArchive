@@ -79,7 +79,11 @@ void handle_download(Package_data pd){
       Serial.println("Update message creation failed");
     }
 
-    xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
+    if(file_obj){
+      xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
+    }else{
+      Serial.println("Invalid download file");
+    }
   
   }
   else if(pd.command_type == 3){  //end of download
@@ -88,9 +92,9 @@ void handle_download(Package_data pd){
     file_obj.flush();
     file_obj.close();
     file_obj = File();            //resetting file obj to evaluate to false once the download is complete
+    Serial.printf("DOWNLOAD FINISHED. Wrote %d bytes\n", final_file_size);
     final_file_size = 0;
     current_file_size = 0;
-    Serial.println("DOWNLOAD STOPPED");
 
     update.type = 0;
     update.status = 2;

@@ -19,6 +19,7 @@ s.bind((HOST, PORT))
 s.listen(5)
 
 FILENAME = "media/wanda.jpg"
+DEFAULT_CLIENT_DOWNLOAD_FOLDER = "/init_icons"
 ACK_SIZE = 4
 
 ack_queue = queue.Queue()
@@ -35,11 +36,12 @@ def check_ack(req_id):
         print(f"ACK got unexpected value {ack} while expecting {req_id} / {basic_comms.server_cmd_id}")
         return False
 
-def handle_upload(client_socket, filename):
+def handle_upload(client_socket, filename, client_location):
     print("STARTED UPLOAD\n")
     file_size = os.path.getsize(filename)
-    # client_filename = "/"+filename.split('/')[-1]
-    client_filename = "/acktest3.jpg"
+    client_filename = client_location + "/" + filename.split('/')[-1]
+    # client_filename = client_filename
+    print(f'writing to {client_filename}')
 
     req_cmd = basic_comms.server_cmd_id
     send_request(client_socket, SDCF, req_cmd, file_size, len(client_filename), client_filename)
@@ -84,6 +86,36 @@ def execute_command(client_socket, cmd_dict, command_id, request_contents):
         else:
             print("Invalid command id in dictionary")
 
+def check_connection(client_socket):
+    try:
+        data = client_socket.recv(16, socket.MSG_DONTWAIT | socket.MSG_PEEK)
+        if len(data) == 0:
+            return False
+    except BlockingIOError as e:
+        print(e)
+        return True    #socket is open and reading from it would block
+    except ConnectionResetError as e:
+        print(e)        #socket was closed
+        return False
+    except Exception as e:
+        print(e)
+        return True
+    return True
+
+def initialize_deck(client_socket):
+    #get all images and send them to esp one by one
+    btn_id = 0
+    try:
+        for button in CMD_DICT["buttons"]:
+            if button["button_id"] != btn_id:
+                raise ValueError("Missing button ids")
+            file_path = button["image_path"]
+            print(file_path)
+            handle_upload(client_socket, file_path, DEFAULT_CLIENT_DOWNLOAD_FOLDER)
+            btn_id += 1
+    except ValueError as e:
+        print(e)
+        return False
 
 def handle_request(request, client_socket):
     header = struct.unpack("!iiiiI", request)
@@ -127,13 +159,15 @@ def handle_server_send(client_socket, client_addr):
     responses = ["hey dude thanks for letting me know",
                  "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum",
                  "hyaimamanannanan"]
+
     while True:
         user_input = input(">")
 
         if user_input == "u":
-            handle_upload(client_socket, FILENAME)
+            handle_upload(client_socket, FILENAME, DEFAULT_CLIENT_DOWNLOAD_FOLDER)
         if user_input == "f":
-            print("Fetching data")
+            initialize_deck(client_socket)
+            # print("Fetching data")
         if user_input == "m":
             msg_index = random.randint(0, len(responses) - 1)
             print(f'server cmd id = {basic_comms.server_cmd_id}')

@@ -26,6 +26,7 @@ struct Package_data{
 
 File file_obj = File();
 
+
 unsigned long crc_update(unsigned long crc, byte data)
 {
     byte tbl_idx;
@@ -45,12 +46,40 @@ unsigned long crc_string(const char *s, size_t length) {
 }
 //create/open the file where we have to write the data
 File get_file_obj(const char* filename){
-  //way to check this?
-
   // if(!SD.begin(SD_CS)){
   //   Serial.println("Failed to open SD card");
   //   return File();
   // }
+  int slash_pos = -1;
+  char* directory = NULL;
+  for(int i = strlen(filename) - 1; i >= 0; --i){
+    if(filename[i] == '/'){
+      slash_pos = i;
+      break;
+    }
+  }
+  //no slash found
+  if(slash_pos == -1 || filename[0] != '/'){
+    Serial.println("Invalid filename");
+    return File();
+  }
+  //create directory if it doesn't exist
+  if(slash_pos > 0){
+    directory = strndup(filename, slash_pos);
+    Serial.printf("Directory is %s\n", directory);
+  }else{
+    Serial.println("Requested directory is root");
+  }
+  if(!SD.exists(directory)){
+    if(!SD.mkdir(directory)){
+      Serial.println("Failed to create directory");
+      return File();
+    }else{
+      Serial.println("Successfully created directory");
+    }
+  }else{
+    Serial.println("Directory already exists");
+  }
 
   //filename must start with '/'
   Serial.printf("Attempting to open or create %s\n", filename);
@@ -63,6 +92,7 @@ File get_file_obj(const char* filename){
     return File();
   }
   Serial.println("File opened successfully");
+  free(directory);
   return file_obj;
 }
 

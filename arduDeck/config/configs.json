@@ -7,7 +7,8 @@
                 "command_id": "START_PROCESS",
                 "command_args": ["C:\\Users\\dante\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"]
             }
-        ]
+        ],
+        "image_path" : "media/icons/1.jpg"
     },
 
     {
@@ -17,7 +18,8 @@
           "command_id": "START_URL",
           "command_args": ["https://www.dw.com/en/top-stories/s-9097"]
         }
-      ]
+      ],
+      "image_path" : "media/icons/2.jpg"
     },
 
     {
@@ -27,7 +29,8 @@
           "command_id": "HARD_KEY_PRESS",
           "command_args": ["dA+w500+dB+w500+uA+uB"]
         }
-      ]
+      ],
+      "image_path": "media/icons/3.jpg"
     },
 
     {
@@ -37,7 +40,8 @@
           "command_id": "HARD_KEY_PRESS",
           "command_args": ["dLEFT_CTRL+dR+r"]
         }
-      ]
+      ],
+      "image_path": "media/icons/4.jpg"
     },
 
     {
@@ -47,7 +51,8 @@
           "command_id": "HARD_KEY_PRESS",
           "command_args": ["pSalut Frate"]
         }
-      ]
+      ],
+      "image_path": "media/icons/8.jpg"
     },
 
     {
@@ -67,7 +72,8 @@
                 "command_id": 5,
                 "command_args": ["<url>", "", ""]
             }
-        ]
+        ],
+        "image_path": "media/icons/9.jpg"
     }
   ]
 }

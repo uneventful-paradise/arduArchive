@@ -179,7 +179,10 @@ void setup() {
     
   }
 }
+//todo: block tasks until connection happens.
+//add exceptions when connection is interrupted
 
+//interrupt upload if something goes wrong?
 void loop() {
 
 }
