@@ -10,9 +10,9 @@ int current_file_size = 0;
 float download_percentage = 0;
 int client_cmd_id = 0;
 
-struct UI_update{   //what other data should update messages have?
-  int type;
-  int status;       //0 = start, 1 = in progress, 2 = finished
+struct UI_update{
+  int type;         //0 = file trasnfer, 1 = connection checkup ...
+  int status;       //0 = start_transfer, 1 = transfer_in_progress, 2 = transfer_finished, 3 = general_update
   float arg;
   char message[BUFFER_SIZE];
 };
@@ -30,9 +30,10 @@ void printWifiStatus() {
   Serial.print(WiFi.RSSI());
   Serial.println(" dBm");
 }
-
+/*Build the Package_Data object given all the field values and send it to the server.*/
 void send_request(int cmd_type, int cmd_id, int opt_arg, int req_len, unsigned int crc_value, char* req){
   Package_data data;
+  //Convert data to big endian (network byte order) before sending (network standard).
   data.command_type = htonl(cmd_type);
   data.command_id = htonl(cmd_id);
   data.opt_arg = htonl(opt_arg);
@@ -40,14 +41,12 @@ void send_request(int cmd_type, int cmd_id, int opt_arg, int req_len, unsigned i
   data.crc_value = htonl(crc_value);
   memcpy(data.contents, req, req_len);
 
+  //Calculate total packet size
   int packet_size = sizeof(data.command_type) + sizeof(data.command_id) 
   + sizeof(data.opt_arg) + sizeof(data.length) + sizeof(data.crc_value) + req_len;
 
-  // int bytes_sent = client.write((uint8_t*)&data, packet_size) != packet_size
-  // Serial.printf("Sent % of %d bytes for %d request.\n", bytes_sent, packet_size, cmd_id);
-
   int bytes_sent = 0;
-
+  //Loop to send all the data in the packet (TCP can fail to send all the bytes in a single send call).
   while (bytes_sent < packet_size) {
     int sent = client.write(((uint8_t*)&data) + bytes_sent, packet_size - bytes_sent);
     if (sent > 0) {
@@ -62,11 +61,28 @@ void send_request(int cmd_type, int cmd_id, int opt_arg, int req_len, unsigned i
   client_cmd_id++;
 }
 
-void handle_download(Package_data pd){
-  //file_obj will be true only while a transfer is active and right when it is initiated
-  UI_update update;
+/*Manage download process. This function uses a global File handle to 
+handle writing received content on the SD card. The `file_obj` is a global
+file handled initialized with null (value of File() default constructor).
 
-  if(pd.command_type == 1){       //initiate download. initiation package contains the path to which the content ought to be written
+Download data packets are handled based on the `command_type` argument:
+command_type = 1 -> start download
+command_type = 2 -> download in progress
+command_type = 3 -> end download
+Upon a "start download" request the file is created and its handle is assigned to `file_obj`.
+This first request contains the total file size (necessary for the progress bar calculation) 
+stored in the `opt_arg` field and the client sided file name as payload. 
+The following FILE_SIZE/CHUNK packets are data transfer packets and will be written to the 
+newly created file.
+Finally, the "end download" request signalizes that EOF has been read on the server side. So 
+the file is closed and the `file_obj` object is reasigned NULL. So, `file_obj` is NULL as
+long as no file transfer is ongoing.
+*/
+void handle_download(Package_data pd){
+  UI_update update;
+  BaseType_t xStatus;
+
+  if(pd.command_type == 1){
     file_obj = get_file_obj(pd.contents);
     current_file_size = 0;
     final_file_size = pd.opt_arg;
@@ -78,20 +94,24 @@ void handle_download(Package_data pd){
     if(sprintf(update.message, "Starting download") < 0){
       Serial.println("Update message creation failed");
     }
-
+    //checking that the file has been created/opened without errors.
     if(file_obj){
-      xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
+      xStatus = xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
+      if(xStatus != pdPASS){
+        vPrintString("handle_download failed to send download start data to ui_updates_queue.\r\n");
+      }
     }else{
       Serial.println("Invalid download file");
     }
   
   }
-  else if(pd.command_type == 3){  //end of download
-    //checking for eof_packet
+  //EOF read on server side. Ending download.
+  else if(pd.command_type == 3){
     Serial.println("EOF reached. Ending download.");
     file_obj.flush();
     file_obj.close();
-    file_obj = File();            //resetting file obj to evaluate to false once the download is complete
+    //resetting file obj to evaluate to false once the download is complete
+    file_obj = File();
     Serial.printf("DOWNLOAD FINISHED. Wrote %d bytes\n", final_file_size);
     final_file_size = 0;
     current_file_size = 0;
@@ -103,8 +123,11 @@ void handle_download(Package_data pd){
       Serial.println("Update message creation failed");
     }
 
-    xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
-
+    xStatus = xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
+    if(xStatus != pdPASS){
+      vPrintString("handle_download failed to send end of download data to ui_updates_queue.\r\n");
+    }
+  //file content packet
   }else if(pd.command_type == 2){
     if(file_obj) {
 
@@ -118,13 +141,15 @@ void handle_download(Package_data pd){
         Serial.println("Update message creation failed");
       }
 
-      xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
-  
-      // file_obj.write((uint8_t*)pd.contents, pd.length);
+      xStatus= xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
+      if(xStatus != pdPASS){
+        vPrintString("handle_download failed to send file trasnfer data to ui_updates_queue.\r\n");
+      }
+      //Write bytes to file
       size_t written = file_obj.write((uint8_t*)pd.contents, pd.length);
       if (written != pd.length) {
           Serial.printf("Error: Expected to write %d bytes but wrote %d bytes\n", pd.length, written);
-          // Handle error (e.g., retry, abort transfer, etc.)
+          // TODO: find a way to handle errors (e.g., retry, abort transfer, etc.)
       }
       file_obj.flush();
       Serial.printf("Current progress %f\n", download_percentage);

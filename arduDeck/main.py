@@ -1,6 +1,5 @@
 #TODO: retest/build connection checking loop
 #TODO: CLIENT add mutex and eliminate busy waiting in handle_request
-#TODO: troubleshoot faulty sends: a.implement CRC checking b. increase sstacvk size of tasks?
 
 import threading 
 

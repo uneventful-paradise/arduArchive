@@ -1,7 +1,7 @@
 #ifndef _DISPLAY_H_
 #define _DISPLAY_H_
 
-#include "config.h"
+#include "Utilities.h"
 #include "Sprite.h"
 // #include <TAMC_GT911.h>
 
@@ -9,7 +9,6 @@ int touch_last_x = 0, touch_last_y = 0;
 int pos[2] = {0, 0};
 Sprite* sprites[SPRITE_COUNT];
 char* icons[SPRITE_COUNT] = {NOTEPAD_85, CHROME_85, YOUTUBE_85, SPOTIFY_85, ADOBE_85, PYCHARM_85, VSCODE_85, STEAM_85, GIT_85, NOTEPAD_85};
-char* paths[SPRITE_COUNT];
 
 int icon_x = 0, icon_y = 0;
 
@@ -49,6 +48,9 @@ void touch_init(void)
   ts.setRotation(TOUCH_ROTATION);
 }
 
+/*Get coordinates of a touch. Updates x and y coordinates in the `pos` 
+array for new touches alongside a return value of 1. Otherwise coords
+are set to -1 and a value of 0 is returned. */
 int get_pos()
 {
     ts.read();
@@ -57,7 +59,7 @@ int get_pos()
     {
       pos[0] = ts.points[0].x;
       pos[1] = ts.points[0].y;
-      Serial.println("atins");
+      Serial.println("touched");
 
       Serial.print(",x = ");
       Serial.print(pos[0]);
@@ -77,7 +79,18 @@ int get_pos()
     }
 }
 
-void draw_main_screen(){
+void draw_text(Arduino_RPi_DPI_RGBPanel *gfx, int text_x, int text_y, int text_size, int text_color, const char* text){
+  gfx->setTextSize(text_size);
+  gfx->setTextColor(text_color);
+  gfx->setCursor(text_x, text_y);
+  gfx->println(text);
+}
+
+void clear_screen(Arduino_RPi_DPI_RGBPanel *gfx){
+  gfx->fillScreen(BLACK);
+}
+/*Draw main icon scene*/
+void draw_main_screen(Arduino_RPi_DPI_RGBPanel *gfx){
   gfx->setCursor(0,0);
   icon_x = 0;
   icon_y = 0;

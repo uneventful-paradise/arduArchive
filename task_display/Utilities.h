@@ -4,16 +4,20 @@
 #include "config.h"
 // #include <avr/pgmspace.h>
 
+/*lookup table used in computing crc value
+more time efficient compared to a polynomoial version with no lookup.
+table is stored in flash memory to save RAM.*/
 const uint32_t PROGMEM crc_table[16] = {
-    0x00000000, 0x1db71064, 0x3b6e20c8, 0x26d930ac,
-    0x76dc4190, 0x6b6b51f4, 0x4db26158, 0x5005713c,
-    0xedb88320, 0xf00f9344, 0xd6d6a3e8, 0xcb61b38c,
-    0x9b64c2b0, 0x86d3d2d4, 0xa00ae278, 0xbdbdf21c
+  0x00000000, 0x1db71064, 0x3b6e20c8, 0x26d930ac,
+  0x76dc4190, 0x6b6b51f4, 0x4db26158, 0x5005713c,
+  0xedb88320, 0xf00f9344, 0xd6d6a3e8, 0xcb61b38c,
+  0x9b64c2b0, 0x86d3d2d4, 0xa00ae278, 0xbdbdf21c
 };
 
 USBHIDKeyboard Keyboard;
 
 QueueHandle_t send_queue;
+SemaphoreHandle_t xPrintMutex = NULL;
 
 struct Package_data{
   int command_type;
@@ -25,7 +29,7 @@ struct Package_data{
 }data;
 
 File file_obj = File();
-
+char* paths[SPRITE_COUNT];
 
 unsigned long crc_update(unsigned long crc, byte data)
 {
@@ -37,6 +41,9 @@ unsigned long crc_update(unsigned long crc, byte data)
     return crc;
 }
 
+/*Caculate CRC32 value of a known length bitstring 
+(binary data cannot be NULL terminated so we rely on the string length
+for string traversal).*/
 unsigned long crc_string(const char *s, size_t length) {
   unsigned long crc = ~0L;          // initialize with all bits set
   for (size_t i = 0; i < length; ++i) {
@@ -44,14 +51,14 @@ unsigned long crc_string(const char *s, size_t length) {
   }
   return ~crc;                      // final complement of the CRC
 }
-//create/open the file where we have to write the data
+
+/*Create the file and the path to it if it doesn't exist. 
+Finds the last `/` character to split filename from directory path
+Path must start with a `/` to denote the root directory of the SD card*/
 File get_file_obj(const char* filename){
-  // if(!SD.begin(SD_CS)){
-  //   Serial.println("Failed to open SD card");
-  //   return File();
-  // }
   int slash_pos = -1;
   char* directory = NULL;
+  //get the last slash in the path
   for(int i = strlen(filename) - 1; i >= 0; --i){
     if(filename[i] == '/'){
       slash_pos = i;
@@ -59,17 +66,18 @@ File get_file_obj(const char* filename){
     }
   }
   //no slash found
-  if(slash_pos == -1 || filename[0] != '/'){
+  if(slash_pos == -1){
     Serial.println("Invalid filename");
     return File();
   }
-  //create directory if it doesn't exist
+  //get directory path
   if(slash_pos > 0){
     directory = strndup(filename, slash_pos);
     Serial.printf("Directory is %s\n", directory);
   }else{
     Serial.println("Requested directory is root");
   }
+  //create directory if it doesn't exist
   if(!SD.exists(directory)){
     if(!SD.mkdir(directory)){
       Serial.println("Failed to create directory");
@@ -80,8 +88,7 @@ File get_file_obj(const char* filename){
   }else{
     Serial.println("Directory already exists");
   }
-
-  //filename must start with '/'
+  //opening or creating file
   Serial.printf("Attempting to open or create %s\n", filename);
   if(SD.exists(filename)){
     Serial.println("File already exists");
@@ -96,8 +103,29 @@ File get_file_obj(const char* filename){
   return file_obj;
 }
 
-
+/*thread safe logging function
+TODO:alternative mutexes for tasks that also use mutexes and call this function?*/
+void vPrintString(const char *pString, bool debug = true){
+  if(debug){
+    //created mutex if it doesn't exist
+    if(xPrintMutex == NULL){
+      // xPrintMutex = xSemaphoreCreateMutex();
+      Serial.printf("xPrintMutex hasn't been initialized\n");
+      return;
+    }
+    //Perform a blocking wait to acquire mutex
+    if(xSemaphoreTake(xPrintMutex, portMAX_DELAY) == pdTRUE){
+      Serial.printf("%s", pString);
+      //Release mutex
+      xSemaphoreGive(xPrintMutex);
+    }
+  }
+}
+/*logging function that sends log messages to server
+for debugging when connected to USB-native port (Serial not available)*/
 void log(char* message){
+  BaseType_t xStatus;
+
   Package_data data;
   data.command_type = LGCF;
   data.command_id = 0;  
@@ -105,12 +133,27 @@ void log(char* message){
   data.length = strlen(message);
   strcpy(data.contents, message);
 
-  xQueueSend(send_queue, &data, portMAX_DELAY);
+  xStatus = xQueueSend(send_queue, &data, portMAX_DELAY);
+  if(xStatus != pdPASS){
+    vPrintString("log failed to send data to send_queue.\r\n");
+  }
 }
 
+/*Uses USBHIDKeyboard library to emulate harware level key presses.
+The sequence argument is composed of a series of commands separated 
+by the `+` character that can be any of the following:
+
+wNUMERICAL_VALUE  - wait for `NUMERICAL_VALUE` miliseconds. essentially a delay
+dKEY_VALUE        - press down the key represented in decimal value by `KEY_VALUE`
+uKEY_VALUE        - release the key represented in decimal value by `KEY_VALUE`
+r                 - release all pressed keys
+pVALUE            - print VALUE string
+
+Keyboard modifiers (special keys like ALT, ESCAPE etc.) need to be handled by the 
+Raw variation of the library function.
+*/
 void hard_press(char* sequence){
-  //sequence cointains dKEY_NAME + .... + wDELAY_TIME + .... +uKEY_NAME
-  //first we split the string by '+' using thread safe strtok
+  //first split the string by '+' using thread safe strtok
   char* save_ptr = sequence;
   char* token;
 
@@ -121,19 +164,20 @@ void hard_press(char* sequence){
   }
 
   while(token){
+    //get command type
     char event = token[0];
-    //converting string to ascii code
     //char* pEnd;
     // printf("%s\n", token);
     
     unsigned long long int code = 0;
     if(strlen(token) > 1){
+      //convert string key value to decimal value
       code = strtoull(token+1, NULL, 10);
       if(code == 0L){
         Serial.println("stroull failed for token conversion");
       }
     }
-
+    //perform the appropriate action given the command type
     switch(event){
       case 'u':{
         char c = code;
@@ -185,5 +229,38 @@ void hard_press(char* sequence){
   free(log_msg);
 }
 
+void init_paths(char* filename){
+  if(!SD.exists(filename)){
+    Serial.println("File does not exist");
+    return;
+  }
+  File file = SD.open(filename);
+  if(!file){
+    Serial.println("Could not open file");
+    return;
+  }
+  int index = 0;
+  while(file.available()){
+    if(index > SPRITE_COUNT){
+      break;
+    }
+    String s = file.readStringUntil('\n');
+    paths[index++] = strdup(s.c_str());
+  }
+}
+
+void access_path(int icon_index){
+  Keyboard.pressRaw(0xE3);
+  Keyboard.pressRaw(HID_KEY_R);
+  delay(500);
+
+  Keyboard.releaseRaw(HID_KEY_GUI_LEFT);
+  Keyboard.releaseRaw(HID_KEY_R);
+
+  Keyboard.printf(paths[icon_index]);
+  Keyboard.press(KEY_RETURN);
+  delay(100);
+  Keyboard.releaseAll();
+}
 
 #endif

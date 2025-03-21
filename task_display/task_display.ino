@@ -2,41 +2,9 @@
 
 static TaskHandle_t touch_task_handle = NULL;
 
-void init_paths(char* filename){
-  if(!SD.exists(filename)){
-    Serial.println("File does not exist");
-    return;
-  }
-  File file = SD.open(filename);
-  if(!file){
-    Serial.println("Could not open file");
-    return;
-  }
-  int index = 0;
-  while(file.available()){
-    if(index > SPRITE_COUNT){
-      break;
-    }
-    String s = file.readStringUntil('\n');
-    paths[index++] = strdup(s.c_str());
-  }
-}
-
-void access_path(int icon_index){
-  Keyboard.pressRaw(0xE3);
-  Keyboard.pressRaw(HID_KEY_R);
-  delay(500);
-
-  Keyboard.releaseRaw(HID_KEY_GUI_LEFT);
-  Keyboard.releaseRaw(HID_KEY_R);
-
-  Keyboard.printf(paths[icon_index]);
-  Keyboard.press(KEY_RETURN);
-  delay(100);
-  Keyboard.releaseAll();
-}
-
-
+/*Initialize the touch function, screen, display function, keyboard
+and start the tasks.
+TODO: block some tasks from running before internet connection or during transfers*/
 void setup() {
   Serial.begin(115200);
 
@@ -84,13 +52,12 @@ void setup() {
     Serial.print("Free Heap before loading image: ");
     Serial.println(ESP.getFreeHeap());
 
-    draw_main_screen();
+    draw_main_screen(gfx);
     
     init_paths("/configs/path_config_2.txt");
-    //https://www.esp32.com/viewtopic.php?t=2663
-    //https://www.freertos.org/Documentation/02-Kernel/04-API-references/01-Task-creation/01-xTaskCreate
 
-    //creating task queue. the queue takes event size as parameter so it can manage the memory blocks allocated for each instance of the event
+    /*Creating task queues. The queue takes event size as parameter 
+    so it can manage the memory blocks allocated for each instance of the event itself*/
     selection_queue = xQueueCreate(10, sizeof(Touch_event));
     send_queue = xQueueCreate(20, sizeof(Package_data));
     ui_updates_queue = xQueueCreate(10, sizeof(UI_update));
@@ -104,6 +71,10 @@ void setup() {
     }
   
     if(ui_updates_queue == NULL){
+      Serial.println("Failed to create ui_updates_queue");
+    }
+
+    if(wifi_request_queue == NULL){
       Serial.println("Failed to create ui_updates_queue");
     }
   
@@ -140,7 +111,7 @@ void setup() {
     xTaskCreatePinnedToCore(
       establish_connection_task,
       "establish_connection_task",
-      4096, //was 8192 because of insufficient stack space durin upload
+      4096, 
       NULL,
       1,
       NULL,
@@ -179,8 +150,6 @@ void setup() {
     
   }
 }
-//todo: block tasks until connection happens.
-//add exceptions when connection is interrupted
 
 //interrupt upload if something goes wrong?
 void loop() {
