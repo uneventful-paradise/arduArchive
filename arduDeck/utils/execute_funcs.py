@@ -18,16 +18,16 @@ def start_process(client_socket, cmd_id, file_path):
         if command.returncode != 0:
             raise subprocess.CalledProcessError
     except subprocess.CalledProcessError(command.returncode, file_path):
-        print(f"START_PROCESS {cmd_id} failed")
+        logger.warning("START_PROCESS %d failed", cmd_id)
         print(res[1])
 
 """Opens a new tab or a new browser instance if none is running currently.
 This can be performed using shell but is unsafe and not recommended"""
 def start_url(client_socket, cmd_id, url):
     if webbrowser.open_new_tab(url):
-        print(f"START_URL {cmd_id} successful")
+        logger.debug("Start_url %d successful", cmd_id)
     else:
-        print(f"START_URL {cmd_id} failed")
+        logger.warning("START_URL %d failed", cmd_id)
 
 """Parses the macro sequence and converts key codes to their decimal value.
 The individuals commands of the sequence are separated by the `+` character
@@ -57,20 +57,20 @@ def hard_key_press(client_socket, cmd_id, key_sequence):
             new_keys.append(key)
         else:
             if len(value) == 1:                     #regular key
-                print(f'regular key {value}')
+                logger.debug("regular key %s", value)
                 key = cmd_prefix + str(ord(value))  #get asii decimal value of key
                 new_keys.append(key)
             elif len(value) > 1:                    #special key
-                print(f'special key {value}')
+                logger.debug("special key %s", value)
                 key_code = ""
                 #get the assigned key code from the config file
                 for elem in KEY_CODES["keys"]:
                     if elem["key_name"] == value:
                         key_code = cmd_prefix + str(elem["key_code"])
-                        print(f'special key is {key_code} of length {len(key_code)}')
+                        logger.debug("special key is %s o length %d", key_code, len(key_code))
                         new_keys.append(key_code)
                 if key_code == "":
-                    print(f"key code not found in config {key_code}")
+                    logger.warning("key code not found in config %d", key_code)
             else:                                       #singular character command
                 new_keys.append(key)
 

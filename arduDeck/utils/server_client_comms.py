@@ -14,7 +14,7 @@ with open(CONFIG_FILE, "r") as f:
 MAX_CLIENTS = 5
 threads = []
 HOST = "0.0.0.0"
-PORT = 65431
+PORT = 65432
 
 # Initialize the main connection socket. Bind and listen
 # will be called on it resulting in client connection sockets.
@@ -23,7 +23,8 @@ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind((HOST, PORT))
 s.listen(5)
 
-FILENAME = "media/wanda.jpg"
+# FILENAME = "media/haskell-register.log"
+FILENAME = "media/wanda2.jpg"
 DEFAULT_CLIENT_DOWNLOAD_FOLDER = "/init_icons"
 
 """In the context of file transfers the server sends a packet then
@@ -43,13 +44,13 @@ succeeded or `-1` otherwise."""
 def check_ack(req_id):
     ack = ack_queue.get()
     if int(ack) == req_id:
-        print(f"ack successful for req_id {req_id} and server_id {basic_comms.server_cmd_id}\n")
+        logger.debug("ack successful for re_id %d and server_id %d", req_id, basic_comms.server_cmd_id)
         return True
     elif int(ack) == -1:
-        print(f"ACK process failed! Requesting resend")
+        logger.warning("ACK process failed! Requesting resend")
         return False
     else:
-        print(f"ACK got unexpected value {ack} while expecting {req_id} / {basic_comms.server_cmd_id}")
+        logger.warning("ACK got unexpected value %d while expecting %d/%d", ack, req_id, basic_comms.server_cmd_id)
         return False
 
 """Opens the upload source file and sends predefined sized chunks of data to client.
@@ -59,10 +60,11 @@ Then `file_size/CHUNK_SIZE` file contents sends follow. Finally when EOF is enco
 on the server side, an `upload end flag` is sent to the client to stop the transfer. 
 """
 def handle_upload(client_socket, filename, client_location):
-    print("STARTED UPLOAD\n")
+    logger.debug("Started upload")
+
     file_size = os.path.getsize(filename)
     client_filename = client_location + "/" + filename.split('/')[-1]
-    print(f'writing to {client_filename}')
+    logger.debug("writing to %s", client_filename)
 
     #send the upload initiating request
     req_cmd = basic_comms.server_cmd_id
@@ -92,7 +94,7 @@ def handle_upload(client_socket, filename, client_location):
                     send_request(client_socket, FTCF, req_cmd, 0, len(data), data)
 
     except IOError as e:
-        print("Could not open or read file.\n" + e.strerror)
+        logger.error("Could not open or read file", exc_info=True)
 
 """Executes the action associated with the id of a pressed button.
 It checks the existence of the requested button id then calls the associated action
@@ -115,12 +117,12 @@ def execute_command(client_socket, cmd_dict, command_id, request_contents):
 
     #get action arguments and execute the action
     for action in actions:
-        print(action["command_id"])
+        logger.debug("Action has command_id: %s", action["command_id"])
         if action["command_id"] in ACT_DICT.keys():
-            print(action["command_args"])
+            logger.debug("Action has arguments: %s", action["command_args"])
             ACT_DICT[action["command_id"]](client_socket, command_id, *action["command_args"])
         else:
-            print("Invalid command id in dictionary")
+            logger.warning("Invalid command id in dictionary")
 
 """Function to continuously check for the status of the connection."""
 #TODO: interrupt functions when connection drops
@@ -152,7 +154,10 @@ def initialize_deck(client_socket):
             if button["button_id"] != btn_id:
                 raise ValueError("Missing button ids")
             file_path = button["image_path"]
+
             print(file_path)
+            logger.debug(file_path)
+
             handle_upload(client_socket, file_path, DEFAULT_CLIENT_DOWNLOAD_FOLDER)
             btn_id += 1
     except ValueError as e:
@@ -178,13 +183,13 @@ def handle_request(request, client_socket):
     crc_value = int(header[4])
 
     try:
-        print(f'REQUEST has type {command_type}, id {command_id}, opt_arg {opt_arg}, len {req_len}, CRC {hex(crc_value)}')
-
+        logger.debug("Request has type %d, id %d, opt_arg %d, len %d, CRC %s", command_type, command_id, opt_arg, req_len, hex(crc_value))
         #get payload contents
         req_contents = read_all(client_socket, req_len)
         readable_req_contents = req_contents.decode("utf-8")
 
-        print(f'REQUEST_CONTENTS: {readable_req_contents}')
+        logger.debug("REQUEST CONTENTS: %s", readable_req_contents)
+
         #executing command associated to the button id
         if command_type == CFCF:
             ack_queue.put(readable_req_contents)
@@ -193,20 +198,20 @@ def handle_request(request, client_socket):
             #TODO: change macros to have button id in the payload
             execute_command(client_socket, CMD_DICT, command_id, opt_arg)
     except ValueError as e:
-        print(e)
+        logger.error("Handle request exception: %s", e, exc_info=True)
 
 """Function to be called by the reader thread. It loops indefinitely listening for 
 client request headers."""
 def handle_new_connection(client_socket, client_addr):
-    print(f'Created new thread for client {client_addr}')
+    logger.debug("Created new thread of client %s", client_addr)
     while True:
         req = read_all(client_socket, HEADER_SIZE)
 
         if not req:
             client_socket.close()
-            print("Client has requested disconnect")
+            logger.debug("Client disconnected")
             return None
-        print(f'Client {client_addr} requested: {req}')
+        logger.debug("Client %s requested %s", client_addr, req)
         handle_request(req, client_socket)
 
 """Function to be called by the writer thread. It will deal with listening to and 
@@ -225,6 +230,8 @@ def handle_server_send(client_socket, client_addr):
             initialize_deck(client_socket)
         if user_input == "m":
             msg_index = random.randint(0, len(responses) - 1)
-            print(f'server cmd id = {basic_comms.server_cmd_id}')
+            # print(f'server cmd id = {basic_comms.server_cmd_id}')
             send_request(client_socket, INTF, basic_comms.server_cmd_id, 0, len(responses[msg_index]), responses[msg_index])
-            # print(hex(binascii.crc32(responses[msg_index].encode()) & 0xffffffff))
+        if user_input == "e":
+            client_socket.close()
+            s.close()

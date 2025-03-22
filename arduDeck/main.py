@@ -8,9 +8,9 @@ from utils.server_client_comms import *
 if __name__ == '__main__':
 
     while True:
-        print("waiting for clients")
+        logger.debug("waiting for clients")
         conn, addr = s.accept()
-        print(f"Connected by {addr}\n")
+        logger.debug("Connected by %s", addr)
         listener_thread = threading.Thread(target=handle_new_connection, args=(conn, addr))
         threads.append(listener_thread)
         sender_thread = threading.Thread(target=handle_server_send, args=(conn, addr))

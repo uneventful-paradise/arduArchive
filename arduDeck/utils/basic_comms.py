@@ -1,7 +1,24 @@
 import socket
 import struct
 import binascii
+import logging
+import datetime
+import os
+import sys
 
+os.makedirs("logs", exist_ok=True)
+logger = logging.getLogger(__name__)
+log_filename = datetime.datetime.now().strftime("logs/log_%Y-%m-%d_%H-%M-%S.log")
+
+# Configure logger
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s [%(levelname)s] [%(funcName)s] %(message)s',
+    handlers=[
+        logging.FileHandler(log_filename),
+        logging.StreamHandler(sys.stdout)  # Optional: also print logs to console
+    ]
+)
 CHUNK_SIZE = 2048
 HEADER_SIZE = 20
 
@@ -30,12 +47,12 @@ def read_all(client_socket, req_len):
         while bytes_received < req_len:
             chunk = client_socket.recv(min(CHUNK_SIZE, req_len - bytes_received))
             if not chunk:
-                print("socket connection broken")
+                logger.error("socket connection broken")
                 break
             chunks.append(chunk)
             bytes_received += len(chunk)
     except socket.error as e:
-        print(e)
+        logger.error("read_all exception: %s", e, exc_info=True)
 
     return b''.join(chunks)
 
@@ -46,11 +63,11 @@ def write_all(client_socket, data):
         while total_sent < len(data):
             sent = client_socket.send(data[total_sent:])
             if not sent:
-                print("socket connection broken")
+                logger.error("socket connection broken")
                 break
             total_sent += sent
     except socket.error as e:
-        print(e)
+        logger.error("write_all exception: %s", e, exc_info=True)
 
 """Compose a protocol compliant message and send it to the client.
 
@@ -67,7 +84,7 @@ def send_request(client_socket, cmd_type, cmd_id, opt_arg, req_len, req):
     global server_cmd_id
     #format: < = small endian (! for network = big endian)
     if req_len > CHUNK_SIZE:
-        print(f"send {cmd_id} exceeded size limit")
+        logger.warning("send %d exceeded size limit", req_len)
         raise ValueError("Payload length exceeds chunk size")
 
     enc_type = "hex"
@@ -79,12 +96,13 @@ def send_request(client_socket, cmd_type, cmd_id, opt_arg, req_len, req):
     packet = struct.pack("!iiiiI", cmd_type, cmd_id, opt_arg, req_len, crc_value) + req
 
     if enc_type == "str":
-        print(f"SENT packet of type {cmd_type} id {cmd_id} opt_arg {opt_arg} size {len(req)} CRC {hex(crc_value)}\nSEND CONTENTS: " + req.decode() + "\n")
+        logger.debug("SENT packet of type %s id: %s opt_arg: %d size: %d CRC: %s\n%s\n",
+                    cmd_type, cmd_id, opt_arg, len(req), hex(crc_value), req.decode('utf-8'))
     else:
-        print(f"SENT packet of type {cmd_type} id {cmd_id} opt_arg {opt_arg} size {len(req)} CRC {hex(crc_value)}\nSEND CONTENTS: " + req.hex() + "\n")
+        logger.debug("SENT packet of type %s id: %s opt_arg: %d size: %d CRC: %s\n%s\n",
+                    cmd_type, cmd_id, opt_arg, len(req), hex(crc_value), req.hex())
 
     write_all(client_socket, packet)
     # server_cmd_id+=1 TODO: how should the server message id be incremented in the context of multiple client connections
     server_cmd_id = cmd_id + 1
     # print(f"incrementing srv_id = {server_cmd_id}")
-    # client_socket.sendall(packet)

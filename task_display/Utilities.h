@@ -55,7 +55,7 @@ unsigned long crc_string(const char *s, size_t length) {
 /*Create the file and the path to it if it doesn't exist. 
 Finds the last `/` character to split filename from directory path
 Path must start with a `/` to denote the root directory of the SD card*/
-File get_file_obj(const char* filename){
+File get_file_obj(const char* filename, bool append_mode = false){
   int slash_pos = -1;
   char* directory = NULL;
   //get the last slash in the path
@@ -93,7 +93,14 @@ File get_file_obj(const char* filename){
   if(SD.exists(filename)){
     Serial.println("File already exists");
   }
-  file_obj = SD.open(filename, FILE_WRITE);
+  /*open file in approapriate mode (append will be called 
+  in case the writing process fails mid way)*/
+  if(!append_mode){
+    file_obj = SD.open(filename, FILE_WRITE);
+  }else{
+    file_obj = SD.open(filename, FILE_APPEND);
+  }
+
   if(!file_obj){
     Serial.println("Error opening or creating file");
     return File();

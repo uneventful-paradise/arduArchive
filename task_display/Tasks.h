@@ -310,7 +310,7 @@ void wifi_request_handling_task(void* params){
           ack = -1;
         }else{
           ack = data.command_id;
-          Serial.printf("CRC32 check %04xn successful! processing packet\n", expected_crc);
+          Serial.printf("CRC32 check %04x successful! processing packet\n", expected_crc);
           handle_download(data);
         }
 

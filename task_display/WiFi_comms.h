@@ -78,12 +78,14 @@ Finally, the "end download" request signalizes that EOF has been read on the ser
 the file is closed and the `file_obj` object is reasigned NULL. So, `file_obj` is NULL as
 long as no file transfer is ongoing.
 */
+char current_filename[100];
 void handle_download(Package_data pd){
   UI_update update;
   BaseType_t xStatus;
 
   if(pd.command_type == 1){
     file_obj = get_file_obj(pd.contents);
+    strcpy(current_filename, pd.contents);
     current_file_size = 0;
     final_file_size = pd.opt_arg;
     Serial.printf("INITIATED DOWNLOAD. Final size will be %d\n", final_file_size);
@@ -148,11 +150,28 @@ void handle_download(Package_data pd){
       //Write bytes to file
       size_t written = file_obj.write((uint8_t*)pd.contents, pd.length);
       if (written != pd.length) {
-          Serial.printf("Error: Expected to write %d bytes but wrote %d bytes\n", pd.length, written);
-          // TODO: find a way to handle errors (e.g., retry, abort transfer, etc.)
+        Serial.printf("Error: Expected to write %d bytes but wrote %d bytes\n", pd.length, written);
+        // TODO: find a way to handle errors (e.g., retry, abort transfer, etc.)
+        //currently trying calling flush more rarely and reopening file on fails
+        //next should try aborting download 
+        Serial.println("Attempting to reopen file");
+        file_obj.flush();
+        file_obj.close();
+
+        file_obj = get_file_obj(current_filename, true);
+        if(!file_obj){
+          Serial.println("Failed to reopen file after write error");
+        }else{
+          size_t written = file_obj.write((uint8_t*)pd.contents, pd.length);
+          if(written != pd.length){
+            Serial.printf("Failed second write attempt for packet %d", pd.command_id);
+          }
+        }
       }
+      //write successful
       file_obj.flush();
       Serial.printf("Current progress %f\n", download_percentage);
+      delay(500);
     }else{
       Serial.println("Target file for upload is invalid");
     }
