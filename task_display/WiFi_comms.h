@@ -57,7 +57,7 @@ void send_request(int cmd_type, int cmd_id, int opt_arg, int req_len, unsigned i
     }
   }
 
-  Serial.printf("Send %d %d %d %d %s successful\n\n", cmd_type, cmd_id, opt_arg, req_len, req);
+  Serial.printf("\nSend type %d id %d opt_arg %d len %d successful\n%s\n", cmd_type, cmd_id, opt_arg, req_len, req);
   client_cmd_id++;
 }
 
@@ -113,8 +113,12 @@ void handle_download(Package_data pd){
     file_obj.flush();
     file_obj.close();
     //resetting file obj to evaluate to false once the download is complete
+    if(current_file_size != final_file_size){
+      Serial.println("ERROR: Total written does not match target value");
+    }else{
+      Serial.printf("DOWNLOAD FINISHED. Wrote %d bytes\n", final_file_size);
+    }
     file_obj = File();
-    Serial.printf("DOWNLOAD FINISHED. Wrote %d bytes\n", final_file_size);
     final_file_size = 0;
     current_file_size = 0;
 
@@ -132,8 +136,81 @@ void handle_download(Package_data pd){
   //file content packet
   }else if(pd.command_type == 2){
     if(file_obj) {
+      //checking cursor position
+      unsigned long position = file_obj.position();
+      Serial.printf("Before write cursor was at %lu\n", position);
 
-      current_file_size += pd.length;
+      //Write bytes to file
+
+      // size_t written = 0;
+      // written = file_obj.write((uint8_t*)pd.contents, pd.length);
+      // if (written != pd.length) {
+      //   Serial.printf("Error: Expected to write %d bytes but wrote %d bytes\n", pd.length, written);
+      //   // TODO: find a way to handle errors (e.g., retry, abort transfer, etc.)
+      //   //currently trying calling flush more rarely and reopening file on fails
+      //   //next should try aborting download 
+      //   Serial.println("Attempting to reopen file");
+      //   file_obj.flush();
+      //   file_obj.close();
+
+      //   file_obj = get_file_obj(current_filename, true);
+      //   if(!file_obj){
+      //     Serial.println("Failed to reopen file after write error");
+      //   }else{
+      //     written = file_obj.write((uint8_t*)pd.contents, pd.length);
+      //     if(written != pd.length){
+      //       Serial.printf("Failed second write attempt for packet %d", pd.command_id);
+      //       written = 0;
+      //     }
+      //   }
+      // }
+      size_t total_written = 0;
+      const unsigned int max_retries = 10;
+      unsigned int retry_counter = 0;
+      bool fatal_error = false;
+      while(total_written < pd.length && !fatal_error){
+        ssize_t bytes_written = file_obj.write((uint8_t*)pd.contents + total_written, pd.length - total_written);
+        if(file_obj.position() == 4294967295 && retry_counter < max_retries){
+          Serial.println("Encountered cursor error, attempting to reopen file");
+          file_obj.flush();
+          file_obj.close();
+          file_obj = SD.open(current_filename, FILE_APPEND);
+          if(!file_obj){
+            Serial.println("File reopening failed");
+            fatal_error = true;
+          }else{
+            Serial.printf("Reopened at position %lu\n", file_obj.position());
+            //resetting the pointer
+            file_obj.seek(position);
+            Serial.printf("Repositioned cursor at %lu\n", file_obj.position());
+            retry_counter++;
+          }
+        }
+        if(bytes_written < 0){
+          Serial.println("Error occured during download write");
+          //handle this gracefully:)
+        }
+
+        if(bytes_written == 0 && retry_counter < max_retries){
+          Serial.printf("ERROR: Wrote 0 bytes on attempt %d! Retrying\n", retry_counter);
+          retry_counter++;
+        }else if(bytes_written == 0 && retry_counter == max_retries){
+          fatal_error = true;
+          Serial.println("Fatal error. Stopping transfer!");
+        }
+        total_written += bytes_written;
+      }
+      //when to flush?
+      //write successful
+      //file_obj.flush();
+      position = file_obj.position();
+      Serial.printf("After write cursor was at %lu\n", position);
+
+      Serial.printf("Current progress %f\n", download_percentage);
+      // delay(500);
+
+      // current_file_size += pd.length;
+      current_file_size += total_written;
       download_percentage = round(((float)current_file_size/(float)final_file_size) * 100);
       
       update.type = 0;
@@ -147,31 +224,6 @@ void handle_download(Package_data pd){
       if(xStatus != pdPASS){
         vPrintString("handle_download failed to send file trasnfer data to ui_updates_queue.\r\n");
       }
-      //Write bytes to file
-      size_t written = file_obj.write((uint8_t*)pd.contents, pd.length);
-      if (written != pd.length) {
-        Serial.printf("Error: Expected to write %d bytes but wrote %d bytes\n", pd.length, written);
-        // TODO: find a way to handle errors (e.g., retry, abort transfer, etc.)
-        //currently trying calling flush more rarely and reopening file on fails
-        //next should try aborting download 
-        Serial.println("Attempting to reopen file");
-        file_obj.flush();
-        file_obj.close();
-
-        file_obj = get_file_obj(current_filename, true);
-        if(!file_obj){
-          Serial.println("Failed to reopen file after write error");
-        }else{
-          size_t written = file_obj.write((uint8_t*)pd.contents, pd.length);
-          if(written != pd.length){
-            Serial.printf("Failed second write attempt for packet %d", pd.command_id);
-          }
-        }
-      }
-      //write successful
-      file_obj.flush();
-      Serial.printf("Current progress %f\n", download_percentage);
-      delay(500);
     }else{
       Serial.println("Target file for upload is invalid");
     }

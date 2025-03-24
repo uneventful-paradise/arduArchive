@@ -23,8 +23,10 @@ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind((HOST, PORT))
 s.listen(5)
 
-# FILENAME = "media/haskell-register.log"
-FILENAME = "media/wanda2.jpg"
+#FILENAME = "media/haskell-register.log"
+#FILENAME = "media/tw.txt"
+#FILENAME = "media/pdfs/rtos.pdf"
+FILENAME = "media/images/landscape.jpg"
 DEFAULT_CLIENT_DOWNLOAD_FOLDER = "/init_icons"
 
 """In the context of file transfers the server sends a packet then
@@ -44,7 +46,7 @@ succeeded or `-1` otherwise."""
 def check_ack(req_id):
     ack = ack_queue.get()
     if int(ack) == req_id:
-        logger.debug("ack successful for re_id %d and server_id %d", req_id, basic_comms.server_cmd_id)
+        logger.debug("ack successful for req_id %d", req_id)
         return True
     elif int(ack) == -1:
         logger.warning("ACK process failed! Requesting resend")
@@ -89,6 +91,8 @@ def handle_upload(client_socket, filename, client_location):
                 break
             #send the following file contents request
             else:
+                if len(data) < CHUNK_SIZE:
+                    logger.debug("partial read")
                 send_request(client_socket, FTCF, req_cmd, 0, len(data), data)
                 while not check_ack(req_cmd):
                     send_request(client_socket, FTCF, req_cmd, 0, len(data), data)
@@ -183,12 +187,12 @@ def handle_request(request, client_socket):
     crc_value = int(header[4])
 
     try:
-        logger.debug("Request has type %d, id %d, opt_arg %d, len %d, CRC %s", command_type, command_id, opt_arg, req_len, hex(crc_value))
+        logger.debug("\nRequest has type %d, id %d, opt_arg %d, len %d, CRC %s", command_type, command_id, opt_arg, req_len, hex(crc_value))
         #get payload contents
         req_contents = read_all(client_socket, req_len)
         readable_req_contents = req_contents.decode("utf-8")
 
-        logger.debug("REQUEST CONTENTS: %s", readable_req_contents)
+        logger.debug("REQUEST CONTENTS: %s\n", readable_req_contents)
 
         #executing command associated to the button id
         if command_type == CFCF:

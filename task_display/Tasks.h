@@ -227,13 +227,7 @@ void receive_request_task(void* params){
       req_len     = ntohl(req_len);
       received_crc= ntohl(received_crc);
 
-      Serial.printf("RECEIVED type %d id %d opt_arg %d size %d CRC %04x\n", cmd_type, cmd_id, opt_arg, req_len, received_crc);
-      // if(cmd_type >= 1 && cmd_type <= 3){
-      //   unsigned int received_crc = 0;
-      //   client.readBytes((char*)&received_crc, sizeof(int));
-      //   received_crc = ntohl(received_crc);
-      //   printf("CRC IS %04x\n", received_crc);
-      // }
+      Serial.printf("\nRECEIVED type %d id %d opt_arg %d size %d CRC %04x\n", cmd_type, cmd_id, opt_arg, req_len, received_crc);
 
       //set a timeout limit for reading a packet's contents. readBytes has a builting timer (defaulting to 1000ms) can be changed using client.setTimeout()
       //only read the data if it follows the protocol defined maximum length
@@ -241,7 +235,6 @@ void receive_request_task(void* params){
         Serial.printf("Chunk size %d exceeded for received data. Skipping request", req_len);
         return;
       }
-
 
       char* req = (char*)malloc(req_len);
       if(!req){
@@ -261,8 +254,7 @@ void receive_request_task(void* params){
       memcpy(data.contents, req, req_len);
 
       // Serial.printf("Received content %d, length: %d\n", data.cmd_id, data.length);
-      Serial.print("RECEIVED: ");
-      Serial.println(data.contents);
+      Serial.printf("%s\n", data.contents);
       // Serial.println("");
 
       //send request to queue to be processed

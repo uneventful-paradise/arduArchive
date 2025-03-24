@@ -14,9 +14,10 @@ log_filename = datetime.datetime.now().strftime("logs/log_%Y-%m-%d_%H-%M-%S.log"
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s [%(levelname)s] [%(funcName)s] %(message)s',
+    datefmt="%m-%d %H:%M:%S",
     handlers=[
         logging.FileHandler(log_filename),
-        logging.StreamHandler(sys.stdout)  # Optional: also print logs to console
+        logging.StreamHandler(sys.stdout)
     ]
 )
 CHUNK_SIZE = 2048
@@ -96,10 +97,10 @@ def send_request(client_socket, cmd_type, cmd_id, opt_arg, req_len, req):
     packet = struct.pack("!iiiiI", cmd_type, cmd_id, opt_arg, req_len, crc_value) + req
 
     if enc_type == "str":
-        logger.debug("SENT packet of type %s id: %s opt_arg: %d size: %d CRC: %s\n%s\n",
+        logger.debug("SENT packet of type %d, id %d, opt_arg %d, size %d, CRC %s\n%s\n",
                     cmd_type, cmd_id, opt_arg, len(req), hex(crc_value), req.decode('utf-8'))
     else:
-        logger.debug("SENT packet of type %s id: %s opt_arg: %d size: %d CRC: %s\n%s\n",
+        logger.debug("SENT packet of type %d, id %d, opt_arg %d, size %d, CRC %s\n%s\n",
                     cmd_type, cmd_id, opt_arg, len(req), hex(crc_value), req.hex())
 
     write_all(client_socket, packet)

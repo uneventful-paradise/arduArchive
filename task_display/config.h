@@ -2,6 +2,7 @@
 #define _CONFIG_H_
 
 #include <USB.h>
+#include <SD.h>
 #include <USBHIDKeyboard.h>
 #include <SPI.h>
 #include <Wire.h>
