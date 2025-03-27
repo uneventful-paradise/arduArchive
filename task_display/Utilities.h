@@ -2,6 +2,7 @@
 #define _UTILITIES_H_
 
 #include "config.h"
+#include <stdio.h>
 // #include <avr/pgmspace.h>
 
 /*lookup table used in computing crc value
@@ -19,17 +20,23 @@ USBHIDKeyboard Keyboard;
 QueueHandle_t send_queue;
 SemaphoreHandle_t xPrintMutex = NULL;
 
-struct Package_data{
-  int command_type;
-  int command_id;
-  int opt_arg;
-  int length;
+
+struct Header_data{
+  unsigned int command_type;
+  unsigned int command_id;
+  unsigned int length;
   unsigned int crc_value;
+};
+
+struct Package_data{
+  Header_data header;
   char contents[CHUNK_SIZE];
 }data;
 
 File file_obj = File();
 char* paths[SPRITE_COUNT];
+
+unsigned int client_cmd_id = 0;
 
 unsigned long crc_update(unsigned long crc, byte data)
 {
@@ -133,11 +140,9 @@ for debugging when connected to USB-native port (Serial not available)*/
 void log(char* message){
   BaseType_t xStatus;
 
+  Header_data header = {LOG_MESSAGE, 0, strlen(message), 0};
   Package_data data;
-  data.command_type = LGCF;
-  data.command_id = 0;  
-  data.opt_arg = 0;
-  data.length = strlen(message);
+  data.header = header;
   strcpy(data.contents, message);
 
   xStatus = xQueueSend(send_queue, &data, portMAX_DELAY);
@@ -270,4 +275,33 @@ void access_path(int icon_index){
   Keyboard.releaseAll();
 }
 
+const int MIN_DEBUG_LEVEL = 1;
+
+void debug_print(const char* func_name, int debug_lvl, const char* fmt, ...){
+  if(debug_lvl >= MIN_DEBUG_LEVEL){
+
+    const char* level = NULL;
+    switch(debug_lvl) {
+      case 1:
+          level = "DEBUG";
+          break;
+      case 2:
+          level = "WARNING";
+          break;
+      case 3:
+          level = "ERROR";
+          break;
+      default:
+          level = "INFO";
+          break;
+    }
+    Serial.printf("[%s] [%s] ", func_name, level);
+    va_list argList;
+    va_start(argList, fmt);
+    vprintf(fmt, argList);
+    va_end(argList);
+
+    printf("\n");
+  }
+}
 #endif

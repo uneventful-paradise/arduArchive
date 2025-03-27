@@ -55,7 +55,12 @@ void setup() {
     draw_main_screen(gfx);
     
     init_paths("/configs/path_config_2.txt");
+    /*Initializing mutexes*/
+     xPrintMutex = xSemaphoreCreateMutex();
 
+    if (xPrintMutex == NULL) {
+      Serial.println("Failed to create print mutex!");
+    }
     /*Creating task queues. The queue takes event size as parameter 
     so it can manage the memory blocks allocated for each instance of the event itself*/
     selection_queue = xQueueCreate(10, sizeof(Touch_event));
@@ -77,7 +82,7 @@ void setup() {
     if(wifi_request_queue == NULL){
       Serial.println("Failed to create ui_updates_queue");
     }
-  
+
     xTaskCreatePinnedToCore(
       touch_check_task,
       "touch_check",
@@ -152,6 +157,7 @@ void setup() {
 }
 
 //interrupt upload if something goes wrong?
+//constants vs macros
 void loop() {
-
+  
 }

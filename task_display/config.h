@@ -16,16 +16,16 @@
 #define SERVER_IP           "192.168.100.63"
 #define PORT                65432
 #define CHUNK_SIZE          2048
-#define HEADER_SIZE         20    //int cmd_type | int cmd_id | int opt_arg | int length | unsigned int crc_value
+#define HEADER_SIZE         16    //unsigned int cmd_type | unsigned int cmd_id | unsigned int length | unsigned int crc_value
 #define BUFFER_SIZE         256
 
-#define MCCF  0     //MACRO COMMAND FLAG
-#define SDCF  1     //START DOWNLOAD COMMAND FLAG
-#define FTCF  2     //FILE TRANSFER COMMAND FLAG
-#define EDCF  3     //END OF DOWNLOAD COMMAND FLAG
-#define INTF  4     //INITIALIZATION FLAG (start of routine)
-#define CFCF  5     //CONFIRMATION COMMAND FLAG
-#define LGCF  6     //LOG MESSAGE COMMAND FLAG
+#define  MACRO_COMMAND         0
+#define  START_DOWNLOAD        1
+#define  FILE_TRANSFER         2
+#define  END_DOWNLOAD          3
+#define  INITIALIZE_ROUTINE    4
+#define  CONFIRMATION_FLAG     5
+#define  LOG_MESSAGE           6
 
 #define TOUCH_SDA     17
 #define TOUCH_SCL     18
