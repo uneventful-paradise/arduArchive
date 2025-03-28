@@ -304,4 +304,9 @@ void debug_print(const char* func_name, int debug_lvl, const char* fmt, ...){
     printf("\n");
   }
 }
+
+#define DEBUG_PRINT(fmt, ...) { printf("[%s:%d]: " fmt "\n", __FUNC__, __LINE__ __VA_OPT__(,) __VA_ARGS__); }
+
+#define DEBUG_ERR(fmt, ...) DEBUG_PRINT("[ERROR] " fmt __VA_OPT__(,) __VA_ARGS__)
+#define DEBUG_LOG(fmt, ...) DEBUG_PRINT("[LOG] " fmt __VA_OPT__(,) __VA_ARGS__)
 #endif

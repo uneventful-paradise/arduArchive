@@ -136,7 +136,7 @@ void setup() {
     xTaskCreatePinnedToCore(
       receive_request_task,
       "receive_request_task",
-      4096,
+      8192,
       NULL,
       1,
       NULL,

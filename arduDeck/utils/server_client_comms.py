@@ -27,6 +27,7 @@ s.listen(5)
 # FILENAME = "media/pdfs/com.pdf"
 FILENAME = "media/images/landscape.jpg"
 # FILENAME = "media/images/wanda.jpg"
+# FILENAME = "media/txts/haskell-register.log"
 DEFAULT_CLIENT_DOWNLOAD_FOLDER = "/init_icons"
 
 
