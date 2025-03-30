@@ -100,7 +100,7 @@ int handle_download(Package_data* pd){
 
   /*In the START_DOWNLOAD packet there are sent
   the client side filename and final file size separated by a space*/
-  Serial.printf("Header command type is %u\n", pd->header.command_type);
+  // Serial.printf("Header command type is %u\n", pd->header.command_type);
   if(pd->header.command_type == START_DOWNLOAD){
 
     //parsing the contents to get filename and filesize
@@ -118,6 +118,7 @@ int handle_download(Package_data* pd){
     final_file_size = strtoull(token, NULL, 10);
     if(final_file_size == 0L){
       Serial.println("strtoull failed in handle download");
+      // free(copied_contents);
       return -2;
     }
     /*now that the filename and file size have been copied/calculated
@@ -187,60 +188,24 @@ int handle_download(Package_data* pd){
     if(file_obj) {
       //getting file cursor pointer position
       unsigned long position = file_obj.position();
-      Serial.printf("Before write cursor was at %lu\n", position);
+      // Serial.printf("Before write cursor was at %lu\n", position);
 
-      /*Write bytes to file
-      In case of a write error, reopen the file, replace the cursor
-      to the position of the byte it last wrote successfully and attempt
-      to continue writing*/
       size_t total_written = 0;
       const unsigned int max_retries = 10;
       unsigned int retry_counter = 0;
       bool fatal_error = false;
 
-      while(total_written < pd->header.length && !fatal_error){
-        ssize_t bytes_written = file_obj.write((uint8_t*)pd->contents + total_written, pd->header.length - total_written);
-        //cursor set to -1 position
-        if(file_obj.position() == 0xFFFFFFFF && retry_counter < max_retries){
-          Serial.println("Encountered cursor error, attempting to reopen file");
-          file_obj.flush();
-          file_obj.close();
-          file_obj = SD.open(current_filename, FILE_APPEND);
-          if(!file_obj){
-            Serial.println("File reopening failed");
-            fatal_error = true;
-          }else{
-            Serial.printf("Reopened at position %lu\n", file_obj.position());
-            //resetting the pointer
-            file_obj.seek(position);
-            Serial.printf("Repositioned cursor at %lu\n", file_obj.position());
-            retry_counter++;
-          }
-        }
-        if(bytes_written < 0){
-          Serial.println("Error occured during download write");
-          //handle this gracefully:)
-        }
-
-        if(bytes_written == 0 && retry_counter < max_retries){
-          Serial.printf("ERROR: Wrote 0 bytes on attempt %d! Retrying\n", retry_counter);
-          retry_counter++;
-        }else if(bytes_written == 0 && retry_counter == max_retries){
-          fatal_error = true;
-          Serial.println("Fatal error. Stopping transfer!");
-        }
-        total_written += bytes_written;
+      total_written = file_obj.write((uint8_t*)pd->contents, pd->header.length);
+      if(total_written != pd->header.length){
+        Serial.printf("ERROR: partial write of %d bytes for packet %u\n", total_written, pd->header.command_id);
       }
-
-      if(fatal_error){
-        return -2;
-      }
+      
       //write successful
 
       //TODO: decide on whether to flush after every write or let flush be called automatically
       //file_obj.flush();
       position = file_obj.position();
-      Serial.printf("After write cursor was at %lu\n", position);
+      // Serial.printf("After write cursor was at %lu\n", position);
 
       Serial.printf("Current progress %f\n", download_percentage);
 

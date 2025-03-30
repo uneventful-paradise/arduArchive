@@ -1,8 +1,11 @@
 #ifndef _CONFIG_H_
 #define _CONFIG_H_
 
+#define USE_DBG_MACROS 2
+#define DBG_FILE "task_display.ino"
 #include <USB.h>
-#include <SD.h>
+// #include <SD.h>
+#include "SdFat.h"
 #include <USBHIDKeyboard.h>
 #include <SPI.h>
 #include <Wire.h>
@@ -10,6 +13,7 @@
 #include <TAMC_GT911.h>
 // #include "Tasks.h"
 #include "Sprite.h"
+
 
 #define WIFI_SSID           "DIGI-yWsT"
 #define WIFI_PWD            "74F8ghZw"

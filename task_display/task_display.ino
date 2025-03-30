@@ -5,8 +5,12 @@ static TaskHandle_t touch_task_handle = NULL;
 /*Initialize the touch function, screen, display function, keyboard
 and start the tasks.
 TODO: block some tasks from running before internet connection or during transfers*/
+
 void setup() {
   Serial.begin(115200);
+
+  Serial.printf("val of macro is %d", USE_DBG_MACROS);
+  // DBG_FAIL_MACRO;
 
   pinMode(TOUCH_RST, OUTPUT);
   delay(100);

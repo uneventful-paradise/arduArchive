@@ -194,8 +194,8 @@ void establish_connection_task(void*params){
 
 /*This task polls message requests from all other tasks and sends them to the server*/
 void send_request_task(void* params){
-  UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
-  Serial.printf("\nsend_request_task stack high water mark (BEGIN) : %u\n", watermark);
+  // UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
+  // Serial.printf("\nsend_request_task stack high water mark (BEGIN) : %u\n", watermark);
 
   BaseType_t xStatus;
   Touch_event event;
@@ -212,8 +212,8 @@ void send_request_task(void* params){
         vPrintString("[ERROR] [send_request_task] failed to receive from send_queue.\r\n" );
       }
 
-      watermark = uxTaskGetStackHighWaterMark(NULL);
-      Serial.printf("\nsend_request_task stack high water mark (END) : %u\n", watermark);
+      // watermark = uxTaskGetStackHighWaterMark(NULL);
+      // Serial.printf("\nsend_request_task stack high water mark (END) : %u\n", watermark);
     }
   }
 }
@@ -223,9 +223,10 @@ before reading the whole header. Once the header is read, the payload length is 
 memory for and reads the payload. Once succesfully reading the whole payload, the request is sent to a different task to be
 parsed and executed so that the reading task isn't blocked by those operations.*/
 void receive_request_task(void* params){
-  UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
-  Serial.printf("\nreceive_request_task stack high water mark (BEGIN) : %u\n", watermark);
+  // UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
+  // Serial.printf("\nreceive_request_task stack high water mark (BEGIN) : %u\n", watermark);
 
+  // const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
   BaseType_t xStatus;
   int read_threshold = HEADER_SIZE;
 
@@ -245,17 +246,20 @@ void receive_request_task(void* params){
       header.crc_value    = ntohl(header.crc_value);
 
       Serial.printf("\n[DEBUG] [receive_request] RECEIVED type %u id %u size %u CRC %04x\n", header.command_type, header.command_id, header.length, header.crc_value);
+      // debug_print(__func__, 1, "RECEIVED type %u id %u size %u CRC %04x", header.command_type, header.command_id, header.length, header.crc_value);
 
       //set a timeout limit for reading a packet's contents. readBytes has a builting timer (defaulting to 1000ms) can be changed using client.setTimeout()
       //only read the data if it follows the protocol defined maximum length
       if(header.length > CHUNK_SIZE){
         Serial.printf("[ERROR] [receive_request] Chunk size %u exceeded for received data. Skipping request %u", header.length, header.command_id);
+        // debug_print(__func__, 3, "Chunk size %u exceeded for received data. Skipping request %u", header.length, header.command_id);
         return;
       }
 
       char* req = (char*)malloc(header.length);
       if(!req){
         Serial.printf("[ERROR] [receive_request] Malloc fail for request contents allocation\n");
+        // debug_print(__func__, 3, "Malloc fail for request contents allocation");
         return;
       }
       client.readBytes(req, header.length);
@@ -268,9 +272,10 @@ void receive_request_task(void* params){
 
       // Serial.printf("Received content %d, length: %d\n", data.cmd_id, data.length);
       Serial.printf("%s\n", data.contents);
+      // debug_print(__func__, 1, "%s\n", data.contents);
 
-      UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
-      Serial.printf("\nreceive_request_task stack high water mark (MID) : %u\n", watermark);
+      // UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
+      // Serial.printf("\nreceive_request_task stack high water mark (MID) : %u\n", watermark);
       
       //send request to queue to be processed
       xStatus = xQueueSend(wifi_request_queue, &data, portMAX_DELAY);
@@ -278,8 +283,8 @@ void receive_request_task(void* params){
         vPrintString("receive_request_task Failed to send data to wifi_request_queue.\r\n");
       }
       free(req);
-      watermark = uxTaskGetStackHighWaterMark(NULL);
-      Serial.printf("\nreceive_request_task stack high water mark (END) : %u\n", watermark);
+      // watermark = uxTaskGetStackHighWaterMark(NULL);
+      // Serial.printf("\nreceive_request_task stack high water mark (END) : %u\n", watermark);
     }
 
     vTaskDelay(200/portTICK_PERIOD_MS); //is this needed?
@@ -317,8 +322,8 @@ An acknowledgement message has the payload content set to the id of
 the incoming server request if the CRC32 check was successful or to 
 the `-1` value otherwise.*/
 void wifi_request_handling_task(void* params){
-  UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
-  Serial.printf("\nwifi_request_task high water mark (BEGIN) : %u\n", watermark);
+  // UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
+  // Serial.printf("\nwifi_request_task high water mark (BEGIN) : %u\n", watermark);
   Package_data data;
   BaseType_t xStatus;
 
@@ -337,6 +342,7 @@ void wifi_request_handling_task(void* params){
       if(expected_crc != data.header.crc_value){
         Serial.println("[WARNING] [wifi_request_handling] CRC32 check failed! Skipping packet processing");
         ack = -1;
+         send_ack(ack);
         return;
       }else{
         Serial.printf("[DEBUG] [wifi_request_handling] CRC32 check %04x successful! processing packet\n", expected_crc);
@@ -344,8 +350,8 @@ void wifi_request_handling_task(void* params){
       //successful CRC confirmation of packet 
       ack = data.header.command_id;
 
-      watermark = uxTaskGetStackHighWaterMark(NULL);
-      Serial.printf("\nwifi_request_task high water mark (MID) : %u\n", watermark);
+      // watermark = uxTaskGetStackHighWaterMark(NULL);
+      // Serial.printf("\nwifi_request_task high water mark (MID) : %u\n", watermark);
 
       if(data.header.command_type == START_DOWNLOAD 
         || data.header.command_type == FILE_TRANSFER || data.header.command_type == END_DOWNLOAD){
@@ -359,15 +365,15 @@ void wifi_request_handling_task(void* params){
         Serial.printf("[DEBUG] [wifi_request_handling] result of packet processing is: %d\n", result);
       /*The data packet is a macro command. Call the appropriate function.*/
       }else if(data.header.command_type == MACRO_COMMAND){
-        Serial.printf("DEBUG [wifi_request_handling]: Tokenizing");
+        Serial.printf("[DEBUG] [wifi_request_handling]: Tokenizing");
         hard_press(data.contents);
       }
       Serial.printf("[DEBUG] [wifi_request_handling] Sending ack value %d for message %u\n", ack, data.header.command_id);
       //seding confirmation
       send_ack(ack);
 
-      watermark = uxTaskGetStackHighWaterMark(NULL);
-      Serial.printf("\nwifi_request_task high water mark (END) : %u\n", watermark);
+      // watermark = uxTaskGetStackHighWaterMark(NULL);
+      // Serial.printf("\nwifi_request_task high water mark (END) : %u\n", watermark);
     }else{
       vPrintString("[ERROR] [wifi_request_handling] failed to receive data from wifi_request_queue. \r\n");
     }
