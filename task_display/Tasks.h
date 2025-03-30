@@ -173,7 +173,10 @@ void establish_connection_task(void*params){
     Serial.print(".");
     vTaskDelay(500/portTICK_PERIOD_MS);
   }
-
+  if(!configured_timestamp){
+    configure_timestamp();
+    configured_timestamp = true;
+  }
   Serial.println("\nWiFi Connected!");
   printWifiStatus();
 
@@ -245,21 +248,18 @@ void receive_request_task(void* params){
       header.length       = ntohl(header.length);
       header.crc_value    = ntohl(header.crc_value);
 
-      Serial.printf("\n[DEBUG] [receive_request] RECEIVED type %u id %u size %u CRC %04x\n", header.command_type, header.command_id, header.length, header.crc_value);
-      // debug_print(__func__, 1, "RECEIVED type %u id %u size %u CRC %04x", header.command_type, header.command_id, header.length, header.crc_value);
+      A_DBG("RECEIVED type %u id %u size %u CRC %04x", header.command_type, header.command_id, header.length, header.crc_value);
 
       //set a timeout limit for reading a packet's contents. readBytes has a builting timer (defaulting to 1000ms) can be changed using client.setTimeout()
       //only read the data if it follows the protocol defined maximum length
       if(header.length > CHUNK_SIZE){
-        Serial.printf("[ERROR] [receive_request] Chunk size %u exceeded for received data. Skipping request %u", header.length, header.command_id);
-        // debug_print(__func__, 3, "Chunk size %u exceeded for received data. Skipping request %u", header.length, header.command_id);
+        A_ERR("Chunk size %u exceeded for received data. Skipping request %u", header.length, header.command_id);
         return;
       }
 
       char* req = (char*)malloc(header.length);
       if(!req){
-        Serial.printf("[ERROR] [receive_request] Malloc fail for request contents allocation\n");
-        // debug_print(__func__, 3, "Malloc fail for request contents allocation");
+        A_ERR("Malloc fail for request contents allocation");
         return;
       }
       client.readBytes(req, header.length);
@@ -271,8 +271,12 @@ void receive_request_task(void* params){
       memcpy(data.contents, req, header.length);
 
       // Serial.printf("Received content %d, length: %d\n", data.cmd_id, data.length);
-      Serial.printf("%s\n", data.contents);
-      // debug_print(__func__, 1, "%s\n", data.contents);
+      A_DBG("%s\n", data.contents);
+      //better way to convert to hex?
+      // for(int i = 0; i < data.header.length; ++i){
+      //   printf("%02x", data.contents[i]);
+      // }
+      printf("\n\n");
 
       // UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
       // Serial.printf("\nreceive_request_task stack high water mark (MID) : %u\n", watermark);
@@ -287,7 +291,7 @@ void receive_request_task(void* params){
       // Serial.printf("\nreceive_request_task stack high water mark (END) : %u\n", watermark);
     }
 
-    vTaskDelay(200/portTICK_PERIOD_MS); //is this needed?
+    vTaskDelay(200/portTICK_PERIOD_MS);
   }
 }
 
@@ -298,11 +302,10 @@ void send_ack(int ack){
   //creating acknowledgment message and sending it
   memset(data.contents, 0, sizeof(data.contents));
   if(snprintf(data.contents, sizeof(data.contents), "%d", ack) < 0){
-    Serial.println("[ERROR] [send_ack] Acknowledgement message creation failed");
+    A_ERR("Acknowledgement message creation failed");
   }
   int  size = strlen(data.contents);
-  Serial.printf("[DEBUG] [send_ack] Acknowledge value in ack is %s of size %d\n", data.contents, size);
-  // send_request(CFCF, 0, 0, strlen(ACK), ACK); 
+  // A_DBG("Acknowledge value is %s of size %d\n", data.contents, size);
   header = {CONFIRMATION_FLAG, 0, size, crc_string(data.contents, size)};
   data.header = header;
 
@@ -335,17 +338,16 @@ void wifi_request_handling_task(void* params){
       /*calculate crc value given received payload and compare 
       it to the crc the server reported in the header*/
       unsigned int expected_crc = crc_string(data.contents, data.header.length);
-      // Serial.printf("Expected CRC value of request is %04x\n", expected_crc);
 
       /*The data packet is a transfer packet(upload or download).
       Check its integrity (using CRC32) and send the proper acknowledgment message.*/
       if(expected_crc != data.header.crc_value){
-        Serial.println("[WARNING] [wifi_request_handling] CRC32 check failed! Skipping packet processing");
+        A_WRN("CRC32 check failed! Skipping packet processing");
         ack = -1;
-         send_ack(ack);
+        send_ack(ack);
         return;
       }else{
-        Serial.printf("[DEBUG] [wifi_request_handling] CRC32 check %04x successful! processing packet\n", expected_crc);
+        A_DBG("CRC32 check %04x successful! processing packet\n", expected_crc);
       }
       //successful CRC confirmation of packet 
       ack = data.header.command_id;
@@ -356,19 +358,20 @@ void wifi_request_handling_task(void* params){
       if(data.header.command_type == START_DOWNLOAD 
         || data.header.command_type == FILE_TRANSFER || data.header.command_type == END_DOWNLOAD){
           
-        int result = 0;
+        int result = 1;
         result = handle_download(&data);
 
         if(result != 1){
           ack = result;
         }
-        Serial.printf("[DEBUG] [wifi_request_handling] result of packet processing is: %d\n", result);
+        // A_DBG("result of packet processing is: %d\n", result);
       /*The data packet is a macro command. Call the appropriate function.*/
       }else if(data.header.command_type == MACRO_COMMAND){
-        Serial.printf("[DEBUG] [wifi_request_handling]: Tokenizing");
+        A_DBG("Tokenizing");
         hard_press(data.contents);
       }
-      Serial.printf("[DEBUG] [wifi_request_handling] Sending ack value %d for message %u\n", ack, data.header.command_id);
+      // Serial.printf("[DEBUG] [wifi_request_handling] Sending ack value %d for message %u\n", ack, data.header.command_id);
+      A_DBG("Sending ack value %d for message %u\n", ack, data.header.command_id);
       //seding confirmation
       send_ack(ack);
 

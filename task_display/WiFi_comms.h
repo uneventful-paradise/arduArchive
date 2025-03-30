@@ -1,7 +1,6 @@
 #ifndef _WIFI_H_
 #define _WIFI_H
 
-#include <WiFi.h>
 #include "Utilities.h"
 
 WiFiClient client;
@@ -37,7 +36,13 @@ void send_request(Package_data* data){
   // Serial.printf("Got data type %u id %u len %u CRC %04x \n%s\n", cmd_type, cmd_id, req_len, crc_value, req);
   unsigned int packet_id = data->header.command_id;
   unsigned int packet_len = data->header.length;
-  Serial.printf("\nSending type %u id %u len %u CRC %04x\n%s\n", 
+  // Serial.printf("\nSending type %u id %u len %u CRC %04x\n%s\n", 
+  //               data->header.command_type, 
+  //               data->header.command_id, 
+  //               data->header.length, 
+  //               data->header.crc_value, 
+  //               data->contents);
+  A_DBG("Sending type %u id %u len %u CRC %04x\n%s\n", 
                 data->header.command_type, 
                 data->header.command_id, 
                 data->header.length, 
@@ -52,7 +57,8 @@ void send_request(Package_data* data){
   // Serial.printf("Send type %u id %u len %u CRC %04x \n%s\n", cmd_type, cmd_id, req_len, crc_value, req);
 
   //Calculate total packet size
-  Serial.printf("Size of contents is: %d\n", packet_len);
+  // Serial.printf("Size of contents is: %d\n", packet_len);
+  A_DBG("Size of contents is: %d\n", packet_len);
   unsigned int packet_size = HEADER_SIZE + packet_len;
 
   size_t bytes_sent = 0;
@@ -63,11 +69,13 @@ void send_request(Package_data* data){
     if (sent > 0) {
       bytes_sent += sent;  // move forward in the buffer
     } else {
-      Serial.printf("Send %d failed at byte %d. Retrying...\n", packet_id, bytes_sent);
+      // Serial.printf("Send %d failed at byte %d. Retrying...\n", packet_id, bytes_sent);
+      A_ERR("Send %d failed at byte %d. Retrying...\n", packet_id, bytes_sent);
       delay(10); 
     }
   }
-  Serial.printf("Send of id %u successful!\n", packet_id);
+  // Serial.printf("Send of id %u successful!\n", packet_id);
+  A_DBG("Send of id %u successful!\n", packet_id);
   //increment client request id for next packet
   client_cmd_id++;
 }
@@ -117,8 +125,9 @@ int handle_download(Package_data* pd){
     long long int value. Number value in string is base 10*/
     final_file_size = strtoull(token, NULL, 10);
     if(final_file_size == 0L){
-      Serial.println("strtoull failed in handle download");
-      // free(copied_contents);
+      // Serial.println("strtoull failed in handle download");
+      A_ERR("strtoull failed in handle download");
+      free(copied_contents);
       return -2;
     }
     /*now that the filename and file size have been copied/calculated
@@ -126,16 +135,20 @@ int handle_download(Package_data* pd){
     free(copied_contents);
 
     //open the file and initiate the transfer
-    file_obj = get_file_obj(current_filename);
+    if(!get_file_obj(current_filename)){
+      return -2;
+    }
     current_file_size = 0;
-    Serial.printf("INITIATED DOWNLOAD. Final size will be %d\n", final_file_size);
+    // Serial.printf("INITIATED DOWNLOAD. Final size will be %d\n", final_file_size);
+    A_DBG("INITIATED DOWNLOAD. Final size will be %d\n", final_file_size);
     
     //updating the screen
     update.type = 0;
     update.status = 0;
     update.arg = 0;
     if(sprintf(update.message, "Starting download") < 0){
-      Serial.println("Update message creation failed");
+      // Serial.println("Update message creation failed");
+      A_ERR("Update message creation failed");
     }
     //checking that the file has been created/opened without errors.
     if(file_obj){
@@ -145,25 +158,28 @@ int handle_download(Package_data* pd){
         vPrintString("handle_download failed to send download start data to ui_updates_queue.\r\n");
       }
     }else{
-      Serial.println("Invalid download file");
+      // Serial.println("Invalid download file");
+      A_ERR("Invalid download file");
       return -2;
     }
-    Serial.printf("passing to next packet\n");
+    // Serial.printf("passing to next packet\n");
     return 1;
   }
   else if(pd->header.command_type == END_DOWNLOAD){
     //EOF read on server side. Ending download.
-    
-    Serial.println("EOF reached. Ending download.");
+    //init file to null?
+    // Serial.println("EOF reached. Ending download.");
+    A_DBG("EOF reached. Ending download.");
     file_obj.flush();
     file_obj.close();
     //resetting file obj to evaluate to false once the download is complete
     if(current_file_size != final_file_size){
-      Serial.println("ERROR: Total written does not match target value");
+      // Serial.println("ERROR: Total written does not match target value");
+      A_ERR("Total written %d does not match target value", current_file_size);
     }else{
-      Serial.printf("DOWNLOAD FINISHED. Wrote %d bytes\n", final_file_size);
+      // Serial.printf("DOWNLOAD FINISHED. Wrote %d bytes\n", final_file_size);
+      A_DBG("DOWNLOAD FINISHED. Wrote %d bytes\n", final_file_size);
     }
-    file_obj = File();
     final_file_size = 0;
     current_file_size = 0;
     //free filename to be used by next START_DOWNLOAD command
@@ -173,7 +189,8 @@ int handle_download(Package_data* pd){
     update.status = 2;
     update.arg = 100;
     if(sprintf(update.message, "Download finished") < 0){
-      Serial.println("Update message creation failed");
+      // Serial.println("Update message creation failed");
+      A_ERR("Update message creation failed");
     }
 
     xStatus = xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
@@ -187,7 +204,7 @@ int handle_download(Package_data* pd){
 
     if(file_obj) {
       //getting file cursor pointer position
-      unsigned long position = file_obj.position();
+      // unsigned long position = file_obj.position();
       // Serial.printf("Before write cursor was at %lu\n", position);
 
       size_t total_written = 0;
@@ -197,17 +214,18 @@ int handle_download(Package_data* pd){
 
       total_written = file_obj.write((uint8_t*)pd->contents, pd->header.length);
       if(total_written != pd->header.length){
-        Serial.printf("ERROR: partial write of %d bytes for packet %u\n", total_written, pd->header.command_id);
+        // Serial.printf("ERROR: partial write of %d bytes for packet %u\n", total_written, pd->header.command_id);
+        A_ERR("Wrote %d of %d bytes for packet %u. Error code %d\n", total_written, pd->header.length, pd->header.command_id, file_obj.getError());
       }
-      
       //write successful
 
       //TODO: decide on whether to flush after every write or let flush be called automatically
       //file_obj.flush();
-      position = file_obj.position();
+      // position = file_obj.position();
       // Serial.printf("After write cursor was at %lu\n", position);
 
-      Serial.printf("Current progress %f\n", download_percentage);
+      // Serial.printf("Current progress %f\n", download_percentage);
+      A_DBG("Current progress %f\n", download_percentage);
 
       // current_file_size += pd.length;
       current_file_size += total_written;
@@ -217,7 +235,8 @@ int handle_download(Package_data* pd){
       update.status = 1;
       update.arg = download_percentage;
       if(sprintf(update.message, "Download %f complete", download_percentage) < 0){
-        Serial.println("Update message creation failed");
+        // Serial.println("Update message creation failed");
+        A_ERR("Update message creation failed");
       }
 
       xStatus= xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
@@ -228,20 +247,24 @@ int handle_download(Package_data* pd){
       return 1;
     }
     else{
-      Serial.println("Target file for upload is invalid");
+      // Serial.println("Target file for upload is invalid");
+      A_ERR("Target file for upload is invalid");
     }
   }
-  Serial.printf("ERROR: package type does not match download format\n");
+  // Serial.printf("package type does not match download format\n");
+  A_ERR("package type does not match download format\n");
   return 0;
 }
 
 void connect_to_server() {
-  Serial.println("\nConnecting to server...");
+  // Serial.println("\nConnecting to server...");
+  A_DBG("Connecting to server...");
   if (!client.connect(SERVER_IP, PORT)) {
     Serial.println("Connection failed!");
     delay(1000);
   } else {
-    Serial.println("Connected to server.");
+    // Serial.println("Connected to server.");
+    A_DBG("Connected to server.");
   }
 }
 

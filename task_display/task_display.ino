@@ -8,10 +8,6 @@ TODO: block some tasks from running before internet connection or during transfe
 
 void setup() {
   Serial.begin(115200);
-
-  Serial.printf("val of macro is %d", USE_DBG_MACROS);
-  // DBG_FAIL_MACRO;
-
   pinMode(TOUCH_RST, OUTPUT);
   delay(100);
   digitalWrite(TOUCH_RST, LOW);
@@ -38,8 +34,9 @@ void setup() {
   USB.begin();
 
   SPI.begin(SD_SCK, SD_MISO, SD_MOSI);
-  if (!SD.begin(SD_CS))
+  if (!sd.begin(SdSpiConfig(SD_CS, SHARED_SPI, SD_SCK_MHZ(16))))
   {
+    sd.initErrorHalt();
     Serial.println(F("ERROR: SD Mount Failed!"));
     // while(1)
     {
@@ -163,5 +160,8 @@ void setup() {
 //interrupt upload if something goes wrong?
 //constants vs macros
 void loop() {
-  
+  // if(configured_timestamp){
+  //   update_timestamp();
+  //   delay(1000);
+  // }
 }

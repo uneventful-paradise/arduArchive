@@ -1,11 +1,9 @@
 #ifndef _CONFIG_H_
 #define _CONFIG_H_
 
-#define USE_DBG_MACROS 2
-#define DBG_FILE "task_display.ino"
 #include <USB.h>
 // #include <SD.h>
-#include "SdFat.h"
+#include "JpegFunc.h"
 #include <USBHIDKeyboard.h>
 #include <SPI.h>
 #include <Wire.h>
@@ -13,6 +11,8 @@
 #include <TAMC_GT911.h>
 // #include "Tasks.h"
 #include "Sprite.h"
+#include <WiFi.h>
+#include "time.h"
 
 
 #define WIFI_SSID           "DIGI-yWsT"
@@ -103,5 +103,18 @@
 #define PWM_CHANNEL 1
 #define PWM_FREQ 5000 // Hz
 #define pwm_resolution_bits 10
+
+#define SPI_CLOCK SD_SCK_MHZ(12)
+
+#if defined(HAS_TEENSY_SDIO)
+#define SD_CONFIG SdioConfig(FIFO_SDIO)
+#elif defined(RP_CLK_GPIO) && defined(RP_CMD_GPIO) && defined(RP_DAT0_GPIO)
+// See the Rp2040SdioSetup example for RP2040/RP2350 boards.
+#define SD_CONFIG SdioConfig(RP_CLK_GPIO, RP_CMD_GPIO, RP_DAT0_GPIO)
+#elif ENABLE_DEDICATED_SPI
+#define SD_CONFIG SdSpiConfig(SD_CS, DEDICATED_SPI, SPI_CLOCK)
+#else  // HAS_TEENSY_SDIO
+#define SD_CONFIG SdSpiConfig(SD_CS, SHARED_SPI, SPI_CLOCK)
+#endif  // HAS_TEENSY_SDIO
 
 #endif
