@@ -232,13 +232,18 @@ void receive_request_task(void* params){
   // const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
   BaseType_t xStatus;
   int read_threshold = HEADER_SIZE;
+  size_t bytes_read = 0;
 
   while(1){ 
     if(client.connected() && client.available() >= read_threshold){
       //read and parse the header data. readbytes blocks until the specified number of bytes is available to read from the socket
       //we use ntohl because the data is sent in big-endian (networking standard) while the esp device operates in little-endian. ntohl converts integers to host byte order
       Header_data header;
-      client.readBytes((char*)&header, sizeof(header));
+      bytes_read = client.readBytes((char*)&header, sizeof(header));
+      if (bytes_read != sizeof(header)) {
+        Serial.printf("Error: Expected to read %u bytes but got %u bytes\n", sizeof(header), bytes_read);
+        //how to delete junk from socket?
+      }
       /*use ntohl to converts values from network byte order(big endian) to host byte order
       the conversion is needed because network format is big endian while esp32 runs on small endian.*/
 
@@ -247,7 +252,6 @@ void receive_request_task(void* params){
       header.command_id   = ntohl(header.command_id);
       header.length       = ntohl(header.length);
       header.crc_value    = ntohl(header.crc_value);
-
       A_DBG("RECEIVED type %u id %u size %u CRC %04x", header.command_type, header.command_id, header.length, header.crc_value);
 
       //set a timeout limit for reading a packet's contents. readBytes has a builting timer (defaulting to 1000ms) can be changed using client.setTimeout()
@@ -271,11 +275,11 @@ void receive_request_task(void* params){
       memcpy(data.contents, req, header.length);
 
       // Serial.printf("Received content %d, length: %d\n", data.cmd_id, data.length);
-      A_DBG("%s\n", data.contents);
+      // A_DBG("%s\n", data.contents);
       //better way to convert to hex?
-      // for(int i = 0; i < data.header.length; ++i){
-      //   printf("%02x", data.contents[i]);
-      // }
+      for(int i = 0; i < data.header.length; ++i){
+        printf("%02x", data.contents[i]);
+      }
       printf("\n\n");
 
       // UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
@@ -304,8 +308,8 @@ void send_ack(int ack){
   if(snprintf(data.contents, sizeof(data.contents), "%d", ack) < 0){
     A_ERR("Acknowledgement message creation failed");
   }
-  int  size = strlen(data.contents);
-  // A_DBG("Acknowledge value is %s of size %d\n", data.contents, size);
+  int size = strlen(data.contents);
+  A_DBG("Acknowledge value is %s of size %d\n", data.contents, size);
   header = {CONFIRMATION_FLAG, 0, size, crc_string(data.contents, size)};
   data.header = header;
 
@@ -345,7 +349,7 @@ void wifi_request_handling_task(void* params){
         A_WRN("CRC32 check failed! Skipping packet processing");
         ack = -1;
         send_ack(ack);
-        return;
+        continue;
       }else{
         A_DBG("CRC32 check %04x successful! processing packet\n", expected_crc);
       }

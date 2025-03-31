@@ -271,7 +271,10 @@ void init_paths(char* filename){
       Serial.println(F(" <-- missing nl"));
       break;
     }
-    paths[ln++] = strdup(line);
+    paths[ln++] = strndup(line, n);
+    if(paths[ln-1][n] != '\0'){
+      Serial.printf("failed append of NULL\n");
+    }
   }
 }
 

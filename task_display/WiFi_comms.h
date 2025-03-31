@@ -58,7 +58,7 @@ void send_request(Package_data* data){
 
   //Calculate total packet size
   // Serial.printf("Size of contents is: %d\n", packet_len);
-  A_DBG("Size of contents is: %d\n", packet_len);
+  // A_DBG("Size of contents is: %d\n", packet_len);
   unsigned int packet_size = HEADER_SIZE + packet_len;
 
   size_t bytes_sent = 0;
@@ -216,11 +216,13 @@ int handle_download(Package_data* pd){
       if(total_written != pd->header.length){
         // Serial.printf("ERROR: partial write of %d bytes for packet %u\n", total_written, pd->header.command_id);
         A_ERR("Wrote %d of %d bytes for packet %u. Error code %d\n", total_written, pd->header.length, pd->header.command_id, file_obj.getError());
+      }else{
+        A_DBG("Correctly wrote %d bytes to file\n", total_written);
       }
       //write successful
 
       //TODO: decide on whether to flush after every write or let flush be called automatically
-      //file_obj.flush();
+      file_obj.flush();
       // position = file_obj.position();
       // Serial.printf("After write cursor was at %lu\n", position);
 
