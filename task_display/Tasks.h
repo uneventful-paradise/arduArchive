@@ -22,30 +22,44 @@ QueueHandle_t wifi_request_queue;
 /*This taks's purpose is to listen to incoming touches, determine whether the touch has selected a valid icon
 and send the selection information to the server via a Package_Data object.*/
 void touch_check_task(void* params){
-    // BaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);                    //checking for available heap
+    // BaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);                    //checking for available stack
     // Serial.printf("touch_check_task stack high water mark: %u\n", watermark);
 
   BaseType_t xStatus;
 
   while(true){
-    if (get_pos() == 1){                                                          //screen has been touched
+    //screen has been touched
+    if (get_pos() == 1){
       for (int i = 0; i < SPRITE_COUNT; i++){
         int button_value = UNABLE;
-        if ((button_value = sprites[i]->checkTouch(pos[0], pos[1])) != UNABLE){   //checking if button is bound to command
+        //checking if button is bound to command
+        if ((button_value = sprites[i]->checkTouch(pos[0], pos[1])) != UNABLE){
           Serial.printf("Pos is :%d,%d\n", pos[0], pos[1]);
-          Serial.printf("Value is :%d\n", button_value);
+          Serial.printf("Value is: %d\n", button_value);
 
-          Touch_event event = {pos[0], pos[1], button_value};                     //creating event and sending it to queue to trigger the touch_handle task
-          Package_data data;                                                      //creating a data packet to send command information to server
+          //creating event and sending it to queue to trigger the touch_handle task
+          Touch_event event = {pos[0], pos[1], button_value};
+          //creating a data packet to send command information to server              
+          Package_data data;
+          Header_data header;
+          // Serial.printf("SENDING command for %s to server\n", paths[event.buttonId]);
 
-          Serial.printf("SENDING command for %s to server\n", paths[event.buttonId]);
-          strcpy(data.contents, paths[event.buttonId]);                           //TODO:payload contents should be the button id instead of path (since paths are now stored in the json config)
-          data.command_type = MCCF;                                               //touches can only trigger macro commands
-          data.command_id = 0;                                                    //cmd_id will be updated by sender task
-          data.opt_arg = event.buttonId;                                          //send button id as argument for the server to 
-                                                                                  //identify the corresponding actions
-          data.length = strlen(data.contents);
-          data.crc_value = crc_string(data.contents, data.length);
+          memset(data.contents, 0, sizeof(data.contents));
+          if (snprintf(data.contents, sizeof(data.contents), "%d", button_value) < 0) {
+              Serial.println("snprintf failed in touch_check_task");
+              continue;
+          }
+          /*touches can only trigger macro commands
+          cmd_id will be updated by sender task
+          send button id as argument for the server to
+          identify the corresponding actions
+          */
+          header.command_type = MACRO_COMMAND;
+          header.command_id = 0;
+          header.length = strlen(data.contents);
+          header.crc_value = crc_string(data.contents, header.length);
+          data.header = header;
+          Serial.printf("Selecte value is %s\n", data.contents);
 
           xStatus = xQueueSend(selection_queue, &event, portMAX_DELAY);
           if(xStatus != pdPASS){
@@ -54,6 +68,7 @@ void touch_check_task(void* params){
                 task blocks indefinitely until there is enough space to write the data*/
               vPrintString("touch_check_task failed to send data to the selection_queue.\r\n" );
           }
+
           xStatus = xQueueSend(send_queue, &data, portMAX_DELAY);
           if(xStatus != pdPASS){
             vPrintString("touch_check_task failed to send data to the send_queue.\r\n" );
@@ -70,7 +85,7 @@ void handle_command(void* params){
   Touch_event event;
   while(true){
     if(xQueueReceive(selection_queue, &event, portMAX_DELAY) == pdTRUE){
-      Serial.printf("Button with id %d has been selected and path is %s\n", event.buttonId, paths[event.buttonId]);
+      Serial.printf("Button with id %d has been selected\n", event.buttonId);
       //update display 
       // access_path(event.buttonId);
     }
@@ -158,7 +173,10 @@ void establish_connection_task(void*params){
     Serial.print(".");
     vTaskDelay(500/portTICK_PERIOD_MS);
   }
-
+  if(!configured_timestamp){
+    configure_timestamp();
+    configured_timestamp = true;
+  }
   Serial.println("\nWiFi Connected!");
   printWifiStatus();
 
@@ -180,20 +198,25 @@ void establish_connection_task(void*params){
 /*This task polls message requests from all other tasks and sends them to the server*/
 void send_request_task(void* params){
   // UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
-  // Serial.printf("send_request_task stack high water mark: %u\n", watermark);
+  // Serial.printf("\nsend_request_task stack high water mark (BEGIN) : %u\n", watermark);
+
   BaseType_t xStatus;
   Touch_event event;
-
+  Package_data data;
   while(1){
     //only attempt to send while client is connected otherwise go back to waiting/blocked state
     if(client.connected()){
       xStatus = xQueueReceive(send_queue, &data, portMAX_DELAY);
       if(xStatus == pdPASS){
         //send request to server
-        send_request(data.command_type, client_cmd_id, data.opt_arg, data.length, data.crc_value, data.contents); 
+        data.header.command_id = client_cmd_id;
+        send_request(&data); 
       }else{
-        vPrintString("send_request_task failed to receive from send_queue.\r\n" );
+        vPrintString("[ERROR] [send_request_task] failed to receive from send_queue.\r\n" );
       }
+
+      // watermark = uxTaskGetStackHighWaterMark(NULL);
+      // Serial.printf("\nsend_request_task stack high water mark (END) : %u\n", watermark);
     }
   }
 }
@@ -204,68 +227,95 @@ memory for and reads the payload. Once succesfully reading the whole payload, th
 parsed and executed so that the reading task isn't blocked by those operations.*/
 void receive_request_task(void* params){
   // UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
-  // Serial.printf("receive_request_task stack high water mark: %u\n", watermark);
+  // Serial.printf("\nreceive_request_task stack high water mark (BEGIN) : %u\n", watermark);
+
+  // const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
   BaseType_t xStatus;
   int read_threshold = HEADER_SIZE;
+  size_t bytes_read = 0;
 
   while(1){ 
-    if(client.connected() && client.available() >= read_threshold){   
-      int cmd_type, cmd_id, opt_arg, req_len;
-      unsigned int received_crc = 0;
+    if(client.connected() && client.available() >= read_threshold){
       //read and parse the header data. readbytes blocks until the specified number of bytes is available to read from the socket
       //we use ntohl because the data is sent in big-endian (networking standard) while the esp device operates in little-endian. ntohl converts integers to host byte order
-      client.readBytes((char*)&cmd_type, sizeof(int));
-      client.readBytes((char*)&cmd_id, sizeof(int));
-      client.readBytes((char*)&opt_arg, sizeof(int));
-      client.readBytes((char*)&req_len, sizeof(int));
-      client.readBytes((char*)&received_crc, sizeof(int));
+      Header_data header;
+      bytes_read = client.readBytes((char*)&header, sizeof(header));
+      if (bytes_read != sizeof(header)) {
+        Serial.printf("Error: Expected to read %u bytes but got %u bytes\n", sizeof(header), bytes_read);
+        //how to delete junk from socket?
+      }
       /*use ntohl to converts values from network byte order(big endian) to host byte order
       the conversion is needed because network format is big endian while esp32 runs on small endian.*/
-      cmd_type    = ntohl(cmd_type);
-      cmd_id      = ntohl(cmd_id);
-      opt_arg     = ntohl(opt_arg);
-      req_len     = ntohl(req_len);
-      received_crc= ntohl(received_crc);
 
-      Serial.printf("\nRECEIVED type %d id %d opt_arg %d size %d CRC %04x\n", cmd_type, cmd_id, opt_arg, req_len, received_crc);
+      //or declare command_type as u_int32
+      header.command_type = ntohl(header.command_type);
+      header.command_id   = ntohl(header.command_id);
+      header.length       = ntohl(header.length);
+      header.crc_value    = ntohl(header.crc_value);
+      A_DBG("RECEIVED type %u id %u size %u CRC %04x", header.command_type, header.command_id, header.length, header.crc_value);
 
       //set a timeout limit for reading a packet's contents. readBytes has a builting timer (defaulting to 1000ms) can be changed using client.setTimeout()
       //only read the data if it follows the protocol defined maximum length
-      if(req_len > CHUNK_SIZE){
-        Serial.printf("Chunk size %d exceeded for received data. Skipping request", req_len);
+      if(header.length > CHUNK_SIZE){
+        A_ERR("Chunk size %u exceeded for received data. Skipping request %u", header.length, header.command_id);
         return;
       }
 
-      char* req = (char*)malloc(req_len);
+      char* req = (char*)malloc(header.length);
       if(!req){
-        Serial.println("Malloc fail for request contents allocation");
+        A_ERR("Malloc fail for request contents allocation");
         return;
       }
-      client.readBytes(req, req_len);
+      client.readBytes(req, header.length);
 
       Package_data data;
-      data.command_type = cmd_type;
-      data.command_id = cmd_id;
-      data.opt_arg = opt_arg;
-      data.length = req_len;
-      data.crc_value = received_crc;
+      data.header = header;
       //zero out contents to avoid pre existing junk data when reading binary data
       memset(data.contents, 0, sizeof(data.contents));
-      memcpy(data.contents, req, req_len);
+      memcpy(data.contents, req, header.length);
 
       // Serial.printf("Received content %d, length: %d\n", data.cmd_id, data.length);
-      Serial.printf("%s\n", data.contents);
-      // Serial.println("");
+      // A_DBG("%s\n", data.contents);
+      //better way to convert to hex?
+      for(int i = 0; i < data.header.length; ++i){
+        printf("%02x", data.contents[i]);
+      }
+      printf("\n\n");
 
+      // UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
+      // Serial.printf("\nreceive_request_task stack high water mark (MID) : %u\n", watermark);
+      
       //send request to queue to be processed
       xStatus = xQueueSend(wifi_request_queue, &data, portMAX_DELAY);
       if(xStatus != pdPASS){
         vPrintString("receive_request_task Failed to send data to wifi_request_queue.\r\n");
       }
       free(req);
+      // watermark = uxTaskGetStackHighWaterMark(NULL);
+      // Serial.printf("\nreceive_request_task stack high water mark (END) : %u\n", watermark);
     }
 
-    vTaskDelay(200/portTICK_PERIOD_MS); //is this needed?
+    vTaskDelay(200/portTICK_PERIOD_MS);
+  }
+}
+
+void send_ack(int ack){
+  BaseType_t xStatus;
+  Package_data data;
+  Header_data header;
+  //creating acknowledgment message and sending it
+  memset(data.contents, 0, sizeof(data.contents));
+  if(snprintf(data.contents, sizeof(data.contents), "%d", ack) < 0){
+    A_ERR("Acknowledgement message creation failed");
+  }
+  int size = strlen(data.contents);
+  A_DBG("Acknowledge value is %s of size %d\n", data.contents, size);
+  header = {CONFIRMATION_FLAG, 0, size, crc_string(data.contents, size)};
+  data.header = header;
+
+  xStatus = xQueueSend(send_queue, &data, portMAX_DELAY);
+  if(xStatus != pdPASS){
+    vPrintString("[ERROR] [send_ack] failed to send data to send_queue.\r\n");
   }
 }
 
@@ -280,58 +330,61 @@ the incoming server request if the CRC32 check was successful or to
 the `-1` value otherwise.*/
 void wifi_request_handling_task(void* params){
   // UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
-  // Serial.printf("wifi_request_task high water mark: %u\n", watermark);
+  // Serial.printf("\nwifi_request_task high water mark (BEGIN) : %u\n", watermark);
   Package_data data;
   BaseType_t xStatus;
 
-  char ACK[50];
   int ack = 0;
   while(1){
     xStatus = xQueueReceive(wifi_request_queue, &data, portMAX_DELAY);
+    ack = 0;
     if(xStatus == pdTRUE){
       /*calculate crc value given received payload and compare 
       it to the crc the server reported in the header*/
-      unsigned int expected_crc = crc_string(data.contents, data.length);
-      // Serial.printf("Expected CRC value of request is %04x\n", expected_crc);
+      unsigned int expected_crc = crc_string(data.contents, data.header.length);
 
       /*The data packet is a transfer packet(upload or download).
       Check its integrity (using CRC32) and send the proper acknowledgment message.*/
-      if(data.command_type >= 1 && data.command_type <= 3){
-        if(expected_crc != data.crc_value){
-          Serial.println("CRC32 check failed! Skipping packet processing");
-          ack = -1;
-        }else{
-          ack = data.command_id;
-          Serial.printf("CRC32 check %04x successful! processing packet\n", expected_crc);
-          handle_download(data);
-        }
+      if(expected_crc != data.header.crc_value){
+        A_WRN("CRC32 check failed! Skipping packet processing");
+        ack = -1;
+        send_ack(ack);
+        continue;
+      }else{
+        A_DBG("CRC32 check %04x successful! processing packet\n", expected_crc);
+      }
+      //successful CRC confirmation of packet 
+      ack = data.header.command_id;
 
-        //creating acknowledgment message and sending it
-        if(sprintf(ACK, "%d", ack) < 0){
-          Serial.println("Acknowledgement message creation failed");
-        }
-        // send_request(CFCF, 0, 0, strlen(ACK), ACK); 
-        data.command_type = CFCF;
-        data.command_id = 0;
-        data.opt_arg = 0;
-        data.length = strlen(ACK);
-        data.crc_value = crc_string(ACK, data.length);
-        strcpy(data.contents, ACK);
+      // watermark = uxTaskGetStackHighWaterMark(NULL);
+      // Serial.printf("\nwifi_request_task high water mark (MID) : %u\n", watermark);
 
-        xStatus = xQueueSend(send_queue, &data, portMAX_DELAY);
-        if(xStatus != pdPASS){
-          vPrintString("wifi_request_handling failed to send data to send_queue.\r\n");
+      if(data.header.command_type == START_DOWNLOAD 
+        || data.header.command_type == FILE_TRANSFER || data.header.command_type == END_DOWNLOAD){
+          
+        int result = 1;
+        result = handle_download(&data);
+
+        if(result != 1){
+          ack = result;
         }
+        // A_DBG("result of packet processing is: %d\n", result);
       /*The data packet is a macro command. Call the appropriate function.*/
-      }else if(data.command_type == 0){
-        Serial.println("Tokenizing");
+      }else if(data.header.command_type == MACRO_COMMAND){
+        A_DBG("Tokenizing");
         hard_press(data.contents);
       }
+      // Serial.printf("[DEBUG] [wifi_request_handling] Sending ack value %d for message %u\n", ack, data.header.command_id);
+      A_DBG("Sending ack value %d for message %u\n", ack, data.header.command_id);
+      //seding confirmation
+      send_ack(ack);
+
+      // watermark = uxTaskGetStackHighWaterMark(NULL);
+      // Serial.printf("\nwifi_request_task high water mark (END) : %u\n", watermark);
     }else{
-      vPrintString("wifi_request_handling_task failed to receive data from wifi_request_queue. \r\n");
+      vPrintString("[ERROR] [wifi_request_handling] failed to receive data from wifi_request_queue. \r\n");
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
 }
-
 #endif

@@ -5,6 +5,7 @@ import logging
 import datetime
 import os
 import sys
+import queue
 
 os.makedirs("logs", exist_ok=True)
 logger = logging.getLogger(__name__)
@@ -21,17 +22,23 @@ logging.basicConfig(
     ]
 )
 CHUNK_SIZE = 2048
-HEADER_SIZE = 20
+HEADER_SIZE = 16
+MAX_RETRIES = 10
 
 server_cmd_id = 0
+"""Predefined constant values used as flags in the protocol"""
+MACRO_COMMAND = 0
+START_DOWNLOAD = 1
+FILE_TRANSFER = 2
+END_DOWNLOAD = 3
+INITIALIZE_ROUTINE = 4
+CONFIRMATION_FLAG = 5
+LOG_MESSAGE = 6
 
-MCCF = 0    #MACRO COMMAND FLAG
-SDCF = 1    #START DOWNLOAD COMMAND FLAG
-FTCF = 2    #FILE TRANSFER COMMAND FLAG
-EDCF = 3    #END OF DOWNLOAD COMMAND FLAG
-INTF = 4    #INITIALIZATION FLAG (start of routine)
-CFCF = 5    #CONFIRMATION COMMAND FLAG
-LGCF = 6    #LOG MESSAGE COMMAND FLAG
+"""Acknowledgement flags"""
+SUCCESSFUL_CONF = 1
+INCORRECT_VALUE = -1
+STOP_ACTION = -2
 
 """Loop to send all data to server.
 
@@ -70,6 +77,39 @@ def write_all(client_socket, data):
     except socket.error as e:
         logger.error("write_all exception: %s", e, exc_info=True)
 
+
+"""In the context of data transfers the server sends a packet then
+waits for confirmation before sending the next one. The queue is used to
+store incoming confirmations. Thus, the client thread blocks performing a
+get operation while waiting for a packet's acknowledgment."""
+ack_queue = queue.Queue()
+
+"""The acknowledgement process is defined as follows:
+
+The client receives a server request identified by the cmd_id field
+It checks the message against the provided and self-computed CRC32 values
+then it responds with a verdict:
+
+The value of the acknowledgement is the initial server cmd_id if the check 
+succeeded `INCORRECT_VALUE` in case of need of a resend (e.g. corrupted packet
+and `STOP_ACTION` in case of a client_sided error that means a continuous transfer
+must be stopped.
+"""
+#TODO: add timeout in case client never sends acknowledgement
+def check_ack(req_id):
+    ack = ack_queue.get()
+    if int(ack) == req_id:
+        logger.debug("ack successful for req_id %d\n", req_id)
+        return SUCCESSFUL_CONF
+    elif int(ack) == INCORRECT_VALUE:
+        logger.warning("ACK process failed! Requesting resend\n")
+        return INCORRECT_VALUE
+    elif int(ack) == STOP_ACTION:
+        return STOP_ACTION
+    else:
+        logger.warning("ACK got unexpected value %d while expecting %d/%d\n", ack, req_id, server_cmd_id)
+        return False
+
 """Compose a protocol compliant message and send it to the client.
 
 Compute the CRC32 value of the payload and retrieve the passed header fields.
@@ -81,7 +121,7 @@ This is a product of the file transfer resend/confirmation operation.
 In the context of multiple connections this will require a synchronized variable
 or an id that increments regardless of the acknowledgement status.
 """
-def send_request(client_socket, cmd_type, cmd_id, opt_arg, req_len, req):
+def send_request(client_socket, cmd_type, cmd_id, req_len, req):
     global server_cmd_id
     #format: < = small endian (! for network = big endian)
     if req_len > CHUNK_SIZE:
@@ -94,16 +134,28 @@ def send_request(client_socket, cmd_type, cmd_id, opt_arg, req_len, req):
         enc_type = "str"
 
     crc_value = binascii.crc32(req) & 0xffffffff
-    packet = struct.pack("!iiiiI", cmd_type, cmd_id, opt_arg, req_len, crc_value) + req
+    packet = struct.pack("!IIII", cmd_type, cmd_id, req_len, crc_value) + req
 
     if enc_type == "str":
-        logger.debug("SENT packet of type %d, id %d, opt_arg %d, size %d, CRC %s\n%s\n",
-                    cmd_type, cmd_id, opt_arg, len(req), hex(crc_value), req.decode('utf-8'))
+        logger.debug("SENT packet of type %d, id %d, size %d, CRC %s\n%s\n",
+                    cmd_type, cmd_id, len(req), hex(crc_value), req.decode('utf-8'))
     else:
-        logger.debug("SENT packet of type %d, id %d, opt_arg %d, size %d, CRC %s\n%s\n",
-                    cmd_type, cmd_id, opt_arg, len(req), hex(crc_value), req.hex())
+        logger.debug("SENT packet of type %d, id %d, size %d, CRC %s\n%s\n",
+                    cmd_type, cmd_id, len(req), hex(crc_value), req.hex())
 
     write_all(client_socket, packet)
     # server_cmd_id+=1 TODO: how should the server message id be incremented in the context of multiple client connections
+    result = check_ack(cmd_id)
+    retry_counter = 0
+    #resend packet until successful confirmation, error or exceeded retry counter
+    while result == INCORRECT_VALUE and retry_counter < MAX_RETRIES:
+        write_all(client_socket, packet)
+        result = check_ack(cmd_id)
+        retry_counter += 1
+
+    if retry_counter == MAX_RETRIES and result == INCORRECT_VALUE:
+        logger.error("Packet reached MAX_RETRIES. Ending upload")
+        result = STOP_ACTION
+
     server_cmd_id = cmd_id + 1
-    # print(f"incrementing srv_id = {server_cmd_id}")
+    return result

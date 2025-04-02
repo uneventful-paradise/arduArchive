@@ -2,7 +2,12 @@
 #define _UTILITIES_H_
 
 #include "config.h"
+#include <stdio.h>
 // #include <avr/pgmspace.h>
+
+SdFat sd;
+SdFile file_obj;
+char* paths[SPRITE_COUNT];
 
 /*lookup table used in computing crc value
 more time efficient compared to a polynomoial version with no lookup.
@@ -19,17 +24,21 @@ USBHIDKeyboard Keyboard;
 QueueHandle_t send_queue;
 SemaphoreHandle_t xPrintMutex = NULL;
 
-struct Package_data{
-  int command_type;
-  int command_id;
-  int opt_arg;
-  int length;
+
+struct Header_data{
+  unsigned int command_type;
+  unsigned int command_id;
+  unsigned int length;
   unsigned int crc_value;
+};
+
+struct Package_data{
+  Header_data header;
   char contents[CHUNK_SIZE];
 }data;
 
-File file_obj = File();
-char* paths[SPRITE_COUNT];
+
+unsigned int client_cmd_id = 0;
 
 unsigned long crc_update(unsigned long crc, byte data)
 {
@@ -55,7 +64,7 @@ unsigned long crc_string(const char *s, size_t length) {
 /*Create the file and the path to it if it doesn't exist. 
 Finds the last `/` character to split filename from directory path
 Path must start with a `/` to denote the root directory of the SD card*/
-File get_file_obj(const char* filename, bool append_mode = false){
+bool get_file_obj(const char* filename){
   int slash_pos = -1;
   char* directory = NULL;
   //get the last slash in the path
@@ -68,7 +77,7 @@ File get_file_obj(const char* filename, bool append_mode = false){
   //no slash found
   if(slash_pos == -1){
     Serial.println("Invalid filename");
-    return File();
+    return false;
   }
   //get directory path
   if(slash_pos > 0){
@@ -78,10 +87,12 @@ File get_file_obj(const char* filename, bool append_mode = false){
     Serial.println("Requested directory is root");
   }
   //create directory if it doesn't exist
-  if(!SD.exists(directory)){
-    if(!SD.mkdir(directory)){
+  Serial.printf("Moving onto directory creation\n");
+  if(!sd.exists(directory)){
+    Serial.println("Parent dir does not exist. Creating it");
+    if(!sd.mkdir(directory)){
       Serial.println("Failed to create directory");
-      return File();
+      return false;
     }else{
       Serial.println("Successfully created directory");
     }
@@ -90,24 +101,22 @@ File get_file_obj(const char* filename, bool append_mode = false){
   }
   //opening or creating file
   Serial.printf("Attempting to open or create %s\n", filename);
-  if(SD.exists(filename)){
+  if(sd.exists(filename)){
     Serial.println("File already exists");
   }
   /*open file in approapriate mode (append will be called 
   in case the writing process fails mid way)*/
-  if(!append_mode){
-    file_obj = SD.open(filename, FILE_WRITE);
-  }else{
-    file_obj = SD.open(filename, FILE_APPEND);
-  }
 
-  if(!file_obj){
+
+  if(!file_obj.open(filename, O_WRITE | O_CREAT | O_TRUNC)){
     Serial.println("Error opening or creating file");
-    return File();
+    return false;
   }
   Serial.println("File opened successfully");
-  free(directory);
-  return file_obj;
+  if(directory){
+    free(directory);
+  }
+  return true;
 }
 
 /*thread safe logging function
@@ -133,11 +142,9 @@ for debugging when connected to USB-native port (Serial not available)*/
 void log(char* message){
   BaseType_t xStatus;
 
+  Header_data header = {LOG_MESSAGE, 0, strlen(message), 0};
   Package_data data;
-  data.command_type = LGCF;
-  data.command_id = 0;  
-  data.opt_arg = 0;
-  data.length = strlen(message);
+  data.header = header;
   strcpy(data.contents, message);
 
   xStatus = xQueueSend(send_queue, &data, portMAX_DELAY);
@@ -237,22 +244,37 @@ void hard_press(char* sequence){
 }
 
 void init_paths(char* filename){
-  if(!SD.exists(filename)){
+  const int max_line_size = 100;
+  char line[max_line_size];
+  int ln = 0;
+  size_t n = 0;
+
+  if(!sd.exists(filename)){
     Serial.println("File does not exist");
     return;
   }
-  File file = SD.open(filename);
-  if(!file){
-    Serial.println("Could not open file");
-    return;
+  SdFile file;
+  if(!file.open(filename, O_READ)){
+    Serial.printf("Failed to open file in init_paths\n");
   }
-  int index = 0;
-  while(file.available()){
-    if(index > SPRITE_COUNT){
+  while ((n = file.fgets(line, sizeof(line))) > 0) {
+    if(ln > SPRITE_COUNT){
+      break;
+    } 
+    // Print line number.
+    // Serial.print(ln);
+    // Serial.print(": ");
+    // Serial.print(line);
+    if (line[n - 1] != '\n') {
+      // Line is too long or last line is missing nl.
+      line[n-1] = '\0';
+      Serial.println(F(" <-- missing nl"));
       break;
     }
-    String s = file.readStringUntil('\n');
-    paths[index++] = strdup(s.c_str());
+    paths[ln++] = strndup(line, n);
+    if(paths[ln-1][n] != '\0'){
+      Serial.printf("failed append of NULL\n");
+    }
   }
 }
 
@@ -270,4 +292,74 @@ void access_path(int icon_index){
   Keyboard.releaseAll();
 }
 
+const int MIN_DEBUG_LEVEL = 1;
+
+void debug_print(const char* func_name, int debug_lvl, const char* fmt, ...){
+  if(debug_lvl >= MIN_DEBUG_LEVEL){
+
+    const char* level = NULL;
+    switch(debug_lvl) {
+      case 1:
+          level = "DEBUG";
+          break;
+      case 2:
+          level = "WARNING";
+          break;
+      case 3:
+          level = "ERROR";
+          break;
+      default:
+          level = "INFO";
+          break;
+    }
+    Serial.printf("[%s] [%s] ", func_name, level);
+    va_list argList;
+    va_start(argList, fmt);
+    vprintf(fmt, argList);
+    va_end(argList);
+
+    printf("\n");
+  }
+}
+
+bool configured_timestamp = false;
+struct tm time_info;
+
+void configure_timestamp(){
+  if(WiFi.status() != WL_CONNECTED){
+    Serial.printf("Not connected to network. Failed to fetch current time\n");
+  }
+
+  const char* ntpServer = "pool.ntp.org";
+  const long  gmtOffset_sec = 0;
+  const int   daylightOffset_sec = 3600;
+
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+
+  Serial.printf("Updated time info\n");
+
+}
+
+const int timestamp_size = 30;
+char current_timestamp[timestamp_size];
+
+bool update_timestamp(){
+  if(!getLocalTime(&time_info)){
+    Serial.println("Failed to update time");
+    return false;
+  }
+  // Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+  if(!strftime(current_timestamp , timestamp_size, "%m-%d %H:%M:%S", &time_info)){
+    Serial.printf("Failed to write time\n");
+    return true;
+  }else{
+    Serial.printf("Succesfully wrote time %s\n", current_timestamp);
+    return false;
+  }
+}
+
+#define A_DBG(fmt, ...) { printf("[%s:%d]: " fmt "\n", __func__, __LINE__ __VA_OPT__(,) __VA_ARGS__); }
+
+#define A_ERR(fmt, ...) A_DBG("[ERROR] " fmt __VA_OPT__(,) __VA_ARGS__)
+#define A_WRN(fmt, ...) A_DBG("[WARNING] " fmt __VA_OPT__(,) __VA_ARGS__)
 #endif

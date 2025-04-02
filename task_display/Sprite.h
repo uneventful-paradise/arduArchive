@@ -1,9 +1,9 @@
 #ifndef _Sprite_H_
 #define _Sprite_H_
-#include <SD.h>
+
+#include "config.h"
 #include <arduino.h>
 #include <Arduino_GFX_Library.h>
-#include "JpegFunc.h"
 
 #define UNABLE -1
 #define ENABLE 1

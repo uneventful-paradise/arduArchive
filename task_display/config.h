@@ -2,7 +2,8 @@
 #define _CONFIG_H_
 
 #include <USB.h>
-#include <SD.h>
+// #include <SD.h>
+#include "JpegFunc.h"
 #include <USBHIDKeyboard.h>
 #include <SPI.h>
 #include <Wire.h>
@@ -10,22 +11,25 @@
 #include <TAMC_GT911.h>
 // #include "Tasks.h"
 #include "Sprite.h"
+#include <WiFi.h>
+#include "time.h"
+
 
 #define WIFI_SSID           "DIGI-yWsT"
 #define WIFI_PWD            "74F8ghZw"
 #define SERVER_IP           "192.168.100.63"
 #define PORT                65432
 #define CHUNK_SIZE          2048
-#define HEADER_SIZE         20    //int cmd_type | int cmd_id | int opt_arg | int length | unsigned int crc_value
+#define HEADER_SIZE         16    //unsigned int cmd_type | unsigned int cmd_id | unsigned int length | unsigned int crc_value
 #define BUFFER_SIZE         256
 
-#define MCCF  0     //MACRO COMMAND FLAG
-#define SDCF  1     //START DOWNLOAD COMMAND FLAG
-#define FTCF  2     //FILE TRANSFER COMMAND FLAG
-#define EDCF  3     //END OF DOWNLOAD COMMAND FLAG
-#define INTF  4     //INITIALIZATION FLAG (start of routine)
-#define CFCF  5     //CONFIRMATION COMMAND FLAG
-#define LGCF  6     //LOG MESSAGE COMMAND FLAG
+#define  MACRO_COMMAND         0
+#define  START_DOWNLOAD        1
+#define  FILE_TRANSFER         2
+#define  END_DOWNLOAD          3
+#define  INITIALIZE_ROUTINE    4
+#define  CONFIRMATION_FLAG     5
+#define  LOG_MESSAGE           6
 
 #define TOUCH_SDA     17
 #define TOUCH_SCL     18
@@ -99,5 +103,18 @@
 #define PWM_CHANNEL 1
 #define PWM_FREQ 5000 // Hz
 #define pwm_resolution_bits 10
+
+#define SPI_CLOCK SD_SCK_MHZ(12)
+
+#if defined(HAS_TEENSY_SDIO)
+#define SD_CONFIG SdioConfig(FIFO_SDIO)
+#elif defined(RP_CLK_GPIO) && defined(RP_CMD_GPIO) && defined(RP_DAT0_GPIO)
+// See the Rp2040SdioSetup example for RP2040/RP2350 boards.
+#define SD_CONFIG SdioConfig(RP_CLK_GPIO, RP_CMD_GPIO, RP_DAT0_GPIO)
+#elif ENABLE_DEDICATED_SPI
+#define SD_CONFIG SdSpiConfig(SD_CS, DEDICATED_SPI, SPI_CLOCK)
+#else  // HAS_TEENSY_SDIO
+#define SD_CONFIG SdSpiConfig(SD_CS, SHARED_SPI, SPI_CLOCK)
+#endif  // HAS_TEENSY_SDIO
 
 #endif

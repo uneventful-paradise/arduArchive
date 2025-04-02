@@ -2,6 +2,7 @@ import subprocess
 import webbrowser
 import json
 
+import basic_comms
 from basic_comms import *
 #load modifier key codes from file
 CONFIG_FILE = "config/key_codes.json"
@@ -75,7 +76,12 @@ def hard_key_press(client_socket, cmd_id, key_sequence):
                 new_keys.append(key)
 
     hexed_string = '+'.join(new_keys)
-    send_request(client_socket, MCCF, cmd_id, 0, len(hexed_string), hexed_string)
+    send_result = send_request(client_socket, MACRO_COMMAND, cmd_id, len(hexed_string), hexed_string)
+    if send_result == basic_comms.SUCCESSFUL_CONF:
+        logger.debug("Success")
+    else:
+        logger.error("Unexpected response")
+
 
 #maps the commands to executing functions
 ACT_DICT = {

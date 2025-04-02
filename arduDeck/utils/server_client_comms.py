@@ -1,5 +1,3 @@
-import os
-import queue
 import random
 
 import basic_comms
@@ -26,34 +24,12 @@ s.listen(5)
 #FILENAME = "media/haskell-register.log"
 #FILENAME = "media/tw.txt"
 #FILENAME = "media/pdfs/rtos.pdf"
+# FILENAME = "media/pdfs/com.pdf"
 FILENAME = "media/images/landscape.jpg"
+# FILENAME = "media/images/wanda.jpg"
+# FILENAME = "media/txts/haskell-register.log"
 DEFAULT_CLIENT_DOWNLOAD_FOLDER = "/init_icons"
 
-"""In the context of file transfers the server sends a packet then
-waits for confirmation before sending the next one. The queue is used to
-store incoming confirmations. Thus, the client thread blocks performing a
-get operation while waiting for a packet's acknowledgment."""
-ack_queue = queue.Queue()
-
-"""The acknowledgement process is defined as follows:
-
-The client receives a server request identified by the cmd_id field
-It checks the message against the provided and self-computed CRC32 values
-then it responds with a verdict:
-
-The value of the acknowledgement is the initial server cmd_id if the check 
-succeeded or `-1` otherwise."""
-def check_ack(req_id):
-    ack = ack_queue.get()
-    if int(ack) == req_id:
-        logger.debug("ack successful for req_id %d", req_id)
-        return True
-    elif int(ack) == -1:
-        logger.warning("ACK process failed! Requesting resend")
-        return False
-    else:
-        logger.warning("ACK got unexpected value %d while expecting %d/%d", ack, req_id, basic_comms.server_cmd_id)
-        return False
 
 """Opens the upload source file and sends predefined sized chunks of data to client.
 
@@ -65,37 +41,36 @@ def handle_upload(client_socket, filename, client_location):
     logger.debug("Started upload")
 
     file_size = os.path.getsize(filename)
-    client_filename = client_location + "/" + filename.split('/')[-1]
+    client_filename = client_location + "/" + filename.split('/')[-1] + " " + str(file_size)
     logger.debug("writing to %s", client_filename)
 
     #send the upload initiating request
     req_cmd = basic_comms.server_cmd_id
-    send_request(client_socket, SDCF, req_cmd, file_size, len(client_filename), client_filename)
-
-    #TODO: ack could be on each message so the resending could happen withing the send_request function?
-    #wait for confirmation
-    while not check_ack(req_cmd):
-        send_request(client_socket, SDCF, req_cmd,  file_size, len(client_filename), client_filename)
+    send_res = send_request(client_socket, START_DOWNLOAD, req_cmd, len(client_filename), client_filename)
+    if send_res == STOP_ACTION:
+        logger.ERROR("Client requested end of UPLOAD by ack flag")
+        return
     try:
         file_obj = open(filename, 'rb')
         while True:
+            #read a chunk of data from file
             data = file_obj.read(CHUNK_SIZE)
             req_cmd = basic_comms.server_cmd_id
-            #send transfer ending request
+
             if not data:
+                #send transfer ending request
                 data = "EOF"
-                send_request(client_socket, EDCF, req_cmd, 0, len(data), data)
-                # TODO: retry for a fixed number of times?
-                while not check_ack(req_cmd):
-                    send_request(client_socket, EDCF, req_cmd, 0, len(data), data)
-                break
-            #send the following file contents request
+                send_res = send_request(client_socket, END_DOWNLOAD, req_cmd, len(data), data)
+                if send_res == SUCCESSFUL_CONF:
+                    logger.debug("EOF sent successfully. Upload ended.")
+                    break
             else:
-                if len(data) < CHUNK_SIZE:
-                    logger.debug("partial read")
-                send_request(client_socket, FTCF, req_cmd, 0, len(data), data)
-                while not check_ack(req_cmd):
-                    send_request(client_socket, FTCF, req_cmd, 0, len(data), data)
+                #send the following file contents request
+                send_res = send_request(client_socket, FILE_TRANSFER, req_cmd, len(data), data)
+            #stop transfer in case of error
+            if send_res == STOP_ACTION:
+                logger.ERROR("Received request to end UPLOAD by ack flag")
+                break
 
     except IOError as e:
         logger.error("Could not open or read file", exc_info=True)
@@ -179,15 +154,14 @@ If the message is a macro command (MCCF flag) then the request is forwarded to t
 """
 def handle_request(request, client_socket):
     #parse header
-    header = struct.unpack("!iiiiI", request)
+    header = struct.unpack("!IIII", request)
     command_type = int(header[0])
     command_id = int(header[1])
-    opt_arg = int(header[2])
-    req_len = int(header[3])
-    crc_value = int(header[4])
+    req_len = int(header[2])
+    crc_value = int(header[3])
 
     try:
-        logger.debug("\nRequest has type %d, id %d, opt_arg %d, len %d, CRC %s", command_type, command_id, opt_arg, req_len, hex(crc_value))
+        logger.debug("Request has type %d, id %d, len %d, CRC %s", command_type, command_id, req_len, hex(crc_value))
         #get payload contents
         req_contents = read_all(client_socket, req_len)
         readable_req_contents = req_contents.decode("utf-8")
@@ -195,12 +169,11 @@ def handle_request(request, client_socket):
         logger.debug("REQUEST CONTENTS: %s\n", readable_req_contents)
 
         #executing command associated to the button id
-        if command_type == CFCF:
+        if command_type == CONFIRMATION_FLAG:
             ack_queue.put(readable_req_contents)
             # print(f"put {readable_req_contents} in queue")
-        elif command_type == MCCF:
-            #TODO: change macros to have button id in the payload
-            execute_command(client_socket, CMD_DICT, command_id, opt_arg)
+        elif command_type == MACRO_COMMAND:
+            execute_command(client_socket, CMD_DICT, command_id, int(readable_req_contents))
     except ValueError as e:
         logger.error("Handle request exception: %s", e, exc_info=True)
 
@@ -215,7 +188,7 @@ def handle_new_connection(client_socket, client_addr):
             client_socket.close()
             logger.debug("Client disconnected")
             return None
-        logger.debug("Client %s requested %s", client_addr, req)
+        # logger.debug("Client %s requested %s", client_addr, req)
         handle_request(req, client_socket)
 
 """Function to be called by the writer thread. It will deal with listening to and 
@@ -223,7 +196,8 @@ performing user requests."""
 def handle_server_send(client_socket, client_addr):
     responses = ["hey dude thanks for letting me know",
                  "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum",
-                 "hyaimamanannanan"]
+                 "hyaimamanannanan",
+                 "buna ziuaaa"]
 
     while True:
         user_input = input(">")
@@ -235,7 +209,10 @@ def handle_server_send(client_socket, client_addr):
         if user_input == "m":
             msg_index = random.randint(0, len(responses) - 1)
             # print(f'server cmd id = {basic_comms.server_cmd_id}')
-            send_request(client_socket, INTF, basic_comms.server_cmd_id, 0, len(responses[msg_index]), responses[msg_index])
+            send_result = send_request(client_socket, INITIALIZE_ROUTINE, basic_comms.server_cmd_id
+                         , len(responses[msg_index]), responses[msg_index])
+            if send_result != basic_comms.SUCCESSFUL_CONF:
+                logger.error("Message send failed")
         if user_input == "e":
             client_socket.close()
             s.close()

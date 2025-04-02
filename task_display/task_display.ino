@@ -5,9 +5,9 @@ static TaskHandle_t touch_task_handle = NULL;
 /*Initialize the touch function, screen, display function, keyboard
 and start the tasks.
 TODO: block some tasks from running before internet connection or during transfers*/
+
 void setup() {
   Serial.begin(115200);
-
   pinMode(TOUCH_RST, OUTPUT);
   delay(100);
   digitalWrite(TOUCH_RST, LOW);
@@ -34,8 +34,9 @@ void setup() {
   USB.begin();
 
   SPI.begin(SD_SCK, SD_MISO, SD_MOSI);
-  if (!SD.begin(SD_CS))
+  if (!sd.begin(SdSpiConfig(SD_CS, SHARED_SPI, SD_SCK_MHZ(16))))
   {
+    sd.initErrorHalt();
     Serial.println(F("ERROR: SD Mount Failed!"));
     // while(1)
     {
@@ -55,7 +56,12 @@ void setup() {
     draw_main_screen(gfx);
     
     init_paths("/configs/path_config_2.txt");
+    /*Initializing mutexes*/
+     xPrintMutex = xSemaphoreCreateMutex();
 
+    if (xPrintMutex == NULL) {
+      Serial.println("Failed to create print mutex!");
+    }
     /*Creating task queues. The queue takes event size as parameter 
     so it can manage the memory blocks allocated for each instance of the event itself*/
     selection_queue = xQueueCreate(10, sizeof(Touch_event));
@@ -77,7 +83,7 @@ void setup() {
     if(wifi_request_queue == NULL){
       Serial.println("Failed to create ui_updates_queue");
     }
-  
+
     xTaskCreatePinnedToCore(
       touch_check_task,
       "touch_check",
@@ -131,7 +137,7 @@ void setup() {
     xTaskCreatePinnedToCore(
       receive_request_task,
       "receive_request_task",
-      4096,
+      8192,
       NULL,
       1,
       NULL,
@@ -152,6 +158,10 @@ void setup() {
 }
 
 //interrupt upload if something goes wrong?
+//constants vs macros
 void loop() {
-
+  // if(configured_timestamp){
+  //   update_timestamp();
+  //   delay(1000);
+  // }
 }

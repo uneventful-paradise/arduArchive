@@ -1,7 +1,7 @@
 #ifndef _DISPLAY_H_
 #define _DISPLAY_H_
 
-#include "Utilities.h"
+#include "utilities.h"
 #include "Sprite.h"
 // #include <TAMC_GT911.h>
 
