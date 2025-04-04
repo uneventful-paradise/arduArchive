@@ -5,15 +5,6 @@
 
 WiFiClient client;
 
-struct UI_update{
-  int type;         //0 = file trasnfer, 1 = connection checkup ...
-  int status;       //0 = start_transfer, 1 = transfer_in_progress, 2 = transfer_finished, 3 = general_update
-  float arg;
-  char message[BUFFER_SIZE];
-};
-
-QueueHandle_t ui_updates_queue;
-
 void printWifiStatus() {
   Serial.print("\nSSID: ");
   Serial.println(WiFi.SSID());
@@ -32,22 +23,22 @@ completely written on the socket.
 
 TODO: change structure of Package_data to dynamically allocated contents
 to avoid sending unnecessary data around.*/
-void send_request(Package_data* data){
+void send_request(Package_data* data) {
   // Serial.printf("Got data type %u id %u len %u CRC %04x \n%s\n", cmd_type, cmd_id, req_len, crc_value, req);
   unsigned int packet_id = data->header.command_id;
   unsigned int packet_len = data->header.length;
-  // Serial.printf("\nSending type %u id %u len %u CRC %04x\n%s\n", 
-  //               data->header.command_type, 
-  //               data->header.command_id, 
-  //               data->header.length, 
-  //               data->header.crc_value, 
+  // Serial.printf("\nSending type %u id %u len %u CRC %04x\n%s\n",
+  //               data->header.command_type,
+  //               data->header.command_id,
+  //               data->header.length,
+  //               data->header.crc_value,
   //               data->contents);
-  A_DBG("Sending type %u id %u len %u CRC %04x\n%s\n", 
-                data->header.command_type, 
-                data->header.command_id, 
-                data->header.length, 
-                data->header.crc_value, 
-                data->contents);
+  A_DBG("Sending type %u id %u len %u CRC %04x\n%s\n",
+        data->header.command_type,
+        data->header.command_id,
+        data->header.length,
+        data->header.crc_value,
+        data->contents);
 
   //Convert data to big endian (network byte order) before sending (network standard).
   data->header.command_type = htonl(data->header.command_type);
@@ -71,7 +62,7 @@ void send_request(Package_data* data){
     } else {
       // Serial.printf("Send %d failed at byte %d. Retrying...\n", packet_id, bytes_sent);
       A_ERR("Send %d failed at byte %d. Retrying...\n", packet_id, bytes_sent);
-      delay(10); 
+      delay(10);
     }
   }
   // Serial.printf("Send of id %u successful!\n", packet_id);
@@ -97,19 +88,19 @@ Finally, the "END_DOWNLOAD" request signalizes that EOF has been read on the ser
 The file is closed and the `file_obj` object is reasigned NULL. So, `file_obj` is NULL as
 long as no file transfer is ongoing.
 */
-unsigned int final_file_size = 0; //unsigned long int
+unsigned int final_file_size = 0;  //unsigned long int
 unsigned int current_file_size = 0;
 float download_percentage = 0;
 char* current_filename;
 
-int handle_download(Package_data* pd){
+int handle_download(Package_data* pd) {
   UI_update update;
   BaseType_t xStatus;
 
   /*In the START_DOWNLOAD packet there are sent
   the client side filename and final file size separated by a space*/
   // Serial.printf("Header command type is %u\n", pd->header.command_type);
-  if(pd->header.command_type == START_DOWNLOAD){
+  if (pd->header.command_type == START_DOWNLOAD) {
 
     //parsing the contents to get filename and filesize
     //request has form "filename filesize"
@@ -124,7 +115,7 @@ int handle_download(Package_data* pd){
     /*use stroull to convert string to unsigned 
     long long int value. Number value in string is base 10*/
     final_file_size = strtoull(token, NULL, 10);
-    if(final_file_size == 0L){
+    if (final_file_size == 0L) {
       // Serial.println("strtoull failed in handle download");
       A_ERR("strtoull failed in handle download");
       free(copied_contents);
@@ -135,37 +126,35 @@ int handle_download(Package_data* pd){
     free(copied_contents);
 
     //open the file and initiate the transfer
-    if(!get_file_obj(current_filename)){
+    if (!get_file_obj(current_filename)) {
       return -2;
     }
     current_file_size = 0;
     // Serial.printf("INITIATED DOWNLOAD. Final size will be %d\n", final_file_size);
     A_DBG("INITIATED DOWNLOAD. Final size will be %d\n", final_file_size);
-    
-    //updating the screen
-    update.type = 0;
+
+    /*Send an update to screen*/
+    update.type = START_DOWNLOAD;
     update.status = 0;
-    update.arg = 0;
-    if(sprintf(update.message, "Starting download") < 0){
+    if (sprintf(update.message, "Starting download") < 0) {
       // Serial.println("Update message creation failed");
       A_ERR("Update message creation failed");
     }
     //checking that the file has been created/opened without errors.
-    if(file_obj){
+    if (file_obj) {
       //sending update to queue for the update function to receive and execute
       xStatus = xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
-      if(xStatus != pdPASS){
+      if (xStatus != pdPASS) {
         vPrintString("handle_download failed to send download start data to ui_updates_queue.\r\n");
       }
-    }else{
+    } else {
       // Serial.println("Invalid download file");
       A_ERR("Invalid download file");
       return -2;
     }
     // Serial.printf("passing to next packet\n");
     return 1;
-  }
-  else if(pd->header.command_type == END_DOWNLOAD){
+  } else if (pd->header.command_type == END_DOWNLOAD) {
     //EOF read on server side. Ending download.
     //init file to null?
     // Serial.println("EOF reached. Ending download.");
@@ -173,10 +162,10 @@ int handle_download(Package_data* pd){
     file_obj.flush();
     file_obj.close();
     //resetting file obj to evaluate to false once the download is complete
-    if(current_file_size != final_file_size){
+    if (current_file_size != final_file_size) {
       // Serial.println("ERROR: Total written does not match target value");
       A_ERR("Total written %d does not match target value", current_file_size);
-    }else{
+    } else {
       // Serial.printf("DOWNLOAD FINISHED. Wrote %d bytes\n", final_file_size);
       A_DBG("DOWNLOAD FINISHED. Wrote %d bytes\n", final_file_size);
     }
@@ -185,24 +174,22 @@ int handle_download(Package_data* pd){
     //free filename to be used by next START_DOWNLOAD command
     free(current_filename);
 
-    update.type = 0;
-    update.status = 2;
-    update.arg = 100;
-    if(sprintf(update.message, "Download finished") < 0){
+    update.type = END_DOWNLOAD;
+    update.status = 100;
+    if (sprintf(update.message, "Download finished") < 0) {
       // Serial.println("Update message creation failed");
       A_ERR("Update message creation failed");
     }
 
     xStatus = xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
-    if(xStatus != pdPASS){
+    if (xStatus != pdPASS) {
       vPrintString("handle_download failed to send end of download data to ui_updates_queue.\r\n");
     }
     return 1;
-  }
-  else if(pd->header.command_type == FILE_TRANSFER){
+  } else if (pd->header.command_type == FILE_TRANSFER) {
     //transfer packet contains file data
 
-    if(file_obj) {
+    if (file_obj) {
       //getting file cursor pointer position
       // unsigned long position = file_obj.position();
       // Serial.printf("Before write cursor was at %lu\n", position);
@@ -213,10 +200,10 @@ int handle_download(Package_data* pd){
       bool fatal_error = false;
 
       total_written = file_obj.write((uint8_t*)pd->contents, pd->header.length);
-      if(total_written != pd->header.length){
+      if (total_written != pd->header.length) {
         // Serial.printf("ERROR: partial write of %d bytes for packet %u\n", total_written, pd->header.command_id);
         A_ERR("Wrote %d of %d bytes for packet %u. Error code %d\n", total_written, pd->header.length, pd->header.command_id, file_obj.getError());
-      }else{
+      } else {
         A_DBG("Correctly wrote %d bytes to file\n", total_written);
       }
       //write successful
@@ -231,24 +218,22 @@ int handle_download(Package_data* pd){
 
       // current_file_size += pd.length;
       current_file_size += total_written;
-      download_percentage = round(((float)current_file_size/(float)final_file_size) * 100);
-      
-      update.type = 0;
-      update.status = 1;
-      update.arg = download_percentage;
-      if(sprintf(update.message, "Download %f complete", download_percentage) < 0){
+      download_percentage = round(((float)current_file_size / (float)final_file_size) * 100);
+
+      update.type = FILE_TRANSFER;
+      update.status = download_percentage;
+      if (sprintf(update.message, "Download %f complete", download_percentage) < 0) {
         // Serial.println("Update message creation failed");
         A_ERR("Update message creation failed");
       }
 
-      xStatus= xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
-      if(xStatus != pdPASS){
+      xStatus = xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
+      if (xStatus != pdPASS) {
         vPrintString("handle_download failed to send file trasnfer data to ui_updates_queue.\r\n");
       }
 
       return 1;
-    }
-    else{
+    } else {
       // Serial.println("Target file for upload is invalid");
       A_ERR("Target file for upload is invalid");
     }

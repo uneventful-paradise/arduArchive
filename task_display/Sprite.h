@@ -10,8 +10,7 @@
 #define DEFAULT_TEXT_SIZE 2
 
 //define a button class
-class Sprite
-{
+class Sprite {
 private:
   //Button Position
   int x;
@@ -21,10 +20,10 @@ private:
 
   //Button text
   String path;
-  char* filename;
+  char *filename;
   String text;
   int textSize;
-  Arduino_RPi_DPI_RGBPanel * gfx;
+  Arduino_RPi_DPI_RGBPanel *gfx;
 
   //Button value, default value = -1 is untouchable
   int value;
@@ -32,7 +31,7 @@ private:
 public:
   Sprite();
   Sprite(int x, int y, int w, int h, String text, int value, int textSize = DEFAULT_TEXT_SIZE);
-  Sprite(Arduino_RPi_DPI_RGBPanel * gfx);
+  Sprite(Arduino_RPi_DPI_RGBPanel *gfx);
 
   void set(int x, int y, int w, int h, String text, int value, int textSize = DEFAULT_TEXT_SIZE);
   void getFoDraw(int *x, int *y, int *w, int *h, String *text, int *textSize);
@@ -43,11 +42,11 @@ public:
   String getPath();
   void setValue(int v);
   int getValue();
-  char* getFilename();
-  void setFilename(char* filename);
+  char *getFilename();
+  void setFilename(char *filename);
   void setTextSize(int textSize);
   int checkTouch(int x, int y);
-  void setGFX(Arduino_RPi_DPI_RGBPanel * gfx);
+  void setGFX(Arduino_RPi_DPI_RGBPanel *gfx);
   int getWidth();
   int getHeight();
 

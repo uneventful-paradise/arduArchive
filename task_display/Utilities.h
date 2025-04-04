@@ -24,96 +24,104 @@ USBHIDKeyboard Keyboard;
 QueueHandle_t send_queue;
 SemaphoreHandle_t xPrintMutex = NULL;
 
-
-struct Header_data{
+struct Header_data {
   unsigned int command_type;
   unsigned int command_id;
   unsigned int length;
   unsigned int crc_value;
 };
 
-struct Package_data{
+struct Package_data {
   Header_data header;
   char contents[CHUNK_SIZE];
-}data;
+} data;
 
+struct UI_update {
+  unsigned int type; //just like command type
+  /*status is a type specific argument. 
+  Conveys the transfer percentage for transfer packets
+  and connection change value for the connection check*/
+  int status;
+  char message[BUFFER_SIZE];
+};
+
+QueueHandle_t ui_updates_queue;
 
 unsigned int client_cmd_id = 0;
 
-unsigned long crc_update(unsigned long crc, byte data)
-{
-    byte tbl_idx;
-    tbl_idx = crc ^ (data >> (0 * 4));
-    crc = pgm_read_dword_near(crc_table + (tbl_idx & 0x0f)) ^ (crc >> 4);
-    tbl_idx = crc ^ (data >> (1 * 4));
-    crc = pgm_read_dword_near(crc_table + (tbl_idx & 0x0f)) ^ (crc >> 4);
-    return crc;
+unsigned long crc_update(unsigned long crc, byte data) {
+  byte tbl_idx;
+  tbl_idx = crc ^ (data >> (0 * 4));
+  crc = pgm_read_dword_near(crc_table + (tbl_idx & 0x0f)) ^ (crc >> 4);
+  tbl_idx = crc ^ (data >> (1 * 4));
+  crc = pgm_read_dword_near(crc_table + (tbl_idx & 0x0f)) ^ (crc >> 4);
+  return crc;
 }
 
 /*Caculate CRC32 value of a known length bitstring 
 (binary data cannot be NULL terminated so we rely on the string length
 for string traversal).*/
-unsigned long crc_string(const char *s, size_t length) {
-  unsigned long crc = ~0L;          // initialize with all bits set
+unsigned long crc_string(const char* s, size_t length) {
+  unsigned long crc = ~0L;  // initialize with all bits set
   for (size_t i = 0; i < length; ++i) {
-    crc = crc_update(crc, s[i]);    // process each byte
+    crc = crc_update(crc, s[i]);  // process each byte
   }
-  return ~crc;                      // final complement of the CRC
+  return ~crc;  // final complement of the CRC
 }
 
 /*Create the file and the path to it if it doesn't exist. 
 Finds the last `/` character to split filename from directory path
 Path must start with a `/` to denote the root directory of the SD card*/
-bool get_file_obj(const char* filename){
+bool get_file_obj(const char* filename) {
   int slash_pos = -1;
   char* directory = NULL;
   //get the last slash in the path
-  for(int i = strlen(filename) - 1; i >= 0; --i){
-    if(filename[i] == '/'){
+  for (int i = strlen(filename) - 1; i >= 0; --i) {
+    if (filename[i] == '/') {
       slash_pos = i;
       break;
     }
   }
   //no slash found
-  if(slash_pos == -1){
+  if (slash_pos == -1) {
     Serial.println("Invalid filename");
     return false;
   }
   //get directory path
-  if(slash_pos > 0){
+  if (slash_pos > 0) {
     directory = strndup(filename, slash_pos);
     Serial.printf("Directory is %s\n", directory);
-  }else{
+  } else {
     Serial.println("Requested directory is root");
   }
   //create directory if it doesn't exist
   Serial.printf("Moving onto directory creation\n");
-  if(!sd.exists(directory)){
+  if (!sd.exists(directory)) {
     Serial.println("Parent dir does not exist. Creating it");
-    if(!sd.mkdir(directory)){
+    if (!sd.mkdir(directory)) {
       Serial.println("Failed to create directory");
       return false;
-    }else{
+    } else {
       Serial.println("Successfully created directory");
     }
-  }else{
+  } else {
     Serial.println("Directory already exists");
   }
   //opening or creating file
   Serial.printf("Attempting to open or create %s\n", filename);
-  if(sd.exists(filename)){
+  if (sd.exists(filename)) {
     Serial.println("File already exists");
   }
   /*open file in approapriate mode (append will be called 
   in case the writing process fails mid way)*/
 
 
-  if(!file_obj.open(filename, O_WRITE | O_CREAT | O_TRUNC)){
+  if (!file_obj.open(filename, O_WRITE | O_CREAT | O_TRUNC)) {
     Serial.println("Error opening or creating file");
     return false;
   }
   Serial.println("File opened successfully");
-  if(directory){
+  if (directory) {
     free(directory);
   }
   return true;
@@ -121,16 +129,16 @@ bool get_file_obj(const char* filename){
 
 /*thread safe logging function
 TODO:alternative mutexes for tasks that also use mutexes and call this function?*/
-void vPrintString(const char *pString, bool debug = true){
-  if(debug){
+void vPrintString(const char* pString, bool debug = true) {
+  if (debug) {
     //created mutex if it doesn't exist
-    if(xPrintMutex == NULL){
+    if (xPrintMutex == NULL) {
       // xPrintMutex = xSemaphoreCreateMutex();
       Serial.printf("xPrintMutex hasn't been initialized\n");
       return;
     }
     //Perform a blocking wait to acquire mutex
-    if(xSemaphoreTake(xPrintMutex, portMAX_DELAY) == pdTRUE){
+    if (xSemaphoreTake(xPrintMutex, portMAX_DELAY) == pdTRUE) {
       Serial.printf("%s", pString);
       //Release mutex
       xSemaphoreGive(xPrintMutex);
@@ -139,16 +147,16 @@ void vPrintString(const char *pString, bool debug = true){
 }
 /*logging function that sends log messages to server
 for debugging when connected to USB-native port (Serial not available)*/
-void log(char* message){
+void log(char* message) {
   BaseType_t xStatus;
 
-  Header_data header = {LOG_MESSAGE, 0, strlen(message), 0};
+  Header_data header = { LOG_MESSAGE, 0, strlen(message), 0 };
   Package_data data;
   data.header = header;
   strcpy(data.contents, message);
 
   xStatus = xQueueSend(send_queue, &data, portMAX_DELAY);
-  if(xStatus != pdPASS){
+  if (xStatus != pdPASS) {
     vPrintString("log failed to send data to send_queue.\r\n");
   }
 }
@@ -166,76 +174,81 @@ pVALUE            - print VALUE string
 Keyboard modifiers (special keys like ALT, ESCAPE etc.) need to be handled by the 
 Raw variation of the library function.
 */
-void hard_press(char* sequence){
+void hard_press(char* sequence) {
   //first split the string by '+' using thread safe strtok
   char* save_ptr = sequence;
   char* token;
 
   token = strtok_r(sequence, "+", &save_ptr);
   char* log_msg = (char*)malloc(BUFFER_SIZE);
-  if(log_msg == NULL){
+  if (log_msg == NULL) {
     Serial.println("log_msg allocation failed");
   }
 
-  while(token){
+  while (token) {
     //get command type
     char event = token[0];
     //char* pEnd;
     // printf("%s\n", token);
-    
+
     unsigned long long int code = 0;
-    if(strlen(token) > 1){
+    if (strlen(token) > 1) {
       //convert string key value to decimal value
-      code = strtoull(token+1, NULL, 10);
-      if(code == 0L){
+      code = strtoull(token + 1, NULL, 10);
+      if (code == 0L) {
         Serial.println("stroull failed for token conversion");
       }
     }
     //perform the appropriate action given the command type
-    switch(event){
-      case 'u':{
-        char c = code;
-        if(code >= 128){
-          Keyboard.releaseRaw(code);
-        }else{
-          Keyboard.release(code);
+    switch (event) {
+      case 'u':
+        {
+          char c = code;
+          if (code >= 128) {
+            Keyboard.releaseRaw(code);
+          } else {
+            Keyboard.release(code);
+          }
+
+          sprintf(log_msg, "key_up selected for %c\n", c);
+          // log(log_msg);
+          break;
         }
+      case 'd':
+        {
+          char c = code;
+          if (code >= 128) {
+            Keyboard.pressRaw(code);
+          } else {
+            Keyboard.press(code);
+          }
 
-        sprintf(log_msg, "key_up selected for %c\n", c);
-        // log(log_msg);
-        break;
-      } 
-      case 'd':{
-        char c = code;
-        if(code >= 128){
-          Keyboard.pressRaw(code);
-        }else{
-          Keyboard.press(code);
+          sprintf(log_msg, "key_down selected for %c\n", c);
+          // log(log_msg);
+          break;
         }
+      case 'w':
+        {
+          delay(code);
 
-        sprintf(log_msg, "key_down selected for %c\n", c);
-        // log(log_msg);
-        break;
-      }
-      case 'w':{
-        delay(code);
+          sprintf(log_msg, "delay selected for %ld\n", code);
+          // log(log_msg);
+          break;
+        }
+      case 'r':
+        {
+          Keyboard.releaseAll();
 
-        sprintf(log_msg, "delay selected for %ld\n", code);
-        // log(log_msg);
-        break;
-      }
-      case 'r':{
-        Keyboard.releaseAll();
-
-        sprintf(log_msg, "release all selected\n");
-        // log(log_msg);
-        break;
-      }
-      case 'p':{
-        Keyboard.printf(token+1);
-        sprintf(log_msg, "print selected\n");
-        break;
-      }
+          sprintf(log_msg, "release all selected\n");
+          // log(log_msg);
+          break;
+        }
+      case 'p':
+        {
+          Keyboard.printf(token + 1);
+          sprintf(log_msg, "print selected\n");
+          break;
+        }
     }
     Serial.print(log_msg);
     token = strtok_r(NULL, "+", &save_ptr);
@@ -243,42 +256,42 @@ void hard_press(char* sequence){
   free(log_msg);
 }
 
-void init_paths(char* filename){
+void init_paths(char* filename) {
   const int max_line_size = 100;
   char line[max_line_size];
   int ln = 0;
   size_t n = 0;
 
-  if(!sd.exists(filename)){
+  if (!sd.exists(filename)) {
     Serial.println("File does not exist");
     return;
   }
   SdFile file;
-  if(!file.open(filename, O_READ)){
+  if (!file.open(filename, O_READ)) {
     Serial.printf("Failed to open file in init_paths\n");
   }
   while ((n = file.fgets(line, sizeof(line))) > 0) {
-    if(ln > SPRITE_COUNT){
+    if (ln > SPRITE_COUNT) {
       break;
-    } 
+    }
     // Print line number.
     // Serial.print(ln);
     // Serial.print(": ");
     // Serial.print(line);
     if (line[n - 1] != '\n') {
       // Line is too long or last line is missing nl.
-      line[n-1] = '\0';
+      line[n - 1] = '\0';
       Serial.println(F(" <-- missing nl"));
       break;
     }
     paths[ln++] = strndup(line, n);
-    if(paths[ln-1][n] != '\0'){
+    if (paths[ln - 1][n] != '\0') {
       Serial.printf("failed append of NULL\n");
     }
   }
 }
 
-void access_path(int icon_index){
+void access_path(int icon_index) {
   Keyboard.pressRaw(0xE3);
   Keyboard.pressRaw(HID_KEY_R);
   delay(500);
@@ -294,23 +307,23 @@ void access_path(int icon_index){
 
 const int MIN_DEBUG_LEVEL = 1;
 
-void debug_print(const char* func_name, int debug_lvl, const char* fmt, ...){
-  if(debug_lvl >= MIN_DEBUG_LEVEL){
+void debug_print(const char* func_name, int debug_lvl, const char* fmt, ...) {
+  if (debug_lvl >= MIN_DEBUG_LEVEL) {
 
     const char* level = NULL;
-    switch(debug_lvl) {
+    switch (debug_lvl) {
       case 1:
-          level = "DEBUG";
-          break;
+        level = "DEBUG";
+        break;
       case 2:
-          level = "WARNING";
-          break;
+        level = "WARNING";
+        break;
       case 3:
-          level = "ERROR";
-          break;
+        level = "ERROR";
+        break;
       default:
-          level = "INFO";
-          break;
+        level = "INFO";
+        break;
     }
     Serial.printf("[%s] [%s] ", func_name, level);
     va_list argList;
@@ -325,41 +338,86 @@ void debug_print(const char* func_name, int debug_lvl, const char* fmt, ...){
 bool configured_timestamp = false;
 struct tm time_info;
 
-void configure_timestamp(){
-  if(WiFi.status() != WL_CONNECTED){
+void configure_timestamp() {
+  if (WiFi.status() != WL_CONNECTED) {
     Serial.printf("Not connected to network. Failed to fetch current time\n");
   }
 
   const char* ntpServer = "pool.ntp.org";
-  const long  gmtOffset_sec = 0;
-  const int   daylightOffset_sec = 3600;
+  const long gmtOffset_sec = 0;
+  const int daylightOffset_sec = 3600;
 
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 
   Serial.printf("Updated time info\n");
-
 }
 
 const int timestamp_size = 30;
 char current_timestamp[timestamp_size];
 
-bool update_timestamp(){
-  if(!getLocalTime(&time_info)){
+bool update_timestamp() {
+  if (!getLocalTime(&time_info)) {
     Serial.println("Failed to update time");
     return false;
   }
   // Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
-  if(!strftime(current_timestamp , timestamp_size, "%m-%d %H:%M:%S", &time_info)){
+  if (!strftime(current_timestamp, timestamp_size, "%m-%d %H:%M:%S", &time_info)) {
     Serial.printf("Failed to write time\n");
     return true;
-  }else{
+  } else {
     Serial.printf("Succesfully wrote time %s\n", current_timestamp);
     return false;
   }
 }
 
-#define A_DBG(fmt, ...) { printf("[%s:%d]: " fmt "\n", __func__, __LINE__ __VA_OPT__(,) __VA_ARGS__); }
+/*Send an update struct instance to the ui_updates_queue
+for the update task to process and display*/
+void send_connection_status(int change){
+  //change is defined as 1 if !connected -> connected and -1 otherwise
+  BaseType_t xStatus;
+  UI_update update;
+  char* temp_text;
+  switch(change){
+    case -2:{
+      temp_text = "Network connection Lost.";
+      break;
+    }
+    case -1:{
+      temp_text = "Network Connected.";
+      break;
+    }
+    case 0:{
+      temp_text = "Client Disconnected.";
+      break;
+    }
+    case 1:{
+      temp_text = "Client Connected.";
+      break;
+    }
+    default:{
+      temp_text = "Uknown connection case";
+      Serial.printf("ERROR invalid status value in send_connection_status\n");
+      break;
+    }
+  }
 
-#define A_ERR(fmt, ...) A_DBG("[ERROR] " fmt __VA_OPT__(,) __VA_ARGS__)
-#define A_WRN(fmt, ...) A_DBG("[WARNING] " fmt __VA_OPT__(,) __VA_ARGS__)
+  if(snprintf(update.message, sizeof(update.message), "%s", temp_text) < 0){
+    Serial.printf("update message creation failed in send_connection_status\n");
+  }  
+
+  update.type = CONNECTION_CHECK;
+  update.status = change;
+
+  xStatus = xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
+  if(xStatus != pdPASS){
+    vPrintString("send_connection_status failed to send update to ui_updates_queue\r\n");
+  }
+}
+
+#define A_DBG(fmt, ...) \
+{ printf("[%s:%d]: " fmt "\n", __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__); }
+// {update_timestamp(); printf("[%s:%s:%d]: " fmt "\n", current_timestamp, __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__);}
+
+#define A_ERR(fmt, ...) A_DBG("[ERROR] " fmt __VA_OPT__(, ) __VA_ARGS__)
+#define A_WRN(fmt, ...) A_DBG("[WARNING] " fmt __VA_OPT__(, ) __VA_ARGS__)
 #endif

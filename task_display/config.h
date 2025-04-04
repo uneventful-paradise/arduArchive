@@ -15,28 +15,29 @@
 #include "time.h"
 
 
-#define WIFI_SSID           "DIGI-yWsT"
-#define WIFI_PWD            "74F8ghZw"
-#define SERVER_IP           "192.168.100.63"
-#define PORT                65432
-#define CHUNK_SIZE          2048
-#define HEADER_SIZE         16    //unsigned int cmd_type | unsigned int cmd_id | unsigned int length | unsigned int crc_value
-#define BUFFER_SIZE         256
+#define WIFI_SSID "DIGI-yWsT"
+#define WIFI_PWD "74F8ghZw"
+#define SERVER_IP "192.168.100.63"
+#define PORT 65432
+#define CHUNK_SIZE 2048
+#define HEADER_SIZE 16  //unsigned int cmd_type | unsigned int cmd_id | unsigned int length | unsigned int crc_value
+#define BUFFER_SIZE 256
 
-#define  MACRO_COMMAND         0
-#define  START_DOWNLOAD        1
-#define  FILE_TRANSFER         2
-#define  END_DOWNLOAD          3
-#define  INITIALIZE_ROUTINE    4
-#define  CONFIRMATION_FLAG     5
-#define  LOG_MESSAGE           6
+#define MACRO_COMMAND 0
+#define START_DOWNLOAD 1
+#define FILE_TRANSFER 2
+#define END_DOWNLOAD 3
+#define INITIALIZE_ROUTINE 4
+#define CONFIRMATION_FLAG 5
+#define LOG_MESSAGE 6
+#define CONNECTION_CHECK 7
 
-#define TOUCH_SDA     17
-#define TOUCH_SCL     18
-#define TOUCH_INT     -1
-#define TOUCH_RST     38
-#define TOUCH_WIDTH   800
-#define TOUCH_HEIGHT  480
+#define TOUCH_SDA 17
+#define TOUCH_SCL 18
+#define TOUCH_INT -1
+#define TOUCH_RST 38
+#define TOUCH_WIDTH 800
+#define TOUCH_HEIGHT 480
 
 #define COLOR_BACKGROUND BLACK
 #define COLOR_BUTTON BLACK
@@ -53,33 +54,33 @@
 #define BUTTON_WIDTH 85
 #define BUTTON_HEIGHT 85
 
-#define VSCODE      "/jpg_icons/vscode.jpg"
-#define CHROME      "/jpg_icons/chrome.jpg"
-#define YOUTUBE     "/jpg_icons/youtube.jpg"
-#define OBS         "/clap_icons/OBS.jpg"
-#define OVERWATCH   "/clap_icons/Overwatch.jpg"
-#define STEAM       "/clap_icons/Steam.jpg"
-#define DISCORD     "/clap_icons/Discord.jpg"
-#define TINDER      "/clap_icons/Tinder.jpg"
-#define CC          "/clap_icons/Adobe_Creative_Cloud.jpg"
-#define YT          "/clap_icons/Youtube.jpg"
+#define VSCODE "/jpg_icons/vscode.jpg"
+#define CHROME "/jpg_icons/chrome.jpg"
+#define YOUTUBE "/jpg_icons/youtube.jpg"
+#define OBS "/clap_icons/OBS.jpg"
+#define OVERWATCH "/clap_icons/Overwatch.jpg"
+#define STEAM "/clap_icons/Steam.jpg"
+#define DISCORD "/clap_icons/Discord.jpg"
+#define TINDER "/clap_icons/Tinder.jpg"
+#define CC "/clap_icons/Adobe_Creative_Cloud.jpg"
+#define YT "/clap_icons/Youtube.jpg"
 
-#define PYCHARM_85      "/85px/1.jpg"
-#define PYCHARM_85_B    "/85px/1b.jpg"
-#define ADOBE_85        "/85px/2.jpg"
-#define ADOBE_85_B      "/85px/2b.jpg"
-#define WORD_85         "/85px/3.jpg"
-#define WORD_85_B       "/85px/3B.jpg"
-#define CALCULATOR_85   "/85px/4.jpg"
+#define PYCHARM_85 "/85px/1.jpg"
+#define PYCHARM_85_B "/85px/1b.jpg"
+#define ADOBE_85 "/85px/2.jpg"
+#define ADOBE_85_B "/85px/2b.jpg"
+#define WORD_85 "/85px/3.jpg"
+#define WORD_85_B "/85px/3B.jpg"
+#define CALCULATOR_85 "/85px/4.jpg"
 #define CALCULATOR_85_B "/85px/4b.jpg"
-#define SPOTIFY_85      "/85px/5.jpg"
-#define SPOTIFY_85_B    "/85px/5b.jpg"
-#define STEAM_85        "/85px/9.jpg"
-#define GIT_85          "/85px/6.jpg"
-#define NOTEPAD_85      "/85px/10.jpg"
-#define CHROME_85       "/85px/7.jpg"
-#define YOUTUBE_85      "/85px/12.jpg"
-#define VSCODE_85       "/85px/11.jpg"
+#define SPOTIFY_85 "/85px/5.jpg"
+#define SPOTIFY_85_B "/85px/5b.jpg"
+#define STEAM_85 "/85px/9.jpg"
+#define GIT_85 "/85px/6.jpg"
+#define NOTEPAD_85 "/85px/10.jpg"
+#define CHROME_85 "/85px/7.jpg"
+#define YOUTUBE_85 "/85px/12.jpg"
+#define VSCODE_85 "/85px/11.jpg"
 
 //micro SD card
 #define SD_SCK 12
@@ -101,7 +102,7 @@
 #define TFT_BL GFX_BL
 
 #define PWM_CHANNEL 1
-#define PWM_FREQ 5000 // Hz
+#define PWM_FREQ 5000  // Hz
 #define pwm_resolution_bits 10
 
 #define SPI_CLOCK SD_SCK_MHZ(12)

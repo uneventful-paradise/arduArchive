@@ -3,3 +3,4 @@ logs/
 arduDeck/media/*
 !media/icons/*
 !media/icons/**
+.vscode/
