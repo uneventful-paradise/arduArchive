@@ -6,6 +6,7 @@ import datetime
 import os
 import sys
 import queue
+from data_format import HeaderData, PackageData
 
 os.makedirs("logs", exist_ok=True)
 logger = logging.getLogger(__name__)
@@ -108,7 +109,7 @@ def check_ack(req_id):
         return STOP_ACTION
     else:
         logger.warning("ACK got unexpected value %d while expecting %d/%d\n", ack, req_id, server_cmd_id)
-        return False
+        return STOP_ACTION
 
 """Compose a protocol compliant message and send it to the client.
 

@@ -180,10 +180,6 @@ void hard_press(char* sequence) {
   char* token;
 
   token = strtok_r(sequence, "+", &save_ptr);
-  char* log_msg = (char*)malloc(BUFFER_SIZE);
-  if (log_msg == NULL) {
-    Serial.println("log_msg allocation failed");
-  }
 
   while (token) {
     //get command type
@@ -201,59 +197,49 @@ void hard_press(char* sequence) {
     }
     //perform the appropriate action given the command type
     switch (event) {
-      case 'u':
-        {
-          char c = code;
-          if (code >= 128) {
-            Keyboard.releaseRaw(code);
-          } else {
-            Keyboard.release(code);
-          }
+      case 'u':{
+        char c = code;
+        if (code >= 128) {
+          Keyboard.releaseRaw(code);
+        } else {
+          Keyboard.release(code);
+        }
 
-          sprintf(log_msg, "key_up selected for %c\n", c);
-          // log(log_msg);
-          break;
+        Serial.printf("key_up selected for %c\n", c);
+        // log(log_msg);
+        break;
+      }
+      case 'd':{
+        char c = code;
+        if (code >= 128) {
+          Keyboard.pressRaw(code);
+        } else {
+          Keyboard.press(code);
         }
-      case 'd':
-        {
-          char c = code;
-          if (code >= 128) {
-            Keyboard.pressRaw(code);
-          } else {
-            Keyboard.press(code);
-          }
 
-          sprintf(log_msg, "key_down selected for %c\n", c);
-          // log(log_msg);
-          break;
-        }
-      case 'w':
-        {
-          delay(code);
+        Serial.printf("key_down selected for %c\n", c);
+        break;
+      }
+      case 'w':{
+        delay(code);
 
-          sprintf(log_msg, "delay selected for %ld\n", code);
-          // log(log_msg);
-          break;
-        }
-      case 'r':
-        {
-          Keyboard.releaseAll();
+        Serial.printf("delay selected for %ld\n", code);
+        break;
+      }
+      case 'r':{
+        Keyboard.releaseAll();
 
-          sprintf(log_msg, "release all selected\n");
-          // log(log_msg);
-          break;
-        }
-      case 'p':
-        {
-          Keyboard.printf(token + 1);
-          sprintf(log_msg, "print selected\n");
-          break;
-        }
+        Serial.printf("release all selected\n");
+        break;
+      }
+      case 'p':{
+        Keyboard.printf(token + 1);
+        Serial.printf("print selected\n");
+        break;
+      }
     }
-    Serial.print(log_msg);
     token = strtok_r(NULL, "+", &save_ptr);
   }
-  free(log_msg);
 }
 
 void init_paths(char* filename) {
@@ -271,23 +257,38 @@ void init_paths(char* filename) {
     Serial.printf("Failed to open file in init_paths\n");
   }
   while ((n = file.fgets(line, sizeof(line))) > 0) {
-    if (ln > SPRITE_COUNT) {
+    // Check that we don't exceed our array bounds.
+    if (ln >= SPRITE_COUNT) {
       break;
     }
-    // Print line number.
+
+    // Ensure we have at least one character.
+    if (n < 1) continue;
+    
     // Serial.print(ln);
     // Serial.print(": ");
     // Serial.print(line);
+    
+    // Check if the last character is not newline, but only if n > 0.
     if (line[n - 1] != '\n') {
-      // Line is too long or last line is missing nl.
-      line[n - 1] = '\0';
+      // Ensure null termination.
+      line[n] = '\0';
       Serial.println(F(" <-- missing nl"));
-      break;
     }
-    paths[ln++] = strndup(line, n);
-    if (paths[ln - 1][n] != '\0') {
+    
+    // Duplicate the line, ensuring it is null-terminated.
+    char* duplicated = strndup(line, n);
+    if (duplicated == NULL) {
+      Serial.println("strndup failed");
+      continue; // or handle error appropriately
+    }
+    paths[ln++] = duplicated;
+    
+    // Check that the duplicated string is null-terminated.
+    if (duplicated[n] != '\0') {
       Serial.printf("failed append of NULL\n");
     }
+    // Serial.printf("%s", duplicated);
   }
 }
 

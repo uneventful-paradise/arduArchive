@@ -30,6 +30,7 @@ FILENAME = "media/images/landscape.jpg"
 # FILENAME = "media/txts/haskell-register.log"
 DEFAULT_CLIENT_DOWNLOAD_FOLDER = "/init_icons"
 
+request_queue = queue.Queue()
 
 """Opens the upload source file and sends predefined sized chunks of data to client.
 
@@ -152,44 +153,62 @@ from the socket. Finally, it checks the command type:
 If the message is a confiermation message (CFCF flag) then the request is passed to the ack queue
 If the message is a macro command (MCCF flag) then the request is forwarded to the execute function
 """
-def handle_request(request, client_socket):
-    #parse header
-    header = struct.unpack("!IIII", request)
-    command_type = int(header[0])
-    command_id = int(header[1])
-    req_len = int(header[2])
-    crc_value = int(header[3])
-
-    try:
-        logger.debug("Request has type %d, id %d, len %d, CRC %s", command_type, command_id, req_len, hex(crc_value))
-        #get payload contents
-        req_contents = read_all(client_socket, req_len)
-        readable_req_contents = req_contents.decode("utf-8")
-
-        logger.debug("REQUEST CONTENTS: %s\n", readable_req_contents)
-
-        #executing command associated to the button id
-        if command_type == CONFIRMATION_FLAG:
-            ack_queue.put(readable_req_contents)
-            # print(f"put {readable_req_contents} in queue")
-        elif command_type == MACRO_COMMAND:
-            execute_command(client_socket, CMD_DICT, command_id, int(readable_req_contents))
-    except ValueError as e:
-        logger.error("Handle request exception: %s", e, exc_info=True)
+def handle_request(client_socket, addr):
+    while True:
+        pd = request_queue.get()
+        logger.debug("Request has type %d, id %d, len %d, CRC %s, contents: %s\n",
+                     pd.header_data.command_id,
+                     pd.header_data.command_id,
+                     pd.header_data.length,
+                     hex(pd.header_data.crc_value),
+                     pd.contents)
+        # executing command associated to the button id
+        if pd.header_data.command_type == MACRO_COMMAND:
+            execute_command(client_socket, CMD_DICT, pd.header_data.command_id, int(pd.contents))
 
 """Function to be called by the reader thread. It loops indefinitely listening for 
 client request headers."""
-def handle_new_connection(client_socket, client_addr):
+def receive_request(client_socket, client_addr):
     logger.debug("Created new thread of client %s", client_addr)
     while True:
-        req = read_all(client_socket, HEADER_SIZE)
+        try:
+            request = read_all(client_socket, HEADER_SIZE)
 
-        if not req:
-            client_socket.close()
-            logger.debug("Client disconnected")
-            return None
-        # logger.debug("Client %s requested %s", client_addr, req)
-        handle_request(req, client_socket)
+            if not request:
+                client_socket.close()
+                logger.error("Client disconnected")
+                return None
+            # logger.debug("Client %s requested %s", client_addr, req)
+
+            # parse header
+            header = struct.unpack("!IIII", request)
+            header_data = HeaderData(int(header[0]), int(header[1]), int(header[2]), int(header[3]))
+
+
+            logger.debug("Request has type %d, id %d, len %d, CRC %s",
+                         header_data.command_type,
+                         header_data.command_id,
+                         header_data.length,
+                         hex(header_data.crc_value))
+
+            # get payload contents
+            req_contents = read_all(client_socket, header_data.length)
+            readable_req_contents = req_contents.decode("utf-8")
+
+            logger.debug("REQUEST CONTENTS: %s\n", readable_req_contents)
+            package_data = PackageData(header_data, readable_req_contents)
+
+            if header_data.command_type == CONFIRMATION_FLAG:
+                ack_queue.put(package_data.contents)
+                logger.debug(f"put {readable_req_contents} in queue")
+            else:
+                logger.debug(f"put a pd in queue")
+                request_queue.put(package_data)
+
+
+        except ValueError as e:
+            logger.error("Handle request exception: %s", e, exc_info=True)
+
 
 """Function to be called by the writer thread. It will deal with listening to and 
 performing user requests."""

@@ -2,12 +2,123 @@
   "keys": [
     {
       "key_name": "LEFT_CTRL",
-      "key_code": 128
+      "key_code": 224
     },
-
+    {
+      "key_name": "LEFT_SHIFT",
+      "key_code": 118
+    },
+    {
+      "key_name": "LEFT_ALT",
+      "key_code": 130
+    },
     {
       "key_name": "LEFT_GUI",
-      "key_code": 131
+      "key_code": 227
+    },
+    {
+      "key_name": "RIGHT_CTRL",
+      "key_code": 132
+    },
+    {
+      "key_name": "RIGHT_SHIFT",
+      "key_code": 133
+    },
+    {
+      "key_name": "RIGHT_ALT",
+      "key_code": 134
+    },
+    {
+      "key_name": "RIGHT_GUI",
+      "key_code": 135
+    },
+    {
+      "key_name": "LEFT_ARROW",
+      "key_code": 216
+    },
+    {
+      "key_name": "DOWN_ARROW",
+      "key_code": 217
+    },
+    {
+      "key_name": "UP_ARROW",
+      "key_code": 218
+    },
+    {
+      "key_name": "RIGHT_ARROW",
+      "key_code": 215
+    },
+    {
+      "key_name": "BACKSPACE",
+      "key_code": 178
+    },
+    {
+      "key_name": "TAB",
+      "key_code": 179
+    },
+    {
+      "key_name": "RETURN",
+      "key_code": 176
+    },
+    {
+      "key_name": "ESC",
+      "key_code": 177
+    },
+    {
+      "key_name": "INSERT",
+      "key_code": 209
+    },
+    {
+      "key_name": "DELETE",
+      "key_code": 212
+    },
+    {
+      "key_name": "PAGE_DOWN",
+      "key_code": 214
+    },
+    {
+      "key_name": "PAGE_UP",
+      "key_code": 211
+    },
+    {
+      "key_name": "END",
+      "key_code": 213
+    },
+    {
+      "key_name": "HOME",
+      "key_code": 210
+    },
+    {
+      "key_name": "CAPS_LOCK",
+      "key_code": 193
+    },
+    {
+      "key_name": "F1",
+      "key_code": 194
+    },
+    {
+      "key_name": "F2",
+      "key_code": 195
+    },
+    {
+      "key_name": "F3",
+      "key_code": 196
+    },
+    {
+      "key_name": "F4",
+      "key_code": 197
+    },
+    {
+      "key_name": "F5",
+      "key_code": 198
+    },
+    {
+      "key_name": "F6",
+      "key_code": 199
+    },
+    {
+      "key_name": "F7",
+      "key_code": 200
     }
   ]
 }

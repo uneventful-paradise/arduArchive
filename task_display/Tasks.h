@@ -38,8 +38,8 @@ void touch_check_task(void* params) {
         int button_value = UNABLE;
         //checking if button is bound to command
         if ((button_value = sprites[i]->checkTouch(pos[0], pos[1])) != UNABLE) {
-          Serial.printf("Pos is :%d,%d\n", pos[0], pos[1]);
-          Serial.printf("Value is: %d\n", button_value);
+          // Serial.printf("Pos is: %d, %d\n", pos[0], pos[1]);
+          // Serial.printf("Value is: %d\n", button_value);
 
           //creating event and sending it to queue to trigger the touch_handle task
           Touch_event event = { pos[0], pos[1], button_value };
@@ -63,7 +63,7 @@ void touch_check_task(void* params) {
           header.length = strlen(data.contents);
           header.crc_value = crc_string(data.contents, header.length);
           data.header = header;
-          Serial.printf("Selecte value is %s\n", data.contents);
+          A_DBG("Selected value is %s\n", data.contents);
 
           xStatus = xQueueSend(selection_queue, &event, portMAX_DELAY);
           if (xStatus != pdPASS) {
@@ -375,7 +375,7 @@ void receive_request_task(void* params) {
     //?((xEventGroupValue & (CONNECTED_TO_CLIENT | CONNECTED_TO_WIFI)) == (CONNECTED_TO_CLIENT | CONNECTED_TO_WIFI)) && 
     //TODO: can this busy loop be removed so that a touch isnt blocked by the read?
     if (client.available() >= read_threshold) {
-      A_WRN("passed threshold. waiting to read");
+      // A_WRN("passed threshold. waiting to read");
       //read and parse the header data. readbytes blocks until the specified number of bytes is available to read from the socket
       //we use ntohl because the data is sent in big-endian (networking standard) while the esp device operates in little-endian. ntohl converts integers to host byte order
       Header_data header;
@@ -500,6 +500,7 @@ void wifi_request_handling_task(void* params) {
       } else if (data.header.command_type == MACRO_COMMAND) {
         A_DBG("Tokenizing");
         hard_press(data.contents);
+        ack = data.header.command_id;
       }
       // Serial.printf("[DEBUG] [wifi_request_handling] Sending ack value %d for message %u\n", ack, data.header.command_id);
       A_DBG("Sending ack value %d for message %u\n", ack, data.header.command_id);

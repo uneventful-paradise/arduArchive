@@ -55,13 +55,13 @@ int get_pos() {
   if (ts.isTouched && pos[0] != ts.points[0].x && pos[1] != ts.points[0].y) {
     pos[0] = ts.points[0].x;
     pos[1] = ts.points[0].y;
-    Serial.println("touched");
+    // Serial.println("touched");
 
-    Serial.print(",x = ");
-    Serial.print(pos[0]);
-    Serial.print(", y = ");
-    Serial.print(pos[1]);
-    Serial.println();
+    // Serial.print(",x = ");
+    // Serial.print(pos[0]);
+    // Serial.print(", y = ");
+    // Serial.print(pos[1]);
+    // Serial.println();
 
     ts.isTouched = false;
 

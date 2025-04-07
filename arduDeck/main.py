@@ -11,13 +11,15 @@ if __name__ == '__main__':
         logger.debug("waiting for clients")
         conn, addr = s.accept()
         logger.debug("Connected by %s", addr)
-        listener_thread = threading.Thread(target=handle_new_connection, args=(conn, addr))
+        listener_thread = threading.Thread(target=receive_request, args=(conn, addr))
         threads.append(listener_thread)
         sender_thread = threading.Thread(target=handle_server_send, args=(conn, addr))
         threads.append(sender_thread)
+        request_handling_thread = threading.Thread(target=handle_request, args=(conn, addr))
+        threads.append(request_handling_thread)
 
-        listener_thread.start()
-        sender_thread.start()
+        for thread in threads:
+            thread.start()
 
     for thread in threads:
         thread.join()
