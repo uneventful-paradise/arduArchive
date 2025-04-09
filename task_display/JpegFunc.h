@@ -20,6 +20,7 @@ static void *jpegOpenFile(const char *szFilename, int32_t *pFileSize) {
   // If the file fails to open, return nullptr and set the file size to 0.
   if (!_f.open(szFilename, O_READ)) {
     *pFileSize = 0;
+    Serial.printf("ERROR: JPEGDEC cannot open file for drawing.\n");
     return nullptr;
   }
   *pFileSize = _f.fileSize();

@@ -1,90 +1,100 @@
-{
-  "buttons": [
-    {
-        "button_id": 0,
-        "actions": [
-            {
-                "command_id": "START_PROCESS",
-                "command_args": ["C:\\Users\\dante\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"]
-            }
-        ],
-        "image_path" : "media/icons/1.jpg"
-    },
-
-    {
-      "button_id": 1,
-      "actions": [
-        {
-          "command_id": "START_URL",
-          "command_args": ["https://www.dw.com/en/top-stories/s-9097"]
-        }
-      ],
-      "image_path" : "media/icons/2.jpg"
-    },
-
-    {
-      "button_id": 2,
-      "actions": [
-        {
-          "command_id": "HARD_KEY_PRESS",
-          "command_args": ["dA+w500+dB+w500+uA+uB"]
-        }
-      ],
-      "image_path": "media/icons/3.jpg"
-    },
-
-    {
-      "button_id": 3,
-      "actions": [
-        {
-          "command_id": "HARD_KEY_PRESS",
-          "command_args": ["dLEFT_CTRL+dR+w500+r"]
-        }
-      ],
-      "image_path": "media/icons/4.jpg"
-    },
-
-    {
-      "button_id": 4,
-      "actions": [
-        {
-          "command_id": "HARD_KEY_PRESS",
-          "command_args": ["dLEFT_GUI+dr+w500+r"]
-        }
-      ],
-      "image_path": "media/icons/4.jpg"
-    },
-
-    {
-      "button_id": 5,
-      "actions": [
-        {
-          "command_id": "HARD_KEY_PRESS",
-          "command_args": ["pSalut Frate"]
-        }
-      ],
-      "image_path": "media/icons/8.jpg"
-    },
-
-    {
-        "button_id": 6,
-        "actions": [
-            {
-                "command_id": 1,
-                "command_args": ["<file_path>"]
-            },
-
-            {
-                "command_id": 2,
-                "command_args": ["<url>"]
-            },
-
-            {
-                "command_id": 5,
-                "command_args": ["<url>", "", ""]
-            }
-        ],
-        "image_path": "media/icons/9.jpg"
-    }
-  ]
-}
+[
+  {
+    "button_id": 0,
+    "actions": [
+      {
+        "command_id": "START_PROCESS",
+        "command_args": [
+          "C:\\Users\\dante\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"
+        ]
+      }
+    ],
+    "image_path": "media/icons/pycharm.jpg"
+  },
+  {
+    "button_id": 1,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://www.dw.com/en/top-stories/s-9097"
+        ]
+      }
+    ],
+    "image_path": "media/icons/adobe.jpg"
+  },
+  {
+    "button_id": 2,
+    "actions": [
+      {
+        "command_id": "HARD_KEY_PRESS",
+        "command_args": [
+          "dA+w500+dB+w500+uA+uB"
+        ]
+      }
+    ],
+    "image_path": "media/icons/steam.jpg"
+  },
+  {
+    "button_id": 3,
+    "actions": [
+      {
+        "command_id": "HARD_KEY_PRESS",
+        "command_args": [
+          "dLEFT_CTRL+dR+w500+r"
+        ]
+      }
+    ],
+    "image_path": "media/icons/obs.jpg"
+  },
+  {
+    "button_id": 4,
+    "actions": [
+      {
+        "command_id": "HARD_KEY_PRESS",
+        "command_args": [
+          "dLEFT_GUI+dr+w500+r"
+        ]
+      }
+    ],
+    "image_path": "media/icons/vscode.jpg"
+  },
+  {
+    "button_id": 5,
+    "actions": [
+      {
+        "command_id": "HARD_KEY_PRESS",
+        "command_args": [
+          "pSalut Frate"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 6,
+    "actions": [
+      {
+        "command_id": 1,
+        "command_args": [
+          "<file_path>"
+        ]
+      },
+      {
+        "command_id": 2,
+        "command_args": [
+          "<url>"
+        ]
+      },
+      {
+        "command_id": 5,
+        "command_args": [
+          "<url>",
+          "",
+          ""
+        ]
+      }
+    ],
+    "image_path": "media/icons/calculator.jpg"
+  }
+]

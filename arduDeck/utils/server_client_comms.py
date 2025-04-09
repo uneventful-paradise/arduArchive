@@ -1,8 +1,8 @@
 import random
+import time
 
-import basic_comms
 from utils.execute_funcs import *
-
+from utils.commands import *
 # Load current key-action configuration into a global dictionary
 # to be used by the action executing functions
 CONFIG_FILE = "config/configs.json"
@@ -38,11 +38,25 @@ The first send contains an `upload start flag` alongside the file size and file 
 Then `file_size/CHUNK_SIZE` file contents sends follow. Finally when EOF is encountered
 on the server side, an `upload end flag` is sent to the client to stop the transfer. 
 """
-def handle_upload(client_socket, filename, client_location):
+def handle_upload(client_socket, filename, client_location, client_fname = ""):
     logger.debug("Started upload")
+    #check for existence of file before starting transfer
+
+    # base_dir = os.path.dirname(os.path.abspath(__file__))
+    # filename = os.path.join(base_dir, filename)
+    try:
+        if not os.path.exists(filename):
+            raise FileNotFoundError
+    except FileNotFoundError as e:
+        logger.exception(e)
 
     file_size = os.path.getsize(filename)
-    client_filename = client_location + "/" + filename.split('/')[-1] + " " + str(file_size)
+
+    if client_fname == "":
+        client_filename = client_location + "/" + filename.split('/')[-1] + " " + str(file_size)
+    else:
+        client_filename = client_location + "/" + client_fname + " " + str(file_size)
+
     logger.debug("writing to %s", client_filename)
 
     #send the upload initiating request
@@ -82,15 +96,16 @@ with the proper arguments.
 
 Actions are functions mapped to an action name field in the config of every button.
 The arguments are also defined within the button configuration."""
-def execute_command(client_socket, cmd_dict, command_id, request_contents):
+def execute_command(client_socket, command_id, request_contents):
     # print(ACT_DICT.keys())
     #check for button existence and validity
-    if not any(button["button_id"] == request_contents for button in cmd_dict["buttons"]):
+
+    if not any(button["button_id"] == request_contents for button in CMD_DICT):
         raise ValueError("Invalid command id")
 
     #get button actions
     actions = []
-    for button in cmd_dict["buttons"]:
+    for button in CMD_DICT:
         if button["button_id"] == request_contents:
             actions = button["actions"]
             break
@@ -128,21 +143,15 @@ This function should be called when the connection is first initiated.
 Still working on it :)"""
 def initialize_deck(client_socket):
     #get all images and send them to esp one by one
-    btn_id = 0
-    try:
-        for button in CMD_DICT["buttons"]:
-            if button["button_id"] != btn_id:
-                raise ValueError("Missing button ids")
-            file_path = button["image_path"]
+    for button in CMD_DICT:
 
-            print(file_path)
-            logger.debug(file_path)
+        file_path = button["image_path"]
+        client_filename = "{btn_index}.jpg".format(btn_index=button["button_id"])
+        logger.debug(f"sending {file_path}")
 
-            handle_upload(client_socket, file_path, DEFAULT_CLIENT_DOWNLOAD_FOLDER)
-            btn_id += 1
-    except ValueError as e:
-        print(e)
-        return False
+        handle_upload(client_socket, file_path, DEFAULT_CLIENT_DOWNLOAD_FOLDER, client_filename)
+
+        time.sleep(1)
 
 """Receives a request header from the client. Parses the header converting it
 from network byte order (`!` format element) to host order.
@@ -150,21 +159,21 @@ from network byte order (`!` format element) to host order.
 Once the payload length is decoded, it attempts to retrieve the payload contents 
 from the socket. Finally, it checks the command type:
 
-If the message is a confiermation message (CFCF flag) then the request is passed to the ack queue
+If the message is a confirmation message (CFCF flag) then the request is passed to the ack queue
 If the message is a macro command (MCCF flag) then the request is forwarded to the execute function
 """
 def handle_request(client_socket, addr):
     while True:
         pd = request_queue.get()
         logger.debug("Request has type %d, id %d, len %d, CRC %s, contents: %s\n",
-                     pd.header_data.command_id,
+                     pd.header_data.command_type,
                      pd.header_data.command_id,
                      pd.header_data.length,
                      hex(pd.header_data.crc_value),
                      pd.contents)
         # executing command associated to the button id
         if pd.header_data.command_type == MACRO_COMMAND:
-            execute_command(client_socket, CMD_DICT, pd.header_data.command_id, int(pd.contents))
+            execute_command(client_socket, pd.header_data.command_id, int(pd.contents))
 
 """Function to be called by the reader thread. It loops indefinitely listening for 
 client request headers."""
@@ -223,7 +232,7 @@ def handle_server_send(client_socket, client_addr):
 
         if user_input == "u":
             handle_upload(client_socket, FILENAME, DEFAULT_CLIENT_DOWNLOAD_FOLDER)
-        if user_input == "f":
+        if user_input == "i":
             initialize_deck(client_socket)
         if user_input == "m":
             msg_index = random.randint(0, len(responses) - 1)
@@ -232,6 +241,13 @@ def handle_server_send(client_socket, client_addr):
                          , len(responses[msg_index]), responses[msg_index])
             if send_result != basic_comms.SUCCESSFUL_CONF:
                 logger.error("Message send failed")
+        if user_input == "a":
+            add_button(
+                10,
+                [("act1", "args1"), ("act2", "args2")],
+                "bombombini_gouzini.jpg",
+                CMD_DICT
+            )
         if user_input == "e":
             client_socket.close()
             s.close()

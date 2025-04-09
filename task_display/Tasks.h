@@ -30,14 +30,14 @@ void touch_check_task(void* params) {
   // Serial.printf("touch_check_task stack high water mark: %u\n", watermark);
 
   BaseType_t xStatus;
-
+  Sprite** buttons = sprite_manager.getButtons();
   while (true) {
     //screen has been touched
     if (get_pos() == 1) {
-      for (int i = 0; i < SPRITE_COUNT; i++) {
+      for (int i = 0; i < sprite_manager.getCapacity(); i++) {
         int button_value = UNABLE;
         //checking if button is bound to command
-        if ((button_value = sprites[i]->checkTouch(pos[0], pos[1])) != UNABLE) {
+        if ((button_value = buttons[i] -> checkTouch(pos[0], pos[1])) != UNABLE) {
           // Serial.printf("Pos is: %d, %d\n", pos[0], pos[1]);
           // Serial.printf("Value is: %d\n", button_value);
 
@@ -143,7 +143,7 @@ void update_screen_task(void* params) {
           draw_text(gfx, textX, textY, 3, WHITE, update.message);
   
           gfx->drawRect(barX, barY, barWidth, barHeight, WHITE);
-          delay(100);
+          vTaskDelay(100 / portTICK_PERIOD_MS);
           break;
         }
         case FILE_TRANSFER:{
@@ -153,15 +153,17 @@ void update_screen_task(void* params) {
           // Calculate filled width based on update.arg (percentage 0 to 100)
           int filledWidth = (barWidth * update.status) / 100;
           gfx->fillRect(barX, barY, filledWidth, barHeight, WHITE);
-          delay(100);
+          vTaskDelay(100 / portTICK_PERIOD_MS);
           break;
         }
         case END_DOWNLOAD: {
           A_DBG("case is end_download");
           draw_text(gfx, textX, textY + 100, 3, WHITE, update.message);
           vTaskDelay(500 / portTICK_PERIOD_MS);
+          
           clear_screen(gfx);
           draw_main_screen(gfx);
+          vTaskDelay(1000 / portTICK_PERIOD_MS);
           break;
         }
         case CONNECTION_CHECK: {

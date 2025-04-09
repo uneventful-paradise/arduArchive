@@ -10,7 +10,6 @@
 
 #include <TAMC_GT911.h>
 // #include "Tasks.h"
-#include "Sprite.h"
 #include <WiFi.h>
 #include "time.h"
 
@@ -49,38 +48,13 @@
 #define BUTTON_POS_X 10
 #define BUTTON_POS_Y 90
 
-#define SPRITE_COUNT 10
+#define SPRITE_COUNT 6
+#define BUTTONS_PER_PAGE 15
+#define BUTTONS_PER_ROW 5
+#define BUTTON_OFFSET 15
 #define BUTTON_DELAY 150
 #define BUTTON_WIDTH 85
 #define BUTTON_HEIGHT 85
-
-#define VSCODE "/jpg_icons/vscode.jpg"
-#define CHROME "/jpg_icons/chrome.jpg"
-#define YOUTUBE "/jpg_icons/youtube.jpg"
-#define OBS "/clap_icons/OBS.jpg"
-#define OVERWATCH "/clap_icons/Overwatch.jpg"
-#define STEAM "/clap_icons/Steam.jpg"
-#define DISCORD "/clap_icons/Discord.jpg"
-#define TINDER "/clap_icons/Tinder.jpg"
-#define CC "/clap_icons/Adobe_Creative_Cloud.jpg"
-#define YT "/clap_icons/Youtube.jpg"
-
-#define PYCHARM_85 "/85px/1.jpg"
-#define PYCHARM_85_B "/85px/1b.jpg"
-#define ADOBE_85 "/85px/2.jpg"
-#define ADOBE_85_B "/85px/2b.jpg"
-#define WORD_85 "/85px/3.jpg"
-#define WORD_85_B "/85px/3B.jpg"
-#define CALCULATOR_85 "/85px/4.jpg"
-#define CALCULATOR_85_B "/85px/4b.jpg"
-#define SPOTIFY_85 "/85px/5.jpg"
-#define SPOTIFY_85_B "/85px/5b.jpg"
-#define STEAM_85 "/85px/9.jpg"
-#define GIT_85 "/85px/6.jpg"
-#define NOTEPAD_85 "/85px/10.jpg"
-#define CHROME_85 "/85px/7.jpg"
-#define YOUTUBE_85 "/85px/12.jpg"
-#define VSCODE_85 "/85px/11.jpg"
 
 //micro SD card
 #define SD_SCK 12

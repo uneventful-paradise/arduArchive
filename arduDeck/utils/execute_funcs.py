@@ -18,6 +18,7 @@ def start_process(client_socket, cmd_id, file_path):
         res = command.communicate()
         if command.returncode != 0:
             raise subprocess.CalledProcessError
+        logger.debug("START_PROCESS %d successful", cmd_id)
     except subprocess.CalledProcessError(command.returncode, file_path):
         logger.warning("START_PROCESS %d failed", cmd_id)
         print(res[1])

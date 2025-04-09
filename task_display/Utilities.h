@@ -7,7 +7,6 @@
 
 SdFat sd;
 SdFile file_obj;
-char* paths[SPRITE_COUNT];
 
 /*lookup table used in computing crc value
 more time efficient compared to a polynomoial version with no lookup.
@@ -116,7 +115,7 @@ bool get_file_obj(const char* filename) {
   in case the writing process fails mid way)*/
 
 
-  if (!file_obj.open(filename, O_WRITE | O_CREAT | O_TRUNC)) {
+  if (!file_obj.open(filename, O_RDWR | O_CREAT | O_TRUNC)) {
     Serial.println("Error opening or creating file");
     return false;
   }
@@ -242,99 +241,69 @@ void hard_press(char* sequence) {
   }
 }
 
-void init_paths(char* filename) {
-  const int max_line_size = 100;
-  char line[max_line_size];
-  int ln = 0;
-  size_t n = 0;
+// void init_paths(char* filename) {
+//   const int max_line_size = 100;
+//   char line[max_line_size];
+//   int ln = 0;
+//   size_t n = 0;
 
-  if (!sd.exists(filename)) {
-    Serial.println("File does not exist");
-    return;
-  }
-  SdFile file;
-  if (!file.open(filename, O_READ)) {
-    Serial.printf("Failed to open file in init_paths\n");
-  }
-  while ((n = file.fgets(line, sizeof(line))) > 0) {
-    // Check that we don't exceed our array bounds.
-    if (ln >= SPRITE_COUNT) {
-      break;
-    }
+//   if (!sd.exists(filename)) {
+//     Serial.println("File does not exist");
+//     return;
+//   }
+//   SdFile file;
+//   if (!file.open(filename, O_READ)) {
+//     Serial.printf("Failed to open file in init_paths\n");
+//   }
+//   while ((n = file.fgets(line, sizeof(line))) > 0) {
+//     // Check that we don't exceed our array bounds.
+//     if (ln >= SPRITE_COUNT) {
+//       break;
+//     }
 
-    // Ensure we have at least one character.
-    if (n < 1) continue;
+//     // Ensure we have at least one character.
+//     if (n < 1) continue;
     
-    // Serial.print(ln);
-    // Serial.print(": ");
-    // Serial.print(line);
+//     // Serial.print(ln);
+//     // Serial.print(": ");
+//     // Serial.print(line);
     
-    // Check if the last character is not newline, but only if n > 0.
-    if (line[n - 1] != '\n') {
-      // Ensure null termination.
-      line[n] = '\0';
-      Serial.println(F(" <-- missing nl"));
-    }
+//     // Check if the last character is not newline, but only if n > 0.
+//     if (line[n - 1] != '\n') {
+//       // Ensure null termination.
+//       line[n] = '\0';
+//       Serial.println(F(" <-- missing nl"));
+//     }
     
-    // Duplicate the line, ensuring it is null-terminated.
-    char* duplicated = strndup(line, n);
-    if (duplicated == NULL) {
-      Serial.println("strndup failed");
-      continue; // or handle error appropriately
-    }
-    paths[ln++] = duplicated;
+//     // Duplicate the line, ensuring it is null-terminated.
+//     char* duplicated = strndup(line, n);
+//     if (duplicated == NULL) {
+//       Serial.println("strndup failed");
+//       continue; // or handle error appropriately
+//     }
+//     paths[ln++] = duplicated;
     
-    // Check that the duplicated string is null-terminated.
-    if (duplicated[n] != '\0') {
-      Serial.printf("failed append of NULL\n");
-    }
-    // Serial.printf("%s", duplicated);
-  }
-}
+//     // Check that the duplicated string is null-terminated.
+//     if (duplicated[n] != '\0') {
+//       Serial.printf("failed append of NULL\n");
+//     }
+//     // Serial.printf("%s", duplicated);
+//   }
+// }
 
-void access_path(int icon_index) {
-  Keyboard.pressRaw(0xE3);
-  Keyboard.pressRaw(HID_KEY_R);
-  delay(500);
+// void access_path(int icon_index) {
+//   Keyboard.pressRaw(0xE3);
+//   Keyboard.pressRaw(HID_KEY_R);
+//   delay(500);
 
-  Keyboard.releaseRaw(HID_KEY_GUI_LEFT);
-  Keyboard.releaseRaw(HID_KEY_R);
+//   Keyboard.releaseRaw(HID_KEY_GUI_LEFT);
+//   Keyboard.releaseRaw(HID_KEY_R);
 
-  Keyboard.printf(paths[icon_index]);
-  Keyboard.press(KEY_RETURN);
-  delay(100);
-  Keyboard.releaseAll();
-}
-
-const int MIN_DEBUG_LEVEL = 1;
-
-void debug_print(const char* func_name, int debug_lvl, const char* fmt, ...) {
-  if (debug_lvl >= MIN_DEBUG_LEVEL) {
-
-    const char* level = NULL;
-    switch (debug_lvl) {
-      case 1:
-        level = "DEBUG";
-        break;
-      case 2:
-        level = "WARNING";
-        break;
-      case 3:
-        level = "ERROR";
-        break;
-      default:
-        level = "INFO";
-        break;
-    }
-    Serial.printf("[%s] [%s] ", func_name, level);
-    va_list argList;
-    va_start(argList, fmt);
-    vprintf(fmt, argList);
-    va_end(argList);
-
-    printf("\n");
-  }
-}
+//   Keyboard.printf(paths[icon_index]);
+//   Keyboard.press(KEY_RETURN);
+//   delay(100);
+//   Keyboard.releaseAll();
+// }
 
 bool configured_timestamp = false;
 struct tm time_info;

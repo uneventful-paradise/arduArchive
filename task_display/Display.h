@@ -1,14 +1,13 @@
 #ifndef _DISPLAY_H_
 #define _DISPLAY_H_
 
-#include "utilities.h"
-#include "Sprite.h"
+#include "SpriteManager.h"
+#include "Utilities.h"
 // #include <TAMC_GT911.h>
 
 int touch_last_x = 0, touch_last_y = 0;
 int pos[2] = { 0, 0 };
-Sprite *sprites[SPRITE_COUNT];
-char *icons[SPRITE_COUNT] = { NOTEPAD_85, CHROME_85, YOUTUBE_85, SPOTIFY_85, ADOBE_85, PYCHARM_85, VSCODE_85, STEAM_85, GIT_85, NOTEPAD_85 };
+
 
 int icon_x = 0, icon_y = 0;
 
@@ -28,7 +27,7 @@ Arduino_RPi_DPI_RGBPanel *gfx = new Arduino_RPi_DPI_RGBPanel(
   1 /* pclk_active_neg */, 16000000 /* prefer_speed */, true /* auto_flush */);
 
 TAMC_GT911 ts = TAMC_GT911(TOUCH_SDA, TOUCH_SCL, TOUCH_INT, TOUCH_RST, TOUCH_WIDTH, TOUCH_HEIGHT);
-
+SpriteManager sprite_manager = SpriteManager(BUTTONS_PER_PAGE, BUTTONS_PER_ROW, BUTTON_OFFSET);
 
 static int jpegDrawCallback(JPEGDRAW *pDraw) {
   // Serial.printf("Draw pos = %d,%d. size = %d x %d\n", pDraw->x, pDraw->y, pDraw->iWidth, pDraw->iHeight);
@@ -83,26 +82,77 @@ void draw_text(Arduino_RPi_DPI_RGBPanel *gfx, int text_x, int text_y, int text_s
 void clear_screen(Arduino_RPi_DPI_RGBPanel *gfx) {
   gfx->fillScreen(BLACK);
 }
+
 /*Draw main icon scene*/
 void draw_main_screen(Arduino_RPi_DPI_RGBPanel *gfx) {
   gfx->setCursor(0, 0);
-  icon_x = 0;
-  icon_y = 0;
-  for (int i = 0; i < SPRITE_COUNT; ++i) {  //define loadIcon()
-    if (icon_x + 85 > gfx->width()) {
-      icon_y += 100;
-      icon_x = 0;
+  Sprite** buttons = sprite_manager.getButtons();
+  for(int i = 0; i < sprite_manager.getCapacity(); ++i){ 
+    int id = buttons[i] -> getId();
+    char* fname = buttons[i] -> getFilename();
+
+    if(buttons[i] -> getId() < 12){
+      A_DBG("Now drawing %d, of path %s\n", id, fname);
+      buttons[i] -> draw(jpegDrawCallback);
     }
-    // Serial.println("printing paths");
-    sprites[i] = new Sprite();
-    sprites[i]->set(icon_x, icon_y, BUTTON_WIDTH, BUTTON_HEIGHT, "", i, 0);
-    sprites[i]->setFilename(icons[i]);
-    sprites[i]->setPath(paths[i]);
-    // Serial.println(paths[i]);
-    sprites[i]->setGFX(gfx);
-    sprites[i]->draw(jpegDrawCallback);
-    icon_x += 100;
   }
+}
+
+const unsigned int FILENAME_SIZE = 13;
+/**
+  * Initialize icon information.
+  *
+  * \param[in] icon_directory The path to the direcotry where icons are stored
+  * icons follow a specific naming format: {icon_id}.jpg
+  * \return False if an error was encountered, True otherwise
+  */
+bool init_icons(const char* icon_directory){
+  unsigned icon_x = 0, icon_y = 0, row = 0;
+  unsigned const int DIR_PATH_SIZE = strlen(icon_directory)+1;
+  SdFile dir;
+  if(!dir.open(icon_directory)){
+    A_ERR("ERROR: failed to open directory for icon initialization\n");
+    return false;
+  }
+
+  SdFile file;
+  while (file.openNext(&dir, O_READ)) {
+    char filename[FILENAME_SIZE], copy_filename[FILENAME_SIZE + DIR_PATH_SIZE]; 
+    file.getName(filename, sizeof(filename));
+    //The generated string has a length of at most n-1, leaving space for the additional terminating null character.
+    //could also just use strlen(copy_filename)
+    snprintf(copy_filename, strlen(filename) + DIR_PATH_SIZE + 1, "%s/%s", icon_directory, filename);
+    A_DBG("Display filepath will be %s\n", copy_filename);
+
+    // A_DBG("Currently processing %s\n", filename);
+    //get pointer to the start of the extension to eliminate it
+    char* terminator;
+    if((terminator = strstr(filename, ".jpg")) != NULL){
+      *terminator = '\0';
+    }else{
+      A_ERR("Icon file has wrong format\n");
+      continue;
+    }
+    // A_DBG("After processing filename is %s\n", filename);
+
+    int btn_id;
+    char* pEnd;
+    /* convert the string id into an int. 0 is a special case because of
+    error return type of strtol.*/
+    if ((btn_id = strtol(filename, &pEnd, 10)) == 0L && strcmp(filename, "0")){
+      //TODO: check for out of limits?
+      A_ERR("ERROR: strtol failed conversion\n");
+      continue;
+    }
+    A_DBG("ID of this button will be %d\n", btn_id);
+
+    Sprite* btn = sprite_manager.add_button(btn_id, copy_filename);
+    btn -> setGFX(gfx);
+    
+    file.close();
+  }
+  dir.close();
+  return true;
 }
 
 #endif
