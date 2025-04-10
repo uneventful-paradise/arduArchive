@@ -1,6 +1,17 @@
 import json
 from basic_comms import logger
 
+def build_client_config_file(client_dir, cmd_dict):
+    file_contents = ""
+    for button in cmd_dict:
+        line = client_dir + "/" + button["image_path"].split('/')[-1] + " " + str(button["button_id"])
+        if file_contents == "":
+            file_contents += line
+        else:
+            file_contents += "\n" + line
+    # logger.debug(file_contents)
+    with open("config/client_config.txt", "w") as f:
+        f.write(file_contents)
 
 def add_button(btn_id, actions, image_path, cmd_dict):
 

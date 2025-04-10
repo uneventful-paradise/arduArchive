@@ -27,7 +27,11 @@ Arduino_RPi_DPI_RGBPanel *gfx = new Arduino_RPi_DPI_RGBPanel(
   1 /* pclk_active_neg */, 16000000 /* prefer_speed */, true /* auto_flush */);
 
 TAMC_GT911 ts = TAMC_GT911(TOUCH_SDA, TOUCH_SCL, TOUCH_INT, TOUCH_RST, TOUCH_WIDTH, TOUCH_HEIGHT);
-SpriteManager sprite_manager = SpriteManager(BUTTONS_PER_PAGE, BUTTONS_PER_ROW, BUTTON_OFFSET);
+SpriteManager sprite_manager = SpriteManager(INIT_SPRITE_COUNT, 
+                                            MAX_SPRITE_COUNT,
+                                            BUTTONS_PER_PAGE,
+                                            BUTTONS_PER_ROW, 
+                                            BUTTON_OFFSET);
 
 static int jpegDrawCallback(JPEGDRAW *pDraw) {
   // Serial.printf("Draw pos = %d,%d. size = %d x %d\n", pDraw->x, pDraw->y, pDraw->iWidth, pDraw->iHeight);
@@ -155,6 +159,72 @@ bool init_icons(const char* icon_directory){
     file.close();
   }
   dir.close();
+  return true;
+}
+
+
+bool init_icons_from_config(const char* config_path){
+  SdFile file;
+  const int max_line_size = 100;
+  char line[max_line_size], line_copy[max_line_size];
+  size_t n = 0;
+  unsigned int id = 0;
+
+  if (!sd.exists(config_path)) {
+    A_ERR("File does not exist");
+    return false;
+  }
+
+  if (!file.open(config_path, O_READ)) {
+    A_ERR("Failed to open file");
+    return false;
+  }
+
+  char* save_ptr = NULL;
+  char* token;
+
+  while ((n = file.fgets(line, sizeof(line))) > 0) {
+    // Ensure we have at least one character.
+    if (n < 1) continue;
+  
+    if (line[n - 1] == '\n') {
+      //remove endlines
+      line[n-1] = '\0';
+    }
+  
+    
+    // A_DBG("Line is %s", line);
+
+    //get filename
+    token = strtok_r(line, " ", &save_ptr);
+    if(token == NULL){
+      A_ERR("failed to extract picture path. Wrong line format");
+      continue;
+    }
+    // A_DBG("filename is %s", token);
+    strcpy(line_copy, token);
+    //get the stringified id
+    token = strtok_r(NULL, " ", &save_ptr);
+
+    if (token == NULL) {
+      A_ERR("failed to extract button id. Wrong line format");
+      continue;
+    }
+    //convert string key value to decimal value
+    id = strtol(token, NULL, 10);
+    if (id == 0L && strcmp(token, "0")) {
+      A_ERR("stroull failed for token conversion");
+      continue;
+    }
+    A_DBG("filename is %s | id is %d", line_copy, id);
+
+    Sprite* btn = sprite_manager.add_button(id, line_copy);
+    if (btn == NULL){
+      A_ERR("Button creation failed");
+    }
+    btn -> setGFX(gfx);
+  }
+  // file.close();
   return true;
 }
 

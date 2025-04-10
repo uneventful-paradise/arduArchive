@@ -53,8 +53,11 @@ void setup() {
     // draw_main_screen(gfx);
 
     // init_paths("/configs/path_config_2.txt");
-    if (!init_icons("/init_icons")) {
-      A_ERR("Icon initialization failed\n");
+    // if (!init_icons("/init_icons")) {
+    //   A_ERR("Icon initialization failed\n");
+    // }
+    if (!init_icons_from_config("/configs/btn_config.txt")) {
+      A_ERR("Icon read failed");
     }
     
     /*Initializing mutexes*/

@@ -2,7 +2,7 @@ import random
 import time
 
 from utils.execute_funcs import *
-from utils.commands import *
+from utils.btn_funcs import *
 # Load current key-action configuration into a global dictionary
 # to be used by the action executing functions
 CONFIG_FILE = "config/configs.json"
@@ -232,22 +232,24 @@ def handle_server_send(client_socket, client_addr):
 
         if user_input == "u":
             handle_upload(client_socket, FILENAME, DEFAULT_CLIENT_DOWNLOAD_FOLDER)
-        if user_input == "i":
+        elif user_input == "i":
             initialize_deck(client_socket)
-        if user_input == "m":
+        elif user_input == "m":
             msg_index = random.randint(0, len(responses) - 1)
             # print(f'server cmd id = {basic_comms.server_cmd_id}')
             send_result = send_request(client_socket, INITIALIZE_ROUTINE, basic_comms.server_cmd_id
                          , len(responses[msg_index]), responses[msg_index])
             if send_result != basic_comms.SUCCESSFUL_CONF:
                 logger.error("Message send failed")
-        if user_input == "a":
+        elif user_input == "a":
             add_button(
                 10,
                 [("act1", "args1"), ("act2", "args2")],
                 "bombombini_gouzini.jpg",
                 CMD_DICT
             )
-        if user_input == "e":
+        elif user_input == "conf":
+            build_client_config_file("/configs", CMD_DICT)
+        elif user_input == "e":
             client_socket.close()
             s.close()

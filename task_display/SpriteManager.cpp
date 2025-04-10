@@ -1,15 +1,17 @@
 #include "SpriteManager.h"
 
-SpriteManager::SpriteManager(const unsigned int BTN_PER_PAGE, const unsigned int BNT_PER_ROW, const unsigned int BTN_OFFSET){
+SpriteManager::SpriteManager(const unsigned int DEFAULT_BTN, const unsigned int MAX_BTNS, const unsigned int BTN_PER_PAGE, const unsigned int BNT_PER_ROW, const unsigned int BTN_OFFSET){
   A_DBG("constructing sprite manager");
 
   this -> btn_per_page = BTN_PER_PAGE;
   this -> btn_per_row = BNT_PER_ROW;
   this -> btn_offset = BTN_OFFSET;
+  this -> max_capacity = MAX_BTNS;
 
   this -> btn_count = 0;
-  this -> btn_capacity = SPRITE_COUNT;
+  this -> btn_capacity = DEFAULT_BTN;
   this -> buttons = (Sprite**)malloc(this -> btn_capacity * sizeof(Sprite*));
+
   if (this -> buttons == NULL) {
     A_ERR("Error at allocating buttons array");
   }
@@ -23,6 +25,11 @@ SpriteManager::SpriteManager(const unsigned int BTN_PER_PAGE, const unsigned int
 
 Sprite* SpriteManager::add_button(int id, char* filename){
   A_DBG("Adding button %d to array", id);
+
+  if (this -> btn_count > this -> max_capacity) {
+    A_ERR("Button limit reached!");
+    return NULL;
+  }
 
   if(this -> btn_count >= this -> btn_capacity){
     A_DBG("Reached buttons array size limit!");
@@ -38,20 +45,19 @@ Sprite* SpriteManager::add_button(int id, char* filename){
       A_ERR("Realloc call for buttons array failed");
       return NULL;
     }
-    A_DBG("Resized array to %d", new_size);
-    // for(int i = old_size; i < new_size; ++i){
-    //   A_DBG("setting %d to nullptr", i);
-    //   this -> buttons[i] = nullptr;
-    // }
     this -> buttons = temp_buttons;
-    // return NULL;
+
+    //setting new, random, uninitialized memory blocks to null
+    A_DBG("Resized array to %d", new_size);
+    for(int i = old_size; i < new_size; ++i){
+      // A_DBG("setting %d to nullptr", i);
+      this -> buttons[i] = nullptr;
+    }
   }
 
   Sprite* new_btn = new Sprite();
-  int index = this -> btn_count;
-  this -> buttons[index] = new_btn;
-  this -> btn_count++;
-  A_DBG("Adding button of id %d and icon %s on position %d", id, filename, index);
+  this -> buttons[this -> btn_count++] = new_btn;
+  A_DBG("Adding button of id %d and icon %s on position %d", id, filename, (this -> btn_count - 1));
 
   int row = ( id % this -> btn_per_page) / this -> btn_per_row;
   int icon_x = (id % this -> btn_per_row) * 100 + this -> btn_offset;
