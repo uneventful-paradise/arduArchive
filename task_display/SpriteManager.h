@@ -19,6 +19,7 @@ public:
     ~SpriteManager();
 
     int getCapacity();
+    int getCount();
     Sprite** getButtons();
 };
 #endif

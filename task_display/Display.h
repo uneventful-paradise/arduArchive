@@ -87,7 +87,7 @@ void clear_screen(Arduino_RPi_DPI_RGBPanel *gfx) {
 void draw_main_screen(Arduino_RPi_DPI_RGBPanel *gfx) {
   gfx->setCursor(0, 0);
   Sprite** buttons = sprite_manager.getButtons();
-  for(int i = 0; i < sprite_manager.getCapacity(); ++i){ 
+  for(int i = 0; i < sprite_manager.getCount(); ++i){ 
     int id = buttons[i] -> getId();
     char* fname = buttons[i] -> getFilename();
 
@@ -122,7 +122,7 @@ bool init_icons(const char* icon_directory){
     //The generated string has a length of at most n-1, leaving space for the additional terminating null character.
     //could also just use strlen(copy_filename)
     snprintf(copy_filename, strlen(filename) + DIR_PATH_SIZE + 1, "%s/%s", icon_directory, filename);
-    A_DBG("Display filepath will be %s\n", copy_filename);
+    A_DBG("Display filepath will be %s", copy_filename);
 
     // A_DBG("Currently processing %s\n", filename);
     //get pointer to the start of the extension to eliminate it
@@ -144,9 +144,12 @@ bool init_icons(const char* icon_directory){
       A_ERR("ERROR: strtol failed conversion\n");
       continue;
     }
-    A_DBG("ID of this button will be %d\n", btn_id);
+    A_DBG("ID of this button will be %d", btn_id);
 
     Sprite* btn = sprite_manager.add_button(btn_id, copy_filename);
+    if (btn == NULL){
+      A_ERR("Button creation failed");
+    }
     btn -> setGFX(gfx);
     
     file.close();

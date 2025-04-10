@@ -34,22 +34,22 @@ void touch_check_task(void* params) {
   while (true) {
     //screen has been touched
     if (get_pos() == 1) {
-      for (int i = 0; i < sprite_manager.getCapacity(); i++) {
-        int button_value = UNABLE;
+      for (int i = 0; i < sprite_manager.getCount(); i++) {
+        int button_id = UNABLE;
         //checking if button is bound to command
-        if ((button_value = buttons[i] -> checkTouch(pos[0], pos[1])) != UNABLE) {
+        if ((buttons[i] != nullptr) && (button_id = buttons[i] -> checkTouch(pos[0], pos[1])) != UNABLE) {
           // Serial.printf("Pos is: %d, %d\n", pos[0], pos[1]);
           // Serial.printf("Value is: %d\n", button_value);
 
           //creating event and sending it to queue to trigger the touch_handle task
-          Touch_event event = { pos[0], pos[1], button_value };
+          Touch_event event = { pos[0], pos[1], button_id };
           //creating a data packet to send command information to server
           Package_data data;
           Header_data header;
           // Serial.printf("SENDING command for %s to server\n", paths[event.buttonId]);
 
           memset(data.contents, 0, sizeof(data.contents));
-          if (snprintf(data.contents, sizeof(data.contents), "%d", button_value) < 0) {
+          if (snprintf(data.contents, sizeof(data.contents), "%d", button_id) < 0) {
             Serial.println("snprintf failed in touch_check_task");
             continue;
           }
@@ -109,7 +109,7 @@ for now this tasks is only used for download progress display (display a progres
 TODO: loading icon for awaiting internet connection*/
 void update_screen_task(void* params) {
   // UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
-  // Serial.printf("update_screen_tasl stack high water mark: %u\n", watermark);
+  // A_DBG("stack high water mark (BEGIN) : %u\n", watermark);
   BaseType_t xStatus;
   UI_update update;
 
@@ -193,6 +193,9 @@ void update_screen_task(void* params) {
     } else {
       vPrintString("update_screen task failed to receive from ui_updates_queue.\r\n");
     }
+    // watermark = uxTaskGetStackHighWaterMark(NULL);
+    // A_DBG("stack high water mark (END): %u\n", watermark);
+
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
 }
@@ -229,15 +232,19 @@ void establish_connection_task(void* params) {
     Serial.print(".");
     vTaskDelay(500 / portTICK_PERIOD_MS);
   }
-  if (!configured_timestamp) {
-    configure_timestamp();
-    configured_timestamp = true;
-  }
+  // if (!configured_timestamp) {
+  //   configure_timestamp();
+  //   configured_timestamp = true;
+  // }
   A_DBG("WiFi Connected!");
   printWifiStatus();
 
+  // UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
+  // A_DBG("stack high water mark (PRE-LOOP): %u\n", watermark);
+
   //Connecting to and monitoring connection to server and network.
   while (1) {
+
     xEventGroupValue = xEventGroupGetBits(connection_event_group);
     
     if (WiFi.status() != WL_CONNECTED) {
@@ -277,7 +284,9 @@ void establish_connection_task(void* params) {
         A_DBG("Client connected!")
       }
     }
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    // watermark = uxTaskGetStackHighWaterMark(NULL);
+    // A_DBG("stack high water mark(END): %u\n", watermark);
+    vTaskDelay(500 / portTICK_PERIOD_MS);
   }
 }
 
@@ -409,19 +418,19 @@ void receive_request_task(void* params) {
         continue;
       }
 
-      char* req = (char*)malloc(header.length);
-      if (!req) {
+      char* req_contents = (char*)malloc(header.length);
+      if (!req_contents) {
         A_ERR("Malloc fail for request contents allocation");
         send_ack(-1);
         continue;
       }
-      client.readBytes(req, header.length);
+      client.readBytes(req_contents, header.length);
 
       Package_data data;
       data.header = header;
       //zero out contents to avoid pre existing junk data when reading binary data
       memset(data.contents, 0, sizeof(data.contents));
-      memcpy(data.contents, req, header.length);
+      memcpy(data.contents, req_contents, header.length);
 
       // Serial.printf("Received content %d, length: %d\n", data.cmd_id, data.length);
       // A_DBG("%s\n", data.contents);
@@ -439,7 +448,7 @@ void receive_request_task(void* params) {
       if (xStatus != pdPASS) {
         vPrintString("receive_request_task Failed to send data to wifi_request_queue.\r\n");
       }
-      free(req);
+      free(req_contents);
       // watermark = uxTaskGetStackHighWaterMark(NULL);
       // Serial.printf("\nreceive_request_task stack high water mark (END) : %u\n", watermark);
     }

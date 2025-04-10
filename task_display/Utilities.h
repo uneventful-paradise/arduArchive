@@ -384,10 +384,5 @@ void send_connection_status(int change){
   }
 }
 
-#define A_DBG(fmt, ...) \
-{ printf("[%s:%d]: " fmt "\n", __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__); }
-// {update_timestamp(); printf("[%s:%s:%d]: " fmt "\n", current_timestamp, __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__);}
 
-#define A_ERR(fmt, ...) A_DBG("[ERROR] " fmt __VA_OPT__(, ) __VA_ARGS__)
-#define A_WRN(fmt, ...) A_DBG("[WARNING] " fmt __VA_OPT__(, ) __VA_ARGS__)
 #endif
