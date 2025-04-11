@@ -13,15 +13,27 @@ with open(CONFIG_FILE, "r") as f:
 It starts the process in a nonblocking manner using `Popen`
 so the server is still responsive during this time"""
 def start_process(client_socket, cmd_id, file_path):
-    try:
-        command = subprocess.Popen([file_path])
-        res = command.communicate()
-        if command.returncode != 0:
-            raise subprocess.CalledProcessError
-        logger.debug("START_PROCESS %d successful", cmd_id)
-    except subprocess.CalledProcessError(command.returncode, file_path):
-        logger.warning("START_PROCESS %d failed", cmd_id)
-        print(res[1])
+    command = subprocess.Popen([file_path])
+    logger.debug("START_PROCESS %d successful", cmd_id)
+    #todo find a way to get popen result without blocking - use threads?
+
+    # try:
+    #     res = command.communicate()
+    #     if command.returncode != 0:
+    #         raise subprocess.CalledProcessError
+    # except subprocess.CalledProcessError(command.returncode, file_path):
+    #     logger.warning("START_PROCESS %d failed", cmd_id)
+    #     print(res[1])
+
+    # process = subprocess.Popen([file_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # logger.debug("START_PROCESS %d started", cmd_id)
+    # stdout, stderr = process.communicate()  # This blocks, but it's in a separate thread
+    # if process.returncode != 0:
+    #     logger.warning("START_PROCESS %d failed. Error: %s", cmd_id, stderr.decode())
+    # else:
+    #     logger.debug("START_PROCESS %d successful", cmd_id)
+    # thread = threading.Thread(target=process_worker, args=(cmd_id, file_path))
+
 
 """Opens a new tab or a new browser instance if none is running currently.
 This can be performed using shell but is unsafe and not recommended"""

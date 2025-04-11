@@ -9,7 +9,7 @@
         ]
       }
     ],
-    "image_path": "media/icons/pycharm.jpg"
+    "image_path": "media/icons/white_pycharm.jpg"
   },
   {
     "button_id": 1,
@@ -69,32 +69,6 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 6,
-    "actions": [
-      {
-        "command_id": 1,
-        "command_args": [
-          "<file_path>"
-        ]
-      },
-      {
-        "command_id": 2,
-        "command_args": [
-          "<url>"
-        ]
-      },
-      {
-        "command_id": 5,
-        "command_args": [
-          "<url>",
-          "",
-          ""
-        ]
-      }
-    ],
-    "image_path": "media/icons/calculator.jpg"
+    "image_path": "media/icons/obs.jpg"
   }
 ]

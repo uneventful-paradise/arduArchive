@@ -144,21 +144,7 @@ void vPrintString(const char* pString, bool debug = true) {
     }
   }
 }
-/*logging function that sends log messages to server
-for debugging when connected to USB-native port (Serial not available)*/
-void log(char* message) {
-  BaseType_t xStatus;
 
-  Header_data header = { LOG_MESSAGE, 0, strlen(message), 0 };
-  Package_data data;
-  data.header = header;
-  strcpy(data.contents, message);
-
-  xStatus = xQueueSend(send_queue, &data, portMAX_DELAY);
-  if (xStatus != pdPASS) {
-    vPrintString("log failed to send data to send_queue.\r\n");
-  }
-}
 
 /*Uses USBHIDKeyboard library to emulate harware level key presses.
 The sequence argument is composed of a series of commands separated 
@@ -240,70 +226,6 @@ void hard_press(char* sequence) {
     token = strtok_r(NULL, "+", &save_ptr);
   }
 }
-
-// void init_paths(char* filename) {
-//   const int max_line_size = 100;
-//   char line[max_line_size];
-//   int ln = 0;
-//   size_t n = 0;
-
-//   if (!sd.exists(filename)) {
-//     Serial.println("File does not exist");
-//     return;
-//   }
-//   SdFile file;
-//   if (!file.open(filename, O_READ)) {
-//     Serial.printf("Failed to open file in init_paths\n");
-//   }
-//   while ((n = file.fgets(line, sizeof(line))) > 0) {
-//     // Check that we don't exceed our array bounds.
-//     if (ln >= SPRITE_COUNT) {
-//       break;
-//     }
-
-//     // Ensure we have at least one character.
-//     if (n < 1) continue;
-    
-//     // Serial.print(ln);
-//     // Serial.print(": ");
-//     // Serial.print(line);
-    
-//     // Check if the last character is not newline, but only if n > 0.
-//     if (line[n - 1] != '\n') {
-//       // Ensure null termination.
-//       line[n] = '\0';
-//       Serial.println(F(" <-- missing nl"));
-//     }
-    
-//     // Duplicate the line, ensuring it is null-terminated.
-//     char* duplicated = strndup(line, n);
-//     if (duplicated == NULL) {
-//       Serial.println("strndup failed");
-//       continue; // or handle error appropriately
-//     }
-//     paths[ln++] = duplicated;
-    
-//     // Check that the duplicated string is null-terminated.
-//     if (duplicated[n] != '\0') {
-//       Serial.printf("failed append of NULL\n");
-//     }
-//     // Serial.printf("%s", duplicated);
-//   }
-// }
-
-// void access_path(int icon_index) {
-//   Keyboard.pressRaw(0xE3);
-//   Keyboard.pressRaw(HID_KEY_R);
-//   delay(500);
-
-//   Keyboard.releaseRaw(HID_KEY_GUI_LEFT);
-//   Keyboard.releaseRaw(HID_KEY_R);
-
-//   Keyboard.printf(paths[icon_index]);
-//   Keyboard.press(KEY_RETURN);
-//   delay(100);
-//   Keyboard.releaseAll();
-// }
 
 bool configured_timestamp = false;
 struct tm time_info;

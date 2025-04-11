@@ -3,11 +3,10 @@ import time
 
 from utils.execute_funcs import *
 from utils.btn_funcs import *
+
 # Load current key-action configuration into a global dictionary
 # to be used by the action executing functions
-CONFIG_FILE = "config/configs.json"
-with open(CONFIG_FILE, "r") as f:
-    CMD_DICT = json.load(f)
+
 
 MAX_CLIENTS = 5
 threads = []
@@ -31,64 +30,6 @@ FILENAME = "media/images/landscape.jpg"
 DEFAULT_CLIENT_DOWNLOAD_FOLDER = "/init_icons"
 
 request_queue = queue.Queue()
-
-"""Opens the upload source file and sends predefined sized chunks of data to client.
-
-The first send contains an `upload start flag` alongside the file size and file name(on the client side).
-Then `file_size/CHUNK_SIZE` file contents sends follow. Finally when EOF is encountered
-on the server side, an `upload end flag` is sent to the client to stop the transfer. 
-"""
-def handle_upload(client_socket, filename, client_location, client_fname = ""):
-    logger.debug("Started upload")
-    #check for existence of file before starting transfer
-
-    # base_dir = os.path.dirname(os.path.abspath(__file__))
-    # filename = os.path.join(base_dir, filename)
-    try:
-        if not os.path.exists(filename):
-            raise FileNotFoundError
-    except FileNotFoundError as e:
-        logger.exception(e)
-
-    file_size = os.path.getsize(filename)
-
-    if client_fname == "":
-        client_filename = client_location + "/" + filename.split('/')[-1] + " " + str(file_size)
-    else:
-        client_filename = client_location + "/" + client_fname + " " + str(file_size)
-
-    logger.debug("writing to %s", client_filename)
-
-    #send the upload initiating request
-    req_cmd = basic_comms.server_cmd_id
-    send_res = send_request(client_socket, START_DOWNLOAD, req_cmd, len(client_filename), client_filename)
-    if send_res == STOP_ACTION:
-        logger.ERROR("Client requested end of UPLOAD by ack flag")
-        return
-    try:
-        file_obj = open(filename, 'rb')
-        while True:
-            #read a chunk of data from file
-            data = file_obj.read(CHUNK_SIZE)
-            req_cmd = basic_comms.server_cmd_id
-
-            if not data:
-                #send transfer ending request
-                data = "EOF"
-                send_res = send_request(client_socket, END_DOWNLOAD, req_cmd, len(data), data)
-                if send_res == SUCCESSFUL_CONF:
-                    logger.debug("EOF sent successfully. Upload ended.")
-                    break
-            else:
-                #send the following file contents request
-                send_res = send_request(client_socket, FILE_TRANSFER, req_cmd, len(data), data)
-            #stop transfer in case of error
-            if send_res == STOP_ACTION:
-                logger.ERROR("Received request to end UPLOAD by ack flag")
-                break
-
-    except IOError as e:
-        logger.error("Could not open or read file", exc_info=True)
 
 """Executes the action associated with the id of a pressed button.
 It checks the existence of the requested button id then calls the associated action
@@ -137,10 +78,6 @@ def check_connection(client_socket):
         return True
     return True
 
-"""Reads the configuration file, validates it and sends all the icons to the deck.
-This function should be called when the connection is first initiated.
-
-Still working on it :)"""
 def initialize_deck(client_socket):
     #get all images and send them to esp one by one
     for button in CMD_DICT:
@@ -173,8 +110,12 @@ def handle_request(client_socket, addr):
                      pd.contents)
         # executing command associated to the button id
         if pd.header_data.command_type == MACRO_COMMAND:
-            execute_command(client_socket, pd.header_data.command_id, int(pd.contents))
-
+            try:
+                execute_command(client_socket, pd.header_data.command_id, int(pd.contents))
+            except ValueError as e:
+                logger.exception(e)
+            except Exception as e:
+                logger.exception(e)
 """Function to be called by the reader thread. It loops indefinitely listening for 
 client request headers."""
 def receive_request(client_socket, client_addr):
@@ -241,15 +182,26 @@ def handle_server_send(client_socket, client_addr):
                          , len(responses[msg_index]), responses[msg_index])
             if send_result != basic_comms.SUCCESSFUL_CONF:
                 logger.error("Message send failed")
-        elif user_input == "a":
-            add_button(
-                10,
-                [("act1", "args1"), ("act2", "args2")],
-                "bombombini_gouzini.jpg",
-                CMD_DICT
-            )
-        elif user_input == "conf":
-            build_client_config_file("/configs", CMD_DICT)
+        elif user_input == "add":
+            try:
+                add_button(
+                    10,
+                    [("START_PROCESS", ["C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE"]),
+                     ("START_URL", ["https://github.com/uneventful-paradise/arduArchive/tree/main"])],
+                    "media/icons/word.jpg",
+                    CMD_DICT
+                )
+                update_button(5,
+                              6,
+                              [("HARD_KEY_PRESS", ["pLa revedere frate"])],
+                              "media/icons/vscode.jpg")
+
+                send_new_config(client_socket, "/configs", basic_comms.server_cmd_id)
+                write_updates()
+
+            except ValueError as e:
+                logger.error("Handle request exception: %s", e, exc_info=True)
+
         elif user_input == "e":
             client_socket.close()
             s.close()

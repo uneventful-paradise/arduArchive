@@ -161,8 +161,8 @@ void update_screen_task(void* params) {
           draw_text(gfx, textX, textY + 100, 3, WHITE, update.message);
           vTaskDelay(500 / portTICK_PERIOD_MS);
           
-          clear_screen(gfx);
-          draw_main_screen(gfx);
+          // clear_screen(gfx);
+          // draw_main_screen(gfx);
           vTaskDelay(1000 / portTICK_PERIOD_MS);
           break;
         }
@@ -184,6 +184,17 @@ void update_screen_task(void* params) {
             draw_main_screen(gfx);
           }
           break;
+        }
+        case REDRAW_COMMAND: {
+          A_DBG("case is redraw screen");
+          clear_screen(gfx);
+
+          sprite_manager.clear_buttons();
+          if (!init_icons_from_config("/configs/btn_config.txt")) {
+            A_ERR("Icon read failed");
+          }
+
+          draw_main_screen(gfx);
         }
         default:{
           A_ERR("Invalid update type");
@@ -512,6 +523,22 @@ void wifi_request_handling_task(void* params) {
         A_DBG("Tokenizing");
         hard_press(data.contents);
         ack = data.header.command_id;
+      } else if (data.header.command_type == REDRAW_COMMAND) {
+        A_DBG("Sending request to redraw screen");
+        ack = data.header.command_id;
+        
+        //todo create function to instantiate and send ui_update struct
+        UI_update update;
+        update.type = REDRAW_COMMAND;
+        update.status = 0;
+        if (snprintf(update.message, sizeof(update.message), "redraw screen") < 0) {
+          A_ERR("update message creation failed in send_connection_status");
+        }
+
+        xStatus = xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
+        if(xStatus != pdPASS){
+          vPrintString("send_connection_status failed to send update to ui_updates_queue\r\n");
+        }
       }
       // Serial.printf("[DEBUG] [wifi_request_handling] Sending ack value %d for message %u\n", ack, data.header.command_id);
       A_DBG("Sending ack value %d for message %u\n", ack, data.header.command_id);

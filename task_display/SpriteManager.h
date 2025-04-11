@@ -20,9 +20,10 @@ public:
         const unsigned int BNT_PER_ROW, 
         const unsigned int BTN_OFFSET);
 
-    Sprite* add_button(int id, char* filename);
+    Sprite* add_button(int id, char* filename, Arduino_RPi_DPI_RGBPanel* gfx);
     bool update_button(int id, char* filename);
     bool delete_button(int id);
+    void clear_buttons();
     ~SpriteManager();
 
     int getCapacity();

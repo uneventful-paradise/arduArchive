@@ -1,5 +1,4 @@
 #TODO: retest/build connection checking loop
-#TODO: CLIENT add mutex and eliminate busy waiting in handle_request
 
 import threading 
 

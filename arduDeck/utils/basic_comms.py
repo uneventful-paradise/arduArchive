@@ -27,6 +27,7 @@ HEADER_SIZE = 16
 MAX_RETRIES = 10
 
 server_cmd_id = 0
+
 """Predefined constant values used as flags in the protocol"""
 MACRO_COMMAND = 0
 START_DOWNLOAD = 1
@@ -34,7 +35,8 @@ FILE_TRANSFER = 2
 END_DOWNLOAD = 3
 INITIALIZE_ROUTINE = 4
 CONFIRMATION_FLAG = 5
-LOG_MESSAGE = 6
+REDRAW_COMMAND = 6
+CONNECTION_CHECK = 7
 
 """Acknowledgement flags"""
 SUCCESSFUL_CONF = 1
@@ -49,7 +51,6 @@ by looping until there is nothing left to send"""
 def read_all(client_socket, req_len):
     if req_len > CHUNK_SIZE:
         raise ValueError("Payload length exceeds chunk size")
-    #TODO: use byte arrays instead of lists for speed
     chunks = []
     bytes_received = 0
     try:
@@ -122,6 +123,7 @@ This is a product of the file transfer resend/confirmation operation.
 In the context of multiple connections this will require a synchronized variable
 or an id that increments regardless of the acknowledgement status.
 """
+#todo use new data format
 def send_request(client_socket, cmd_type, cmd_id, req_len, req):
     global server_cmd_id
     #format: < = small endian (! for network = big endian)
@@ -160,3 +162,62 @@ def send_request(client_socket, cmd_type, cmd_id, req_len, req):
 
     server_cmd_id = cmd_id + 1
     return result
+
+
+"""Opens the upload source file and sends predefined sized chunks of data to client.
+
+The first send contains an `upload start flag` alongside the file size and file name(on the client side).
+Then `file_size/CHUNK_SIZE` file contents sends follow. Finally when EOF is encountered
+on the server side, an `upload end flag` is sent to the client to stop the transfer. 
+"""
+def handle_upload(client_socket, filename, client_location, client_fname = ""):
+    logger.debug("Started upload")
+    #check for existence of file before starting transfer
+
+    # base_dir = os.path.dirname(os.path.abspath(__file__))
+    # filename = os.path.join(base_dir, filename)
+    try:
+        if not os.path.exists(filename):
+            raise FileNotFoundError
+    except FileNotFoundError as e:
+        logger.exception(e)
+
+    file_size = os.path.getsize(filename)
+
+    if client_fname == "":
+        client_filename = client_location + "/" + filename.split('/')[-1] + " " + str(file_size)
+    else:
+        client_filename = client_location + "/" + client_fname + " " + str(file_size)
+
+    logger.debug("writing to %s", client_filename)
+
+    #send the upload initiating request
+    req_cmd = server_cmd_id
+    send_res = send_request(client_socket, START_DOWNLOAD, req_cmd, len(client_filename), client_filename)
+    if send_res == STOP_ACTION:
+        logger.error("Client requested end of UPLOAD by ack flag")
+        return
+    try:
+        file_obj = open(filename, 'rb')
+        while True:
+            #read a chunk of data from file
+            data = file_obj.read(CHUNK_SIZE)
+            req_cmd = server_cmd_id
+
+            if not data:
+                #send transfer ending request
+                data = "EOF"
+                send_res = send_request(client_socket, END_DOWNLOAD, req_cmd, len(data), data)
+                if send_res == SUCCESSFUL_CONF:
+                    logger.debug("EOF sent successfully. Upload ended.")
+                    break
+            else:
+                #send the following file contents request
+                send_res = send_request(client_socket, FILE_TRANSFER, req_cmd, len(data), data)
+            #stop transfer in case of error
+            if send_res == STOP_ACTION:
+                logger.error("Received request to end UPLOAD by ack flag")
+                break
+
+    except IOError as e:
+        logger.error("Could not open or read file", exc_info=True)

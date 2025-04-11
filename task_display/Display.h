@@ -150,11 +150,10 @@ bool init_icons(const char* icon_directory){
     }
     A_DBG("ID of this button will be %d", btn_id);
 
-    Sprite* btn = sprite_manager.add_button(btn_id, copy_filename);
+    Sprite* btn = sprite_manager.add_button(btn_id, copy_filename, gfx);
     if (btn == NULL){
       A_ERR("Button creation failed");
     }
-    btn -> setGFX(gfx);
     
     file.close();
   }
@@ -218,11 +217,10 @@ bool init_icons_from_config(const char* config_path){
     }
     A_DBG("filename is %s | id is %d", line_copy, id);
 
-    Sprite* btn = sprite_manager.add_button(id, line_copy);
+    Sprite* btn = sprite_manager.add_button(id, line_copy, gfx);
     if (btn == NULL){
       A_ERR("Button creation failed");
     }
-    btn -> setGFX(gfx);
   }
   // file.close();
   return true;

@@ -23,7 +23,7 @@ SpriteManager::SpriteManager(const unsigned int DEFAULT_BTN, const unsigned int 
   A_DBG("sprite manager construction complete");
 }
 
-Sprite* SpriteManager::add_button(int id, char* filename){
+Sprite* SpriteManager::add_button(int id, char* filename, Arduino_RPi_DPI_RGBPanel* gfx){
   A_DBG("Adding button %d to array", id);
 
   if (this -> btn_count > this -> max_capacity) {
@@ -65,6 +65,7 @@ Sprite* SpriteManager::add_button(int id, char* filename){
 
   new_btn -> set(icon_x, icon_y, BUTTON_WIDTH, BUTTON_HEIGHT, id);
   new_btn -> setFilename(filename);
+  new_btn -> setGFX(gfx);
   
   A_DBG("Succesfully added button\n");
   return new_btn;
@@ -96,6 +97,15 @@ bool SpriteManager::delete_button(int id){
     }
   }
   return false;
+}
+//works for a small number of buttons.
+void SpriteManager::clear_buttons(){
+  for (int i = 0; i < this -> btn_count; ++i) {
+    delete this -> buttons[i];
+    this -> buttons[i] = nullptr;
+    A_DBG("deleted btn on pos %d", i);
+  }
+  this -> btn_count = 0;
 }
 
 int SpriteManager::getCapacity(){
