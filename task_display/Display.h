@@ -90,14 +90,24 @@ void clear_screen(Arduino_RPi_DPI_RGBPanel *gfx) {
 /*Draw main icon scene*/
 void draw_main_screen(Arduino_RPi_DPI_RGBPanel *gfx) {
   gfx->setCursor(0, 0);
-  Sprite** buttons = sprite_manager.getButtons();
-  for(int i = 0; i < sprite_manager.getCount(); ++i){ 
-    int id = buttons[i] -> getId();
-    char* fname = buttons[i] -> getFilename();
+  if (xButtonsMutex != NULL) {
+    if (xSemaphoreTake(xButtonsMutex, portMAX_DELAY) != pdTRUE){
+      A_ERR("Failed to take buttons mutex");
+    }
 
-    if(buttons[i] -> getId() < 12){
-      A_DBG("Now drawing %d, of path %s\n", id, fname);
-      buttons[i] -> draw(jpegDrawCallback);
+    Sprite** buttons = sprite_manager.getButtons();
+    for(int i = 0; i < sprite_manager.getCount(); ++i){ 
+      int id = buttons[i] -> getId();
+      char* fname = buttons[i] -> getFilename();
+  
+      if(buttons[i] -> getId() < 12){
+        A_DBG("Now drawing %d, of path %s\n", id, fname);
+        buttons[i] -> draw(jpegDrawCallback);
+      }
+    }
+
+    if (xSemaphoreGive(xButtonsMutex) != pdTRUE) {
+      A_ERR("Failed to give buttons mutex");
     }
   }
 }
@@ -217,9 +227,20 @@ bool init_icons_from_config(const char* config_path){
     }
     A_DBG("filename is %s | id is %d", line_copy, id);
 
-    Sprite* btn = sprite_manager.add_button(id, line_copy, gfx);
-    if (btn == NULL){
-      A_ERR("Button creation failed");
+    if (xButtonsMutex != NULL) {
+      if (xSemaphoreTake(xButtonsMutex, portMAX_DELAY) != pdTRUE){
+        A_ERR("Failed to take buttons mutex");
+      }
+
+      // A_DBG("Took mutex");
+      Sprite* btn = sprite_manager.add_button(id, line_copy, gfx);
+      if (btn == NULL){
+        A_ERR("Button creation failed");
+      }
+
+      if (xSemaphoreGive(xButtonsMutex) != pdTRUE) {
+        A_ERR("Failed to give buttons mutex");
+      }
     }
   }
   // file.close();

@@ -22,6 +22,7 @@ USBHIDKeyboard Keyboard;
 
 QueueHandle_t send_queue;
 SemaphoreHandle_t xPrintMutex = NULL;
+SemaphoreHandle_t xButtonsMutex = NULL;
 
 struct Header_data {
   unsigned int command_type;

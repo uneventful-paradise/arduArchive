@@ -2,8 +2,8 @@ import subprocess
 import webbrowser
 import json
 
-import basic_comms
 from basic_comms import *
+from server_key_presses import *
 #load modifier key codes from file
 CONFIG_FILE = "config/key_codes.json"
 with open(CONFIG_FILE, "r") as f:
@@ -90,17 +90,46 @@ def hard_key_press(client_socket, cmd_id, key_sequence):
 
     hexed_string = '+'.join(new_keys)
     send_result = send_request(client_socket, MACRO_COMMAND, cmd_id, len(hexed_string), hexed_string)
-    if send_result == basic_comms.SUCCESSFUL_CONF:
+    if send_result == SUCCESSFUL_CONF:
         logger.debug("Success")
     else:
         logger.error("Unexpected response")
 
+
+def soft_key_press(client_socket, cmd_id, key_sequence):
+    pressed_keys = []
+    keys = key_sequence.split("+")
+
+    for key in keys:
+        #get command prefix and argument
+        value = key[1:]
+        cmd_prefix = key[0]
+        # print(value)
+        if cmd_prefix == 'p':
+            keyboard_stream(value)
+        elif cmd_prefix == 'd':
+            press_key(value)
+            pressed_keys.append(value)
+        elif cmd_prefix == 'u':
+            release_key(value)
+            try:
+                pressed_keys.remove(value)
+            except ValueError as e:
+                logger.warning("Tried removing non existent key")
+        elif cmd_prefix == 'r':
+            for key_val in pressed_keys:
+                release_key(key_val)
+        elif cmd_prefix == 'w':
+            time.sleep(int(value)/1000)
+
+    logger.debug(f"Finished soft key press of id {cmd_id}")
 
 #maps the commands to executing functions
 ACT_DICT = {
     "START_PROCESS": start_process,
     "START_URL": start_url,
     "HARD_KEY_PRESS": hard_key_press,
+    "SOFT_KEY_PRESS": soft_key_press,
 }
 
 # path = path.rstrip('\r\n')

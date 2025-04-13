@@ -1,6 +1,6 @@
 import random
 import time
-
+import basic_comms
 from utils.execute_funcs import *
 from utils.btn_funcs import *
 
@@ -182,7 +182,7 @@ def handle_server_send(client_socket, client_addr):
                          , len(responses[msg_index]), responses[msg_index])
             if send_result != basic_comms.SUCCESSFUL_CONF:
                 logger.error("Message send failed")
-        elif user_input == "add":
+        elif user_input == "add1":
             try:
                 add_button(
                     10,
@@ -191,17 +191,29 @@ def handle_server_send(client_socket, client_addr):
                     "media/icons/word.jpg",
                     CMD_DICT
                 )
-                update_button(5,
-                              6,
-                              [("HARD_KEY_PRESS", ["pLa revedere frate"])],
-                              "media/icons/vscode.jpg")
 
                 send_new_config(client_socket, "/configs", basic_comms.server_cmd_id)
                 write_updates()
 
             except ValueError as e:
                 logger.error("Handle request exception: %s", e, exc_info=True)
-
+        elif user_input == "add2":
+            try:
+                update_button(5,
+                              6,
+                              [("HARD_KEY_PRESS", ["pLa revedere frate"])],
+                              "media/icons/vscode.jpg")
+                send_new_config(client_socket, "/configs", basic_comms.server_cmd_id)
+                write_updates()
+            except ValueError as e:
+                logger.exception(e)
+        elif user_input == "add3":
+            try:
+                delete_button(10)
+                send_new_config(client_socket, "/configs", basic_comms.server_cmd_id)
+                write_updates()
+            except ValueError as e:
+                logger.exception(e)
         elif user_input == "e":
             client_socket.close()
             s.close()

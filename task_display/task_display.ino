@@ -56,17 +56,21 @@ void setup() {
     // if (!init_icons("/init_icons")) {
     //   A_ERR("Icon initialization failed\n");
     // }
+    /*Initializing mutexes*/
+    xPrintMutex = xSemaphoreCreateMutex();
+    if (xPrintMutex == NULL) {
+      A_ERR("Failed to create print mutex!");
+    }
+    xButtonsMutex = xSemaphoreCreateMutex();
+    
+    if (xButtonsMutex == NULL) {
+      A_ERR("Failed to create buttons mutex");
+    }
+    
     if (!init_icons_from_config("/configs/btn_config.txt")) {
       A_ERR("Icon read failed");
     }
     
-    /*Initializing mutexes*/
-    xPrintMutex = xSemaphoreCreateMutex();
-    
-    if (xPrintMutex == NULL) {
-      A_ERR("Failed to create print mutex!");
-    }
-
     connection_event_group = xEventGroupCreate();
     if(!connection_event_group){
       A_ERR("Failed to create event group");
@@ -159,7 +163,6 @@ void setup() {
   }
 }
 
-//interrupt upload if something goes wrong?
 //constants vs macros
 void loop() {
   // if(configured_timestamp){

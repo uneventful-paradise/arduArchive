@@ -30,55 +30,77 @@ void touch_check_task(void* params) {
   // Serial.printf("touch_check_task stack high water mark: %u\n", watermark);
 
   BaseType_t xStatus;
-  Sprite** buttons = sprite_manager.getButtons();
+
   while (true) {
     //screen has been touched
     if (get_pos() == 1) {
-      for (int i = 0; i < sprite_manager.getCount(); i++) {
-        int button_id = UNABLE;
-        //checking if button is bound to command
-        if ((buttons[i] != nullptr) && (button_id = buttons[i] -> checkTouch(pos[0], pos[1])) != UNABLE) {
-          // Serial.printf("Pos is: %d, %d\n", pos[0], pos[1]);
-          // Serial.printf("Value is: %d\n", button_value);
+      //!avoid maxdelay?
+      /* wait for task to acquire mutex before moving on
+      As noted earlier in this book, indefinite time outs are not
+      recommended for production code. */
+      if(xButtonsMutex != NULL){
+        //?refetch the array each time you need to check for touch?
+        if (xSemaphoreTake(xButtonsMutex, portMAX_DELAY) != pdTRUE){
+          A_ERR("Failed to get buttons mutex");
+        }
+        Sprite** buttons = sprite_manager.getButtons();
 
-          //creating event and sending it to queue to trigger the touch_handle task
-          Touch_event event = { pos[0], pos[1], button_id };
-          //creating a data packet to send command information to server
-          Package_data data;
-          Header_data header;
-          // Serial.printf("SENDING command for %s to server\n", paths[event.buttonId]);
+        A_DBG("Pos is: %d, %d\n", pos[0], pos[1]);
+        A_DBG("Count is %d", (sprite_manager.getCount()));
 
-          memset(data.contents, 0, sizeof(data.contents));
-          if (snprintf(data.contents, sizeof(data.contents), "%d", button_id) < 0) {
-            Serial.println("snprintf failed in touch_check_task");
-            continue;
-          }
-          /*touches can only trigger macro commands
-          cmd_id will be updated by sender task
-          send button id as argument for the server to
-          identify the corresponding actions
-          */
-          header.command_type = MACRO_COMMAND;
-          header.command_id = 0;
-          header.length = strlen(data.contents);
-          header.crc_value = crc_string(data.contents, header.length);
-          data.header = header;
-          A_DBG("Selected value is %s\n", data.contents);
+        for (int i = 0; i < sprite_manager.getCount(); i++) {
+          A_DBG("checking button %d", i);
+          int button_id = UNABLE;
+          //checking if button is bound to command
 
-          xStatus = xQueueSend(selection_queue, &event, portMAX_DELAY);
-          if (xStatus != pdPASS) {
-            /*The send operation could not complete because the queue was full-
-                this must be an error since xTicksToWait = portMAX_DELAY so the 
-                task blocks indefinitely until there is enough space to write the data*/
-            vPrintString("touch_check_task failed to send data to the selection_queue.\r\n");
-          }
+          if ((buttons[i] != nullptr) && (button_id = buttons[i] -> checkTouch(pos[0], pos[1])) != UNABLE) {
+            A_DBG("Value is: %d\n", button_id);
+            //creating event and sending it to queue to trigger the touch_handle task
+            Touch_event event = { pos[0], pos[1], button_id };
+            //creating a data packet to send command information to server
+            Package_data data;
+            Header_data header;
+            // Serial.printf("SENDING command for %s to server\n", paths[event.buttonId]);
 
-          xStatus = xQueueSend(send_queue, &data, portMAX_DELAY);
-          if (xStatus != pdPASS) {
-            vPrintString("touch_check_task failed to send data to the send_queue.\r\n");
+            memset(data.contents, 0, sizeof(data.contents));
+            if (snprintf(data.contents, sizeof(data.contents), "%d", button_id) < 0) {
+              Serial.println("snprintf failed in touch_check_task");
+              continue;
+            }
+            /*touches can only trigger macro commands
+            cmd_id will be updated by sender task
+            send button id as argument for the server to
+            identify the corresponding actions
+            */
+            header.command_type = MACRO_COMMAND;
+            header.command_id = 0;
+            header.length = strlen(data.contents);
+            header.crc_value = crc_string(data.contents, header.length);
+            data.header = header;
+            A_DBG("Selected value is %s\n", data.contents);
+
+            xStatus = xQueueSend(selection_queue, &event, portMAX_DELAY);
+            if (xStatus != pdPASS) {
+              /*The send operation could not complete because the queue was full-
+                  this must be an error since xTicksToWait = portMAX_DELAY so the 
+                  task blocks indefinitely until there is enough space to write the data*/
+              vPrintString("touch_check_task failed to send data to the selection_queue.\r\n");
+            }
+
+            xStatus = xQueueSend(send_queue, &data, portMAX_DELAY);
+            if (xStatus != pdPASS) {
+              vPrintString("touch_check_task failed to send data to the send_queue.\r\n");
+            }
+
+            A_DBG("skipping check of rest of buttons");
+            break;
           }
         }
+        if (xSemaphoreGive(xButtonsMutex) != pdTRUE){
+          A_ERR("Failed to give buttons mutex");
+        }
       }
+      
     }
     vTaskDelay(200 / portTICK_PERIOD_MS);
   }
@@ -132,13 +154,14 @@ void update_screen_task(void* params) {
     but data was successfully read from the queue before the block time expired.*/
     xStatus = xQueueReceive(ui_updates_queue, &update, portMAX_DELAY);
     if (xStatus == pdPASS) {
+      // A_DBG("message is %s", update.message);
       //file transfer related upload
       textWidth = strlen(update.message) * 20;
       textX = (screenWidth - textWidth) / 2;
 
       switch (update.type) {
         case START_DOWNLOAD:{
-          A_DBG("case is start_download");
+          // A_DBG("case is start_download");
           clear_screen(gfx);
           draw_text(gfx, textX, textY, 3, WHITE, update.message);
   
@@ -148,7 +171,7 @@ void update_screen_task(void* params) {
         }
         case FILE_TRANSFER:{
           //Transfer ongoing
-          A_DBG("case is file_transfer");
+          // A_DBG("case is file_transfer");
           // gfx->fillRect(barX, barY, barWidth, barHeight, BLACK);
           // Calculate filled width based on update.arg (percentage 0 to 100)
           int filledWidth = (barWidth * update.status) / 100;
@@ -157,7 +180,7 @@ void update_screen_task(void* params) {
           break;
         }
         case END_DOWNLOAD: {
-          A_DBG("case is end_download");
+          // A_DBG("case is end_download");
           draw_text(gfx, textX, textY + 100, 3, WHITE, update.message);
           vTaskDelay(500 / portTICK_PERIOD_MS);
           
@@ -170,13 +193,13 @@ void update_screen_task(void* params) {
           // A_DBG("update message length is %d\n", strlen(update.message));
          
           if (update.status != 1) {
-            A_DBG("case is connection lost");
+            // A_DBG("case is connection lost");
             //TODO: add animation
             //connection dropped
             clear_screen(gfx);
             draw_text(gfx, textX, textY, 3, WHITE, update.message);
           } else if (update.status == 1) {
-            A_DBG("case is connection gained");
+            // A_DBG("case is connection gained");
             clear_screen(gfx);
             draw_text(gfx, textX, textY, 3, WHITE, update.message);
             vTaskDelay(500 / portTICK_PERIOD_MS);
@@ -186,15 +209,27 @@ void update_screen_task(void* params) {
           break;
         }
         case REDRAW_COMMAND: {
-          A_DBG("case is redraw screen");
+          // A_DBG("case is redraw screen");
           clear_screen(gfx);
+          
+          if (xButtonsMutex != NULL) {
+            if (xSemaphoreTake(xButtonsMutex, portMAX_DELAY) != pdTRUE){
+              A_ERR("Failed to take buttons mutex");
+            }
 
-          sprite_manager.clear_buttons();
+            sprite_manager.clear_buttons();
+
+            if (xSemaphoreGive(xButtonsMutex) != pdTRUE) {
+              A_ERR("Failed to give buttons mutex");
+            }
+          }
+
           if (!init_icons_from_config("/configs/btn_config.txt")) {
             A_ERR("Icon read failed");
           }
 
           draw_main_screen(gfx);
+          break;
         }
         default:{
           A_ERR("Invalid update type");
@@ -211,7 +246,6 @@ void update_screen_task(void* params) {
   }
 }
 
-//TODO: block reading and writing tasks while not connected to WiFi or server.
 /*
 This task establishes and continuously monitors WiFi and server connection.
 A device uses Station Mode to join a network that 
@@ -226,9 +260,12 @@ To send conenction status updates to the GUI update task
 the call to `send_connection_status` places an `ui_update`
 object in the `ui_updates_queue` for the task to process. 
 */
+//!try event driven approach in case this fails to reestablish connection
 void establish_connection_task(void* params) {
 
   int status =- 2;
+  unsigned int retries = 0;
+  unsigned int max_retries = 6;
   EventBits_t xEventGroupValue;
 
   WiFi.mode(WIFI_STA);
@@ -264,8 +301,13 @@ void establish_connection_task(void* params) {
         xEventGroupClearBits(connection_event_group, WIFI_CONNECTED_BIT);
         status = -2;
         send_connection_status(status);
+        A_WRN("WiFi disconnected! Reconnecting...");
       }
-      A_WRN("WiFi disconnected! Reconnecting...");
+      retries++;
+      if(retries >= max_retries){
+        WiFi.disconnect();
+        retries = 0;
+      }
       WiFi.begin(WIFI_SSID, WIFI_PWD);
       continue;
     } else {
@@ -354,7 +396,7 @@ void send_ack(int ack) {
     A_ERR("Acknowledgement message creation failed");
   }
   int size = strlen(data.contents);
-  A_DBG("Acknowledge value is %s of size %d\n", data.contents, size);
+  // A_DBG("Acknowledge value is %s of size %d\n", data.contents, size);
   header = { CONFIRMATION_FLAG, 0, size, crc_string(data.contents, size) };
   data.header = header;
 

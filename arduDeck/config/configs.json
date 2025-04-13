@@ -60,15 +60,57 @@
     "image_path": "media/icons/vscode.jpg"
   },
   {
-    "button_id": 5,
+    "button_id": 6,
     "actions": [
       {
         "command_id": "HARD_KEY_PRESS",
         "command_args": [
-          "pSalut Frate"
+          "pLa revedere frate"
         ]
       }
     ],
-    "image_path": "media/icons/obs.jpg"
+    "image_path": "media/icons/vscode.jpg"
+  },
+  {
+    "button_id": 7,
+    "actions": [
+      {
+        "command_id": "SOFT_KEY_PRESS",
+        "command_args": [
+          "dKEY_LWIN+dKEY_R+w500+r"
+        ]
+      },
+      {
+        "command_id": "SOFT_KEY_PRESS",
+        "command_args": [
+          "pC:\\Users\\dante\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"
+        ]
+      },
+      {
+        "command_id": "SOFT_KEY_PRESS",
+        "command_args": [
+          "dKEY_RETURN+w100+r"
+        ]
+      }
+    ],
+    "image_path": "media/icons/adobe.jpg"
+  },
+  {
+    "button_id": 10,
+    "actions": [
+      {
+        "command_id": "START_PROCESS",
+        "command_args": [
+          "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE"
+        ]
+      },
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://github.com/uneventful-paradise/arduArchive/tree/main"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
   }
 ]

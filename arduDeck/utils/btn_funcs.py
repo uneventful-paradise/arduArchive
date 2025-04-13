@@ -53,6 +53,19 @@ def update_button(btn_id, new_btn_id, new_actions, new_image_path):
             button["image_path"] = new_image_path
             break
 
+def delete_button(btn_id):
+    if not any(button["button_id"] == btn_id for button in CMD_DICT):
+        raise ValueError("Button id does nto exists", btn_id)
+    
+    # for button in CMD_DICT:
+    #     if button["button_id"] == btn_id:
+    #         CMD_DICT.remove(button)
+    #         logger.debug("Removed element of id %d", button["button_id"])
+    #         break
+
+    new_CMD_DICT = [button for button in CMD_DICT if button["button_id"] != btn_id]
+    CMD_DICT[:] = new_CMD_DICT  # Replace the contents of CMD_DICT with the new list
+    
 def send_new_config(client_socket, client_dir, cmd_id):
     logger.debug("Building new config file")
     build_client_config_file(client_dir)
@@ -73,6 +86,7 @@ def send_new_config(client_socket, client_dir, cmd_id):
 
     req_contents = "redraw after upload"
     logger.debug("Sending request for redraw")
+    #todo mutex pe server id?? asta trimite 0 pt ca e cmd e copiat nu referntiat
     send_result = send_request(client_socket, REDRAW_COMMAND, cmd_id, len(req_contents), req_contents)
     if send_result == SUCCESSFUL_CONF:
         logger.debug("Success")
