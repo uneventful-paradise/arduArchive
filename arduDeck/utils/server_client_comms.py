@@ -185,10 +185,10 @@ def handle_server_send(client_socket, client_addr):
         elif user_input == "add1":
             try:
                 add_button(
-                    10,
+                    46,
                     [("START_PROCESS", ["C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE"]),
                      ("START_URL", ["https://github.com/uneventful-paradise/arduArchive/tree/main"])],
-                    "media/icons/word.jpg",
+                    "media/icons/obs.jpg",
                     CMD_DICT
                 )
 
@@ -214,6 +214,20 @@ def handle_server_send(client_socket, client_addr):
                 write_updates()
             except ValueError as e:
                 logger.exception(e)
+        elif user_input == "add4":
+            try:
+                add_button(
+                    15,
+                    [("SOFT_KEY_PRESS", ["dKEY_VOLUME_MUTE+w500+uKEY_VOLUME_MUTE+dKEY_LWIN+dKEY_SHIFT+dKEY_C+r"])],
+                    "media/icons/word.jpg",
+                    CMD_DICT
+                )
+
+                send_new_config(client_socket, "/configs", basic_comms.server_cmd_id)
+                write_updates()
+
+            except ValueError as e:
+                logger.error("Handle request exception: %s", e, exc_info=True)
         elif user_input == "e":
             client_socket.close()
             s.close()

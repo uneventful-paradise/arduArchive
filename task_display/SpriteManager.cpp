@@ -1,8 +1,8 @@
 #include "SpriteManager.h"
 
-SpriteManager::SpriteManager(const unsigned int DEFAULT_BTN, const unsigned int MAX_BTNS, const unsigned int BTN_PER_PAGE, const unsigned int BNT_PER_ROW, const unsigned int BTN_OFFSET){
+SpriteManager::SpriteManager(Arduino_RPi_DPI_RGBPanel* GFX, const unsigned int DEFAULT_BTN, const unsigned int MAX_BTNS, const unsigned int BTN_PER_PAGE, const unsigned int BNT_PER_ROW, const unsigned int BTN_OFFSET){
   A_DBG("constructing sprite manager");
-
+  this -> gfx = GFX;
   this -> btn_per_page = BTN_PER_PAGE;
   this -> btn_per_row = BNT_PER_ROW;
   this -> btn_offset = BTN_OFFSET;
@@ -12,6 +12,9 @@ SpriteManager::SpriteManager(const unsigned int DEFAULT_BTN, const unsigned int 
   this -> btn_capacity = DEFAULT_BTN;
   this -> buttons = (Sprite**)malloc(this -> btn_capacity * sizeof(Sprite*));
 
+  this -> current_page = 0;
+  this -> max_page = 0;
+
   if (this -> buttons == NULL) {
     A_ERR("Error at allocating buttons array");
   }
@@ -20,15 +23,34 @@ SpriteManager::SpriteManager(const unsigned int DEFAULT_BTN, const unsigned int 
     this -> buttons[i] = nullptr;
   }
 
+  //!create function for init nav_buttons
+  Sprite* btn_next = new Sprite();
+  btn_next -> set(700, 400, BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_NEXT);
+  btn_next -> setFilename("/85px/next.jpg");
+  btn_next -> setGFX(this -> gfx);
+
+  Sprite* btn_prev = new Sprite();
+  btn_prev -> set(600, 400, BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_PREV);
+  btn_prev -> setFilename("/85px/prev.jpg");
+  btn_prev -> setGFX(this -> gfx);
+
+  navigation_buttons[0] = btn_prev;
+  navigation_buttons[1] = btn_next;
+  navigation_buttons[2] = nullptr;
   A_DBG("sprite manager construction complete");
 }
 
-Sprite* SpriteManager::add_button(int id, char* filename, Arduino_RPi_DPI_RGBPanel* gfx){
+Sprite* SpriteManager::add_button(int id, char* filename){
   A_DBG("Adding button %d to array", id);
-
+  
   if (this -> btn_count > this -> max_capacity) {
     A_ERR("Button limit reached!");
     return NULL;
+  }
+  
+  int page = id / this -> btn_per_page;
+  if(page >= max_page) {
+    max_page = page;
   }
 
   if(this -> btn_count >= this -> btn_capacity){
@@ -59,7 +81,7 @@ Sprite* SpriteManager::add_button(int id, char* filename, Arduino_RPi_DPI_RGBPan
   this -> buttons[this -> btn_count++] = new_btn;
   A_DBG("Adding button of id %d and icon %s on position %d", id, filename, (this -> btn_count - 1));
 
-  int row = ( id % this -> btn_per_page) / this -> btn_per_row;
+  int row = (id % this -> btn_per_page) / this -> btn_per_row;
   int icon_x = (id % this -> btn_per_row) * 100 + this -> btn_offset;
   int icon_y = row * 100 + this -> btn_offset;
 
@@ -108,6 +130,22 @@ void SpriteManager::clear_buttons(){
   this -> btn_count = 0;
 }
 
+void SpriteManager::switchPage(int code){
+  if (code == BUTTON_NEXT) {
+    if (this -> current_page == this -> max_page){
+      this -> current_page = 0;
+    }else{
+      this -> current_page += 1; //++?
+    }
+  }else if (code == BUTTON_PREV) {
+    if (this -> current_page == 0){
+      this -> current_page = this -> max_page;
+    }else{
+      this -> current_page -= 1;
+    }
+  }
+}
+
 int SpriteManager::getCapacity(){
   return this -> btn_capacity;
 }
@@ -120,6 +158,10 @@ Sprite** SpriteManager::getButtons(){
   return this -> buttons;
 }
 
+Sprite** SpriteManager::getNavButtons(){
+  return this -> navigation_buttons;
+}
+
 SpriteManager::~SpriteManager() {
   for (unsigned int i = 0; i < btn_capacity; ++i) {
       if (buttons[i] != nullptr) {
@@ -127,4 +169,20 @@ SpriteManager::~SpriteManager() {
       }
   }
   free(buttons);
+}
+
+int SpriteManager::getCurrentPage(){
+  return this -> current_page;
+}
+
+void SpriteManager::setCurrentPage(int value){
+  this -> current_page = value;
+}
+
+int SpriteManager::getMaxPage(){
+  return this -> max_page;
+}
+
+void SpriteManager::setMaxPage(int value){
+  this -> max_page = value;
 }

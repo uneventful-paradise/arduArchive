@@ -26,20 +26,34 @@ EventGroupHandle_t connection_event_group;
 /*This taks's purpose is to listen to incoming touches, determine whether the touch has selected a valid icon
 and send the selection information to the server via a Package_Data object.*/
 void touch_check_task(void* params) {
-  // BaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);                    //checking for available stack
-  // Serial.printf("touch_check_task stack high water mark: %u\n", watermark);
+  BaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);                    //checking for available stack
+  Serial.printf("touch_check_task stack high water mark: %u\n", watermark);
 
   BaseType_t xStatus;
-
+  Sprite** nav_btn = sprite_manager.getNavButtons();
   while (true) {
     //screen has been touched
     if (get_pos() == 1) {
-      //!avoid maxdelay?
+
+      watermark = uxTaskGetStackHighWaterMark(NULL);
+      Serial.printf("touch_check_task stack high water mark: %u\n", watermark);
+      for (int i = 0; i < NAV_BTN_COUNT; ++i){
+        int btn_id = UNABLE;
+        if((nav_btn[i] != nullptr) && (btn_id = nav_btn[i] -> checkTouch(pos[0], pos[1])) != UNABLE) {
+          A_DBG("button is a nav button");
+          sprite_manager.switchPage(btn_id);
+          if (sprite_manager.getMaxPage() > 0) {
+            clear_screen();
+            draw_main_screen();
+          }
+          continue;
+        }
+      }
+      //!avoid maxdelay? does it make sense to allow multiple button presses?
       /* wait for task to acquire mutex before moving on
       As noted earlier in this book, indefinite time outs are not
       recommended for production code. */
       if(xButtonsMutex != NULL){
-        //?refetch the array each time you need to check for touch?
         if (xSemaphoreTake(xButtonsMutex, portMAX_DELAY) != pdTRUE){
           A_ERR("Failed to get buttons mutex");
         }
@@ -50,13 +64,19 @@ void touch_check_task(void* params) {
 
         for (int i = 0; i < sprite_manager.getCount(); i++) {
           A_DBG("checking button %d", i);
+          //buton_id is redeclared here so multiple buttons can be pressed at same time
+          if ((buttons[i] == nullptr) || (buttons[i] -> getId() / BUTTONS_PER_PAGE != sprite_manager.getCurrentPage())) {
+            A_DBG("button %d is nullptr or not on page", i);
+            continue;
+          }
+
           int button_id = UNABLE;
           //checking if button is bound to command
 
-          if ((buttons[i] != nullptr) && (button_id = buttons[i] -> checkTouch(pos[0], pos[1])) != UNABLE) {
+          if ((button_id = buttons[i] -> checkTouch(pos[0], pos[1])) != UNABLE) {
             A_DBG("Value is: %d\n", button_id);
             //creating event and sending it to queue to trigger the touch_handle task
-            Touch_event event = { pos[0], pos[1], button_id };
+            // Touch_event event = { pos[0], pos[1], button_id };
             //creating a data packet to send command information to server
             Package_data data;
             Header_data header;
@@ -67,11 +87,7 @@ void touch_check_task(void* params) {
               Serial.println("snprintf failed in touch_check_task");
               continue;
             }
-            /*touches can only trigger macro commands
-            cmd_id will be updated by sender task
-            send button id as argument for the server to
-            identify the corresponding actions
-            */
+
             header.command_type = MACRO_COMMAND;
             header.command_id = 0;
             header.length = strlen(data.contents);
@@ -79,13 +95,17 @@ void touch_check_task(void* params) {
             data.header = header;
             A_DBG("Selected value is %s\n", data.contents);
 
-            xStatus = xQueueSend(selection_queue, &event, portMAX_DELAY);
-            if (xStatus != pdPASS) {
-              /*The send operation could not complete because the queue was full-
-                  this must be an error since xTicksToWait = portMAX_DELAY so the 
-                  task blocks indefinitely until there is enough space to write the data*/
-              vPrintString("touch_check_task failed to send data to the selection_queue.\r\n");
-            }
+            // xStatus = xQueueSend(selection_queue, &event, portMAX_DELAY);
+            // if (xStatus != pdPASS) {
+            //   /*The send operation could not complete because the queue was full-
+            //       this must be an error since xTicksToWait = portMAX_DELAY so the 
+            //       task blocks indefinitely until there is enough space to write the data*/
+            //   vPrintString("touch_check_task failed to send data to the selection_queue.\r\n");
+            // }
+
+            watermark = uxTaskGetStackHighWaterMark(NULL);
+            Serial.printf("touch_check_task stack high water mark (MID): %u\n", watermark);
+          
 
             xStatus = xQueueSend(send_queue, &data, portMAX_DELAY);
             if (xStatus != pdPASS) {
@@ -162,8 +182,8 @@ void update_screen_task(void* params) {
       switch (update.type) {
         case START_DOWNLOAD:{
           // A_DBG("case is start_download");
-          clear_screen(gfx);
-          draw_text(gfx, textX, textY, 3, WHITE, update.message);
+          clear_screen();
+          draw_text(textX, textY, 3, WHITE, update.message);
   
           gfx->drawRect(barX, barY, barWidth, barHeight, WHITE);
           vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -181,7 +201,7 @@ void update_screen_task(void* params) {
         }
         case END_DOWNLOAD: {
           // A_DBG("case is end_download");
-          draw_text(gfx, textX, textY + 100, 3, WHITE, update.message);
+          draw_text(textX, textY + 100, 3, WHITE, update.message);
           vTaskDelay(500 / portTICK_PERIOD_MS);
           
           // clear_screen(gfx);
@@ -196,21 +216,21 @@ void update_screen_task(void* params) {
             // A_DBG("case is connection lost");
             //TODO: add animation
             //connection dropped
-            clear_screen(gfx);
-            draw_text(gfx, textX, textY, 3, WHITE, update.message);
+            clear_screen();
+            draw_text(textX, textY, 3, WHITE, update.message);
           } else if (update.status == 1) {
             // A_DBG("case is connection gained");
-            clear_screen(gfx);
-            draw_text(gfx, textX, textY, 3, WHITE, update.message);
+            clear_screen();
+            draw_text(textX, textY, 3, WHITE, update.message);
             vTaskDelay(500 / portTICK_PERIOD_MS);
-            clear_screen(gfx);
-            draw_main_screen(gfx);
+            clear_screen();
+            draw_main_screen();
           }
           break;
         }
         case REDRAW_COMMAND: {
           // A_DBG("case is redraw screen");
-          clear_screen(gfx);
+          clear_screen();
           
           if (xButtonsMutex != NULL) {
             if (xSemaphoreTake(xButtonsMutex, portMAX_DELAY) != pdTRUE){
@@ -218,6 +238,8 @@ void update_screen_task(void* params) {
             }
 
             sprite_manager.clear_buttons();
+            sprite_manager.setMaxPage(0);
+            sprite_manager.setCurrentPage(0);
 
             if (xSemaphoreGive(xButtonsMutex) != pdTRUE) {
               A_ERR("Failed to give buttons mutex");
@@ -228,7 +250,7 @@ void update_screen_task(void* params) {
             A_ERR("Icon read failed");
           }
 
-          draw_main_screen(gfx);
+          draw_main_screen();
           break;
         }
         default:{
@@ -239,8 +261,6 @@ void update_screen_task(void* params) {
     } else {
       vPrintString("update_screen task failed to receive from ui_updates_queue.\r\n");
     }
-    // watermark = uxTaskGetStackHighWaterMark(NULL);
-    // A_DBG("stack high water mark (END): %u\n", watermark);
 
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
@@ -337,8 +357,6 @@ void establish_connection_task(void* params) {
         A_DBG("Client connected!")
       }
     }
-    // watermark = uxTaskGetStackHighWaterMark(NULL);
-    // A_DBG("stack high water mark(END): %u\n", watermark);
     vTaskDelay(500 / portTICK_PERIOD_MS);
   }
 }
@@ -379,9 +397,6 @@ void send_request_task(void* params) {
       } else {
         vPrintString("[ERROR] [send_request_task] failed to receive from send_queue.\r\n");
       }
-
-      // watermark = uxTaskGetStackHighWaterMark(NULL);
-      // Serial.printf("\nsend_request_task stack high water mark (END) : %u\n", watermark);
     }
   }
 }
@@ -493,17 +508,12 @@ void receive_request_task(void* params) {
       }
       printf("\n\n");
 
-      // UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
-      // Serial.printf("\nreceive_request_task stack high water mark (MID) : %u\n", watermark);
-
       //send request to queue to be processed
       xStatus = xQueueSend(wifi_request_queue, &data, portMAX_DELAY);
       if (xStatus != pdPASS) {
         vPrintString("receive_request_task Failed to send data to wifi_request_queue.\r\n");
       }
       free(req_contents);
-      // watermark = uxTaskGetStackHighWaterMark(NULL);
-      // Serial.printf("\nreceive_request_task stack high water mark (END) : %u\n", watermark);
     }
 
     vTaskDelay(200 / portTICK_PERIOD_MS);
@@ -547,9 +557,6 @@ void wifi_request_handling_task(void* params) {
       //successful CRC confirmation of packet
       ack = data.header.command_id;
 
-      // watermark = uxTaskGetStackHighWaterMark(NULL);
-      // Serial.printf("\nwifi_request_task high water mark (MID) : %u\n", watermark);
-
       if (data.header.command_type == START_DOWNLOAD
           || data.header.command_type == FILE_TRANSFER || data.header.command_type == END_DOWNLOAD) {
 
@@ -587,8 +594,6 @@ void wifi_request_handling_task(void* params) {
       //seding confirmation
       send_ack(ack);
 
-      // watermark = uxTaskGetStackHighWaterMark(NULL);
-      // Serial.printf("\nwifi_request_task high water mark (END) : %u\n", watermark);
     } else {
       vPrintString("[ERROR] [wifi_request_handling] failed to receive data from wifi_request_queue. \r\n");
     }

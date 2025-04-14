@@ -101,7 +101,7 @@ void setup() {
     xTaskCreatePinnedToCore(
       touch_check_task,
       "touch_check",
-      4096,
+      8192,
       NULL,
       1,
       &touch_task_handle,
@@ -116,14 +116,14 @@ void setup() {
       NULL,
       1);
 
-    xTaskCreatePinnedToCore(
-      handle_command,
-      "handle_command",
-      4096,
-      NULL,
-      1,
-      NULL,
-      1);
+    // xTaskCreatePinnedToCore(
+    //   handle_command,
+    //   "handle_command",
+    //   4096,
+    //   NULL,
+    //   1,
+    //   NULL,
+    //   1);
 
     xTaskCreatePinnedToCore(
       establish_connection_task,

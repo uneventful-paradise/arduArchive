@@ -27,7 +27,8 @@ Arduino_RPi_DPI_RGBPanel *gfx = new Arduino_RPi_DPI_RGBPanel(
   1 /* pclk_active_neg */, 16000000 /* prefer_speed */, true /* auto_flush */);
 
 TAMC_GT911 ts = TAMC_GT911(TOUCH_SDA, TOUCH_SCL, TOUCH_INT, TOUCH_RST, TOUCH_WIDTH, TOUCH_HEIGHT);
-SpriteManager sprite_manager = SpriteManager(INIT_SPRITE_COUNT, 
+SpriteManager sprite_manager = SpriteManager(gfx,
+                                            INIT_SPRITE_COUNT, 
                                             MAX_SPRITE_COUNT,
                                             BUTTONS_PER_PAGE,
                                             BUTTONS_PER_ROW, 
@@ -76,33 +77,53 @@ int get_pos() {
   }
 }
 
-void draw_text(Arduino_RPi_DPI_RGBPanel *gfx, int text_x, int text_y, int text_size, int text_color, const char *text) {
+void draw_text(int text_x, int text_y, int text_size, int text_color, const char *text) {
   gfx->setTextSize(text_size);
   gfx->setTextColor(text_color);
   gfx->setCursor(text_x, text_y);
   gfx->println(text);
 }
 
-void clear_screen(Arduino_RPi_DPI_RGBPanel *gfx) {
+void clear_screen() {
   gfx->fillScreen(BLACK);
 }
 
+void draw_nav_btns(){
+  Sprite** nav_btn = sprite_manager.getNavButtons();
+  for(int i = 0; i < NAV_BTN_COUNT; ++i){ 
+    if(nav_btn[i] != nullptr){
+      int id = nav_btn[i] -> getId();
+      char* fname = nav_btn[i] -> getFilename();
+  
+      A_DBG("Now drawing %d, of path %s\n", id, fname);
+      nav_btn[i] -> draw(jpegDrawCallback);
+    }
+  }
+}
+
 /*Draw main icon scene*/
-void draw_main_screen(Arduino_RPi_DPI_RGBPanel *gfx) {
+void draw_main_screen() {
   gfx->setCursor(0, 0);
+  draw_nav_btns();
   if (xButtonsMutex != NULL) {
     if (xSemaphoreTake(xButtonsMutex, portMAX_DELAY) != pdTRUE){
       A_ERR("Failed to take buttons mutex");
     }
 
     Sprite** buttons = sprite_manager.getButtons();
+    
+    int page = sprite_manager.getCurrentPage();
+
     for(int i = 0; i < sprite_manager.getCount(); ++i){ 
-      int id = buttons[i] -> getId();
-      char* fname = buttons[i] -> getFilename();
-  
-      if(buttons[i] -> getId() < 12){
-        A_DBG("Now drawing %d, of path %s\n", id, fname);
-        buttons[i] -> draw(jpegDrawCallback);
+      if (buttons[i] != nullptr) {
+        
+        int id = buttons[i] -> getId();
+        char* fname = buttons[i] -> getFilename();
+    
+        if(buttons[i] -> getId() / BUTTONS_PER_PAGE == page){
+          A_DBG("Now drawing %d, of path %s\n", id, fname);
+          buttons[i] -> draw(jpegDrawCallback);
+        }
       }
     }
 
@@ -160,7 +181,7 @@ bool init_icons(const char* icon_directory){
     }
     A_DBG("ID of this button will be %d", btn_id);
 
-    Sprite* btn = sprite_manager.add_button(btn_id, copy_filename, gfx);
+    Sprite* btn = sprite_manager.add_button(btn_id, copy_filename);
     if (btn == NULL){
       A_ERR("Button creation failed");
     }
@@ -178,7 +199,7 @@ bool init_icons_from_config(const char* config_path){
   char line[max_line_size], line_copy[max_line_size];
   size_t n = 0;
   unsigned int id = 0;
-
+  
   if (!sd.exists(config_path)) {
     A_ERR("File does not exist");
     return false;
@@ -233,7 +254,7 @@ bool init_icons_from_config(const char* config_path){
       }
 
       // A_DBG("Took mutex");
-      Sprite* btn = sprite_manager.add_button(id, line_copy, gfx);
+      Sprite* btn = sprite_manager.add_button(id, line_copy);
       if (btn == NULL){
         A_ERR("Button creation failed");
       }

@@ -1,20 +1,23 @@
 [
   {
-    "image_path": "media/icons/white_pycharm.jpg"
-  },
-  {
-    "image_path": "media/icons/adobe.jpg"
-  },
-  {
-    "image_path": "media/icons/steam.jpg"
+    "image_path": "media/icons/word.jpg"
   },
   {
     "image_path": "media/icons/obs.jpg"
   },
   {
+    "image_path": "media/icons/white_pycharm.jpg"
+  },
+  {
     "image_path": "media/icons/vscode.jpg"
   },
   {
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/steam.jpg"
+  },
+  {
+    "image_path": "media/icons/adobe.jpg"
+  },
+  {
+    "image_path": "media/icons/calculator.jpg"
   }
 ]

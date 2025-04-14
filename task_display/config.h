@@ -57,6 +57,11 @@
 #define BUTTON_WIDTH 85
 #define BUTTON_HEIGHT 85
 
+#define NAV_BTN_COUNT 3
+#define BUTTON_PREV 100
+#define BUTTON_NEXT 101
+#define BUTTON_SET  102
+
 //micro SD card
 #define SD_SCK 12
 #define SD_MISO 13
