@@ -3,13 +3,13 @@
     "button_id": 0,
     "actions": [
       {
-        "command_id": "START_URL",
+        "command_id": "START_PROCESS",
         "command_args": [
-          "https://example.com"
+          "C:\\Users\\dante\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/white_pycharm.jpg"
   },
   {
     "button_id": 1,
@@ -17,47 +17,47 @@
       {
         "command_id": "START_URL",
         "command_args": [
-          "https://openai.com"
+          "https://www.dw.com/en/top-stories/s-9097"
+        ]
+      }
+    ],
+    "image_path": "media/icons/adobe.jpg"
+  },
+  {
+    "button_id": 2,
+    "actions": [
+      {
+        "command_id": "HARD_KEY_PRESS",
+        "command_args": [
+          "dA+w500+dB+w500+uA+uB"
+        ]
+      }
+    ],
+    "image_path": "media/icons/steam.jpg"
+  },
+  {
+    "button_id": 3,
+    "actions": [
+      {
+        "command_id": "HARD_KEY_PRESS",
+        "command_args": [
+          "dLEFT_CTRL+dR+w500+r"
         ]
       }
     ],
     "image_path": "media/icons/obs.jpg"
   },
   {
-    "button_id": 2,
+    "button_id": 4,
     "actions": [
       {
-        "command_id": "START_URL",
+        "command_id": "HARD_KEY_PRESS",
         "command_args": [
-          "https://github.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/white_pycharm.jpg"
-  },
-  {
-    "button_id": 3,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://stackoverflow.com"
+          "dLEFT_GUI+dr+w500+r"
         ]
       }
     ],
     "image_path": "media/icons/vscode.jpg"
-  },
-  {
-    "button_id": 4,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://reddit.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/steam.jpg"
   },
   {
     "button_id": 6,
@@ -72,475 +72,31 @@
     "image_path": "media/icons/vscode.jpg"
   },
   {
-    "button_id": 6,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://google.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/calculator.jpg"
-  },
-  {
     "button_id": 7,
     "actions": [
       {
-        "command_id": "START_URL",
+        "command_id": "SOFT_KEY_PRESS",
         "command_args": [
-          "https://bing.com"
+          "dKEY_LWIN+dKEY_R+w500+r"
         ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 8,
-    "actions": [
+      },
       {
-        "command_id": "START_URL",
+        "command_id": "SOFT_KEY_PRESS",
         "command_args": [
-          "https://yahoo.com"
+          "pC:\\Users\\dante\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"
         ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 9,
-    "actions": [
+      },
       {
-        "command_id": "START_URL",
+        "command_id": "SOFT_KEY_PRESS",
         "command_args": [
-          "https://duckduckgo.com"
+          "dKEY_RETURN+w100+r"
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/adobe.jpg"
   },
   {
     "button_id": 10,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://twitter.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 11,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://facebook.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 12,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://linkedin.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 13,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://instagram.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 14,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://youtube.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 15,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://netflix.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 16,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://hulu.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 17,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://amazon.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 18,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://ebay.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 19,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://nytimes.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 20,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://bbc.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 21,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://cnn.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 22,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://dw.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 23,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://reuters.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 24,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://aljazeera.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 25,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://theguardian.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 26,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://bloomberg.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 27,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://wsj.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 28,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://forbes.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 29,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://techcrunch.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 30,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://wired.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 31,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://engadget.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 32,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://theverge.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 33,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://cnet.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 34,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://medium.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 35,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://dev.to"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 36,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://hashnode.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 37,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://mozilla.org"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 38,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://python.org"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 39,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://nodejs.org"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 40,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://java.com"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 41,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://kotlinlang.org"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 42,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://flutter.dev"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 43,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://reactjs.org"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 44,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://vuejs.org"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 45,
     "actions": [
       {
         "command_id": "START_PROCESS",
@@ -555,6 +111,18 @@
         ]
       }
     ],
-    "image_path": "media/icons/obs.jpg"
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 15,
+    "actions": [
+      {
+        "command_id": "SOFT_KEY_PRESS",
+        "command_args": [
+          "dKEY_VOLUME_MUTE+w500+uKEY_VOLUME_MUTE+dKEY_LWIN+dKEY_SHIFT+dKEY_C+r"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
   }
 ]

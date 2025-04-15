@@ -41,12 +41,12 @@ def execute_command(client_socket, command_id, request_contents):
     # print(ACT_DICT.keys())
     #check for button existence and validity
 
-    if not any(button["button_id"] == request_contents for button in CMD_DICT):
+    if not any(button["button_id"] == request_contents for button in BUTTON_LIST):
         raise ValueError("Invalid command id")
 
     #get button actions
     actions = []
-    for button in CMD_DICT:
+    for button in BUTTON_LIST:
         if button["button_id"] == request_contents:
             actions = button["actions"]
             break
@@ -80,7 +80,7 @@ def check_connection(client_socket):
 
 def initialize_deck(client_socket):
     #get all images and send them to esp one by one
-    for button in CMD_DICT:
+    for button in BUTTON_LIST:
 
         file_path = button["image_path"]
         client_filename = "{btn_index}.jpg".format(btn_index=button["button_id"])
@@ -189,7 +189,7 @@ def handle_server_send(client_socket, client_addr):
                     [("START_PROCESS", ["C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE"]),
                      ("START_URL", ["https://github.com/uneventful-paradise/arduArchive/tree/main"])],
                     "media/icons/obs.jpg",
-                    CMD_DICT
+                    BUTTON_LIST
                 )
 
                 send_new_config(client_socket, "/configs", basic_comms.server_cmd_id)
@@ -220,7 +220,7 @@ def handle_server_send(client_socket, client_addr):
                     15,
                     [("SOFT_KEY_PRESS", ["dKEY_VOLUME_MUTE+w500+uKEY_VOLUME_MUTE+dKEY_LWIN+dKEY_SHIFT+dKEY_C+r"])],
                     "media/icons/word.jpg",
-                    CMD_DICT
+                    BUTTON_LIST
                 )
 
                 send_new_config(client_socket, "/configs", basic_comms.server_cmd_id)

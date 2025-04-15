@@ -26,8 +26,8 @@ EventGroupHandle_t connection_event_group;
 /*This taks's purpose is to listen to incoming touches, determine whether the touch has selected a valid icon
 and send the selection information to the server via a Package_Data object.*/
 void touch_check_task(void* params) {
-  BaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);                    //checking for available stack
-  Serial.printf("touch_check_task stack high water mark: %u\n", watermark);
+  // BaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);                    //checking for available stack
+  // Serial.printf("touch_check_task stack high water mark: %u\n", watermark);
 
   BaseType_t xStatus;
   Sprite** nav_btn = sprite_manager.getNavButtons();
@@ -37,8 +37,8 @@ void touch_check_task(void* params) {
 
       watermark = uxTaskGetStackHighWaterMark(NULL);
       Serial.printf("touch_check_task stack high water mark: %u\n", watermark);
+      int btn_id = UNABLE;
       for (int i = 0; i < NAV_BTN_COUNT; ++i){
-        int btn_id = UNABLE;
         if((nav_btn[i] != nullptr) && (btn_id = nav_btn[i] -> checkTouch(pos[0], pos[1])) != UNABLE) {
           A_DBG("button is a nav button");
           sprite_manager.switchPage(btn_id);
@@ -46,6 +46,10 @@ void touch_check_task(void* params) {
             clear_screen();
             draw_main_screen();
           }
+          break;
+        }
+        if (btn_id != UNABLE){
+          A_DBG("skipping cmd btn checks");
           continue;
         }
       }
@@ -103,8 +107,8 @@ void touch_check_task(void* params) {
             //   vPrintString("touch_check_task failed to send data to the selection_queue.\r\n");
             // }
 
-            watermark = uxTaskGetStackHighWaterMark(NULL);
-            Serial.printf("touch_check_task stack high water mark (MID): %u\n", watermark);
+            // watermark = uxTaskGetStackHighWaterMark(NULL);
+            // Serial.printf("touch_check_task stack high water mark (MID): %u\n", watermark);
           
 
             xStatus = xQueueSend(send_queue, &data, portMAX_DELAY);

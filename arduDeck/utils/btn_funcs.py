@@ -10,11 +10,11 @@ with open(IMG_TRACKER_PATH, "r") as f:
 #todo move config file to btn_funcs? and lock it
 CONFIG_FILE = "config/configs.json"
 with open(CONFIG_FILE, "r") as f:
-    CMD_DICT = json.load(f)
+    BUTTON_LIST = json.load(f)
 
 def build_client_config_file(client_dir):
     file_contents = ""
-    for button in CMD_DICT:
+    for button in BUTTON_LIST:
         line = client_dir + "/" + button["image_path"].split('/')[-1] + " " + str(button["button_id"])
         if file_contents == "":
             file_contents += line
@@ -40,10 +40,10 @@ def add_button(btn_id, actions, image_path, cmd_dict):
 
 def update_button(btn_id, new_btn_id, new_actions, new_image_path):
 
-    if not any(button["button_id"] == btn_id for button in CMD_DICT):
+    if not any(button["button_id"] == btn_id for button in BUTTON_LIST):
         raise ValueError("Button id does nto exists", btn_id)
 
-    for button in CMD_DICT:
+    for button in BUTTON_LIST:
         if button["button_id"] == btn_id:
             button["button_id"] = new_btn_id
             button["actions"] = []
@@ -54,7 +54,7 @@ def update_button(btn_id, new_btn_id, new_actions, new_image_path):
             break
 
 def delete_button(btn_id):
-    if not any(button["button_id"] == btn_id for button in CMD_DICT):
+    if not any(button["button_id"] == btn_id for button in BUTTON_LIST):
         raise ValueError("Button id does nto exists", btn_id)
     
     # for button in CMD_DICT:
@@ -63,14 +63,14 @@ def delete_button(btn_id):
     #         logger.debug("Removed element of id %d", button["button_id"])
     #         break
 
-    new_CMD_DICT = [button for button in CMD_DICT if button["button_id"] != btn_id]
-    CMD_DICT[:] = new_CMD_DICT  # Replace the contents of CMD_DICT with the new list
+    new_CMD_DICT = [button for button in BUTTON_LIST if button["button_id"] != btn_id]
+    BUTTON_LIST[:] = new_CMD_DICT  # Replace the contents of CMD_DICT with the new list
     
 def send_new_config(client_socket, client_dir, cmd_id):
     logger.debug("Building new config file")
     build_client_config_file(client_dir)
 
-    for button in CMD_DICT:
+    for button in BUTTON_LIST:
         logger.debug(f"Checking for image {button['image_path']}")
         exists = False
         for image in tracked_images:
@@ -97,7 +97,7 @@ def send_new_config(client_socket, client_dir, cmd_id):
 def write_updates():
     try:
         with open(CONFIG_FILE, "w") as f:
-            json.dump(CMD_DICT, f, indent=2)
+            json.dump(BUTTON_LIST, f, indent=2)
         with open(IMG_TRACKER_PATH, "w") as f:
             json.dump(tracked_images, f, indent=2)
     except IOError as e:
