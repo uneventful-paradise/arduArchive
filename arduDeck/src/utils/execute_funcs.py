@@ -2,8 +2,8 @@ import subprocess
 import webbrowser
 import json
 
-from basic_comms import *
-from server_key_presses import *
+from src.basic_comms import *
+from src.utils.server_key_presses import *
 #load modifier key codes from file
 CONFIG_FILE = "config/key_codes.json"
 with open(CONFIG_FILE, "r") as f:
@@ -12,7 +12,7 @@ with open(CONFIG_FILE, "r") as f:
 """Start a new process using python subprocesses.
 It starts the process in a nonblocking manner using `Popen`
 so the server is still responsive during this time"""
-def start_process(client_socket, cmd_id, file_path):
+def start_process(client, cmd_id, file_path):
     command = subprocess.Popen([file_path])
     logger.debug("START_PROCESS %d successful", cmd_id)
     #todo find a way to get popen result without blocking - use threads?
@@ -37,7 +37,7 @@ def start_process(client_socket, cmd_id, file_path):
 
 """Opens a new tab or a new browser instance if none is running currently.
 This can be performed using shell but is unsafe and not recommended"""
-def start_url(client_socket, cmd_id, url):
+def start_url(client, cmd_id, url):
     if webbrowser.open_new_tab(url):
         logger.debug("Start_url %d successful", cmd_id)
     else:
@@ -56,7 +56,7 @@ pVALUE            - print VALUE string
 Keyboard modifiers (special keys like ALT, ESCAPE etc.) have codes assigned in the
 KEY_CODES config file.
 """
-def hard_key_press(client_socket, cmd_id, key_sequence):
+def hard_key_press(client, cmd_id, key_sequence):
     keys = key_sequence.split("+")
     new_keys = []
     for key in keys:
@@ -89,14 +89,19 @@ def hard_key_press(client_socket, cmd_id, key_sequence):
                 new_keys.append(key)
 
     hexed_string = '+'.join(new_keys)
-    send_result = send_request(client_socket, MACRO_COMMAND, cmd_id, len(hexed_string), hexed_string)
+    pd = create_packet(command_type=MACRO_COMMAND,
+                       command_id=cmd_id,
+                       length=len(hexed_string),
+                       crc_value=0,
+                       contents=hexed_string)
+    send_result = send_request(client, pd)
     if send_result == SUCCESSFUL_CONF:
         logger.debug("Success")
     else:
         logger.error("Unexpected response")
 
 
-def soft_key_press(client_socket, cmd_id, key_sequence):
+def soft_key_press(client, cmd_id, key_sequence):
     pressed_keys = []
     keys = key_sequence.split("+")
 

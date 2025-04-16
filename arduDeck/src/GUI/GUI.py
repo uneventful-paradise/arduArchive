@@ -1,8 +1,11 @@
 import tkinter as tk
 from tkinter import ttk
-from btn_funcs import BUTTON_LIST
+from xml.etree.ElementTree import indent
+
+from ..utils.btn_funcs import BUTTON_LIST
 from tkinter import filedialog, messagebox
-from btn_funcs import send_new_config, write_updates
+from ..utils.btn_funcs import send_new_config, write_updates, gui_upload, button_lock
+from ..basic_comms import get_client
 #todo add id checking for add and update func
 #todo preselect text in command args or register key inputs?
 
@@ -19,6 +22,7 @@ class StreamDeckGUI(tk.Tk):
         self.scrollbar = None
         self.info_frame = None
 
+        self.client = get_client()
         self.geometry("{}x{}".format(1200, 600))
         self.minsize(1200, 600)
         self.title("ArduDeck HUB")
@@ -164,7 +168,9 @@ class StreamDeckGUI(tk.Tk):
         actions_header.pack(pady=(10,5), padx=5, anchor="w")
 
         # List actions
-        actions = btn_info.get("actions", [])
+        with button_lock:
+            actions = btn_info.get("actions", [])
+
         if actions:
             for action in actions:
                 action_text = f"Command: {action.get('command_id', 'N/A')}\nArgs: {action.get('command_args', [])}"
@@ -187,7 +193,8 @@ class StreamDeckGUI(tk.Tk):
         new_path = self.select_image()
         if new_path:
             # Update button reference information
-            btn_info["image_path"] = new_path
+            with button_lock:
+                btn_info["image_path"] = new_path
             # Update the right pane by reloading the current button info.
             self.on_button_click(btn_info)
     
@@ -227,13 +234,14 @@ class StreamDeckGUI(tk.Tk):
         cmd_args_text.grid(row=2, column=1, padx=5, pady=5)
 
         def add_action():
-            actions = btn_info.get("actions", [])
-       
-            action_id = cmd_id_var.get()  
-            new_action = {"command_id": action_id, "command_args": cmd_args_text.get("1.0", "end-1c")}
+            with button_lock:
+                actions = btn_info.get("actions", [])
 
-            actions.append(new_action)
-            btn_info["actions"] = actions
+                action_id = cmd_id_var.get()
+                new_action = {"command_id": action_id, "command_args": [cmd_args_text.get("1.0", "end-1c")]}
+
+                actions.append(new_action)
+                btn_info["actions"] = actions
 
             # Clear the entry fields for the next action.
             cmd_id_var.set("")
@@ -280,8 +288,10 @@ class StreamDeckGUI(tk.Tk):
         btn_frame.grid(row=2, column=0, columnspan=2, pady=10)
 
         def save_changes():
-            action["command_id"] = cmd_id_var.get()
-            action["command_args"] = cmd_args_text.get("1.0", "end-1c")
+            with button_lock:
+                action["command_id"] = cmd_id_var.get()
+                action["command_args"] = cmd_args_text.get("1.0", "end-1c")
+                print("edited action!")
             edit_win.destroy()
             # Optionally, update the displayed actions.
             self.on_button_click(btn_info)
@@ -289,10 +299,12 @@ class StreamDeckGUI(tk.Tk):
 
         def remove_action():
             # Remove the action from the button's action list.
-            actions = btn_info.get("actions", [])
-            if action in actions:
-                actions.remove(action)
-                btn_info["actions"] = actions
+            with button_lock:
+                actions = btn_info.get("actions", [])
+                if action in actions:
+                    actions.remove(action)
+                    btn_info["actions"] = actions
+                    print("removed action!")
             edit_win.destroy()
             self.on_button_click(btn_info)
 
@@ -357,8 +369,10 @@ class StreamDeckGUI(tk.Tk):
                 "actions": [],
                 "image_path": img_path
             }
-            self.button_list.append(new_btn)
-            self.btn_map[bid] = new_btn
+            with button_lock:
+                self.button_list.append(new_btn)
+                self.btn_map[bid] = new_btn
+                print("added button!")
             # Refresh the left grid
             self.create_button_grid()
             
@@ -373,12 +387,14 @@ class StreamDeckGUI(tk.Tk):
 
     
     def delete_button(self, btn_info):
-        if btn_info in self.button_list:
-            self.button_list.remove(btn_info)
-            self.btn_map.pop(btn_info["button_id"])
-            self.create_button_grid()
-            for widget in self.info_frame.winfo_children():
-                widget.destroy()
+        with button_lock:
+            if btn_info in self.button_list:
+                self.button_list.remove(btn_info)
+                self.btn_map.pop(btn_info["button_id"])
+                print("deleted button!")
+                self.create_button_grid()
+                for widget in self.info_frame.winfo_children():
+                    widget.destroy()
 
     def prev_page(self):
         if self.current_page > 0:
@@ -395,10 +411,11 @@ class StreamDeckGUI(tk.Tk):
     def upload_changes(self):
         # Call your external function to process/upload changes.
         print("Uploading changes!")
-        # send_new_config()
-        write_updates()
-        
-if __name__ == "__main__":
+        self.client = get_client()
+        if self.client is None:
+            print("[ERROR]: Client is none!")
+            return None
+        # write_updates()
+        # print(self.button_list)
+        gui_upload(self.client, self.button_list)
 
-    app = StreamDeckGUI(BUTTON_LIST)
-    app.mainloop()

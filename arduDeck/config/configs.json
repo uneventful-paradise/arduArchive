@@ -60,12 +60,12 @@
     "image_path": "media/icons/vscode.jpg"
   },
   {
-    "button_id": 6,
+    "button_id": 5,
     "actions": [
       {
         "command_id": "HARD_KEY_PRESS",
         "command_args": [
-          "pLa revedere frate"
+          "pSalut frate"
         ]
       }
     ],
@@ -108,18 +108,6 @@
         "command_id": "START_URL",
         "command_args": [
           "https://github.com/uneventful-paradise/arduArchive/tree/main"
-        ]
-      }
-    ],
-    "image_path": "media/icons/word.jpg"
-  },
-  {
-    "button_id": 15,
-    "actions": [
-      {
-        "command_id": "SOFT_KEY_PRESS",
-        "command_args": [
-          "dKEY_VOLUME_MUTE+w500+uKEY_VOLUME_MUTE+dKEY_LWIN+dKEY_SHIFT+dKEY_C+r"
         ]
       }
     ],

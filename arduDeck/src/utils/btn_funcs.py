@@ -1,7 +1,11 @@
 import json
 import time
 
-from basic_comms import logger, handle_upload, send_request, REDRAW_COMMAND, SUCCESSFUL_CONF
+from src.basic_comms import logger, handle_upload, send_request, REDRAW_COMMAND, SUCCESSFUL_CONF, create_packet, get_server_cmd_id
+from src.client_model.base_client import BaseClient
+from threading import Lock
+
+button_lock = Lock()
 
 CLIENT_CONFIG_PATH = "config/client_config.txt"
 IMG_TRACKER_PATH = "config/tracked_img.json"
@@ -14,12 +18,13 @@ with open(CONFIG_FILE, "r") as f:
 
 def build_client_config_file(client_dir):
     file_contents = ""
-    for button in BUTTON_LIST:
-        line = client_dir + "/" + button["image_path"].split('/')[-1] + " " + str(button["button_id"])
-        if file_contents == "":
-            file_contents += line
-        else:
-            file_contents += "\n" + line
+    with button_lock:
+        for button in BUTTON_LIST:
+            line = client_dir + "/" + button["image_path"].split('/')[-1] + " " + str(button["button_id"])
+            if file_contents == "":
+                file_contents += line
+            else:
+                file_contents += "\n" + line
     # logger.debug(file_contents)
     with open(CLIENT_CONFIG_PATH, "w") as f:
         f.write(file_contents)
@@ -65,39 +70,53 @@ def delete_button(btn_id):
 
     new_CMD_DICT = [button for button in BUTTON_LIST if button["button_id"] != btn_id]
     BUTTON_LIST[:] = new_CMD_DICT  # Replace the contents of CMD_DICT with the new list
-    
-def send_new_config(client_socket, client_dir, cmd_id):
+
+def send_new_config(client, client_dir, cmd_id):
     logger.debug("Building new config file")
     build_client_config_file(client_dir)
 
-    for button in BUTTON_LIST:
-        logger.debug(f"Checking for image {button['image_path']}")
-        exists = False
-        for image in tracked_images:
-            if button["image_path"] == image["image_path"]:
-                exists = True
-        if not exists:
-            logger.debug("Image not on client. sending and indexing it")
-            tracked_images.append({"image_path": button["image_path"]})
-            handle_upload(client_socket, button["image_path"], client_dir)
-            time.sleep(0.5)
+    with button_lock:
+        for button in BUTTON_LIST:
+            logger.debug(f"Checking for image {button['image_path']}")
+            exists = False
+            for image in tracked_images:
+                if button["image_path"] == image["image_path"]:
+                    exists = True
+            if not exists:
+                logger.debug("Image not on client. sending and indexing it")
+                tracked_images.append({"image_path": button["image_path"]})
+                handle_upload(client, button["image_path"], client_dir)
+                time.sleep(0.5)
     logger.debug("Sending new config")
-    handle_upload(client_socket, CLIENT_CONFIG_PATH, client_dir, "btn_config.txt")
+    write_updates()
+    handle_upload(client, CLIENT_CONFIG_PATH, client_dir, "btn_config.txt")
 
-    req_contents = "redraw after upload"
     logger.debug("Sending request for redraw")
-    #todo mutex pe server id?? asta trimite 0 pt ca e cmd e copiat nu referntiat
-    send_result = send_request(client_socket, REDRAW_COMMAND, cmd_id, len(req_contents), req_contents)
+    req_contents = "redraw after upload"
+    pd = create_packet(command_type=REDRAW_COMMAND,
+                       command_id=cmd_id,
+                       length=len(req_contents),
+                       crc_value=0,
+                       contents=req_contents)
+    #todo mutex pe server id?? asta trimite 0 pt ca e cmd e copiat nu referentiat
+    send_result = send_request(client, pd)
     if send_result == SUCCESSFUL_CONF:
         logger.debug("Success")
     else:
         logger.error("Unexpected response")
 
+def gui_upload(client: BaseClient, btn_list: list):
+    sid = get_server_cmd_id()
+    with button_lock:
+        BUTTON_LIST[:] = btn_list
+    send_new_config(client, "/configs", sid)
 
 def write_updates():
+    logger.debug("Updating configs")
     try:
-        with open(CONFIG_FILE, "w") as f:
-            json.dump(BUTTON_LIST, f, indent=2)
+        with button_lock:
+            with open(CONFIG_FILE, "w") as f:
+                json.dump(BUTTON_LIST, f, indent=2)
         with open(IMG_TRACKER_PATH, "w") as f:
             json.dump(tracked_images, f, indent=2)
     except IOError as e:

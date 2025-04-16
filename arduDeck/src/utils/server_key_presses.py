@@ -1,6 +1,6 @@
 import ctypes
 import time
-from basic_comms import logger
+from src.basic_comms import logger
 from config.server_key_codes import key_scancodes, key_vkcodes
 SendInput = ctypes.windll.user32.SendInput
 

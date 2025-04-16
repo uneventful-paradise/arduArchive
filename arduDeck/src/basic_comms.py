@@ -1,84 +1,51 @@
-import socket
 import struct
 import binascii
-import logging
-import datetime
-import os
-import sys
 import queue
-from data_format import HeaderData, PackageData
 
-os.makedirs("logs", exist_ok=True)
-logger = logging.getLogger(__name__)
-log_filename = datetime.datetime.now().strftime("logs/log_%Y-%m-%d_%H-%M-%S.log")
+from client_model.base_client import BaseClient
+import threading
 
-# Configure logger
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s [%(levelname)s] [%(funcName)s] %(message)s',
-    datefmt="%m-%d %H:%M:%S",
-    handlers=[
-        logging.FileHandler(log_filename),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-CHUNK_SIZE = 2048
-HEADER_SIZE = 16
-MAX_RETRIES = 10
+from src.client_model.network_client import NetworkClient
+from utils.data_format import HeaderData, PackageData
+from server_params import *
 
 server_cmd_id = 0
+client_lock = threading.Lock()
 
-"""Predefined constant values used as flags in the protocol"""
-MACRO_COMMAND = 0
-START_DOWNLOAD = 1
-FILE_TRANSFER = 2
-END_DOWNLOAD = 3
-INITIALIZE_ROUTINE = 4
-CONFIRMATION_FLAG = 5
-REDRAW_COMMAND = 6
-CONNECTION_CHECK = 7
+client: BaseClient = None
+def read_all(client: BaseClient, req_len: int) -> bytes:
+    with client_lock:
+        return client.read_all(req_len)
 
-"""Acknowledgement flags"""
-SUCCESSFUL_CONF = 1
-INCORRECT_VALUE = -1
-STOP_ACTION = -2
+def write_all(client: BaseClient, data: bytes):
+    with client_lock:
+        client.write_all(data)
 
-"""Loop to send all data to server.
+def create_packet(command_type: int, command_id: int, length:int, crc_value: int, contents: any) -> PackageData:
+    hd = HeaderData(command_type=command_type, command_id=command_id, length=length, crc_value=crc_value)
+    pd = PackageData(header_data=hd, contents=contents)
+    return pd
 
-TCP might not send an entire message at once.
-the function makes sure to send the entire chunk of information
-by looping until there is nothing left to send"""
-def read_all(client_socket, req_len):
-    if req_len > CHUNK_SIZE:
-        raise ValueError("Payload length exceeds chunk size")
-    chunks = []
-    bytes_received = 0
-    try:
-        while bytes_received < req_len:
-            chunk = client_socket.recv(min(CHUNK_SIZE, req_len - bytes_received))
-            if not chunk:
-                logger.error("socket connection broken")
-                break
-            chunks.append(chunk)
-            bytes_received += len(chunk)
-    except socket.error as e:
-        logger.error("read_all exception: %s", e, exc_info=True)
+def set_client(new_client: BaseClient):
+    global client
+    with client_lock:
+        if client is not None:
+            client.close()
+            client = None
+        client = new_client
+    logger.debug("Successfully swapped client")
 
-    return b''.join(chunks)
+def get_client() -> BaseClient:
+    with client_lock:
+        return client
 
-"""Similar to read_all. Loop until all data has been sent"""
-def write_all(client_socket, data):
-    try:
-        total_sent = 0
-        while total_sent < len(data):
-            sent = client_socket.send(data[total_sent:])
-            if not sent:
-                logger.error("socket connection broken")
-                break
-            total_sent += sent
-    except socket.error as e:
-        logger.error("write_all exception: %s", e, exc_info=True)
+#lock?
+def get_server_cmd_id():
+    return server_cmd_id
 
+def set_server_cmd_id(new_server_cmd_id: int) -> None:
+    global server_cmd_id
+    server_cmd_id = new_server_cmd_id
 
 """In the context of data transfers the server sends a packet then
 waits for confirmation before sending the next one. The queue is used to
@@ -123,44 +90,60 @@ This is a product of the file transfer resend/confirmation operation.
 In the context of multiple connections this will require a synchronized variable
 or an id that increments regardless of the acknowledgement status.
 """
-#todo use new data format
-def send_request(client_socket, cmd_type, cmd_id, req_len, req):
+
+def send_request(client: BaseClient, pd: PackageData):
     global server_cmd_id
+    req_len = pd.header_data.length
+    req_contents = pd.contents
     #format: < = small endian (! for network = big endian)
     if req_len > CHUNK_SIZE:
         logger.warning("send %d exceeded size limit", req_len)
         raise ValueError("Payload length exceeds chunk size")
 
     enc_type = "hex"
-    if isinstance(req, str):
-        req = req.encode('utf-8')
+    if isinstance(req_contents, str):
+        req_contents = req_contents.encode('utf-8')
         enc_type = "str"
 
-    crc_value = binascii.crc32(req) & 0xffffffff
-    packet = struct.pack("!IIII", cmd_type, cmd_id, req_len, crc_value) + req
+    crc_value = binascii.crc32(req_contents) & 0xffffffff
+    pd.header_data.crc_value = crc_value
+    packet = struct.pack("!IIII",
+                         pd.header_data.command_type,
+                         pd.header_data.command_id,
+                         pd.header_data.length,
+                         pd.header_data.crc_value) + req_contents
 
     if enc_type == "str":
         logger.debug("SENT packet of type %d, id %d, size %d, CRC %s\n%s\n",
-                    cmd_type, cmd_id, len(req), hex(crc_value), req.decode('utf-8'))
+                     pd.header_data.command_type,
+                     pd.header_data.command_id,
+                     len(req_contents),
+                     hex(pd.header_data.crc_value),
+                     req_contents.decode('utf-8'))
     else:
         logger.debug("SENT packet of type %d, id %d, size %d, CRC %s\n%s\n",
-                    cmd_type, cmd_id, len(req), hex(crc_value), req.hex())
+                    pd.header_data.command_type,
+                    pd.header_data.command_id,
+                    len(req_contents),
+                    hex(pd.header_data.crc_value),
+                    req_contents.hex())
 
-    write_all(client_socket, packet)
-    # server_cmd_id+=1 TODO: how should the server message id be incremented in the context of multiple client connections
-    result = check_ack(cmd_id)
+    client.write_all(packet)
+    # server_cmd_id+=1
+    result = check_ack(pd.header_data.command_id)
     retry_counter = 0
+
     #resend packet until successful confirmation, error or exceeded retry counter
     while result == INCORRECT_VALUE and retry_counter < MAX_RETRIES:
-        write_all(client_socket, packet)
-        result = check_ack(cmd_id)
+        client.write_all(packet)
+        result = check_ack(pd.header_data.command_id)
         retry_counter += 1
 
     if retry_counter == MAX_RETRIES and result == INCORRECT_VALUE:
         logger.error("Packet reached MAX_RETRIES. Ending upload")
         result = STOP_ACTION
 
-    server_cmd_id = cmd_id + 1
+    server_cmd_id = pd.header_data.command_id + 1
     return result
 
 
@@ -170,12 +153,15 @@ The first send contains an `upload start flag` alongside the file size and file 
 Then `file_size/CHUNK_SIZE` file contents sends follow. Finally when EOF is encountered
 on the server side, an `upload end flag` is sent to the client to stop the transfer. 
 """
-def handle_upload(client_socket, filename, client_location, client_fname = ""):
+def handle_upload(client: BaseClient, filename: str, client_location: str, client_fname: str = ""):
     logger.debug("Started upload")
     #check for existence of file before starting transfer
 
     # base_dir = os.path.dirname(os.path.abspath(__file__))
     # filename = os.path.join(base_dir, filename)
+    if isinstance(client, NetworkClient):
+        print("Salut sunt network client")
+
     try:
         if not os.path.exists(filename):
             raise FileNotFoundError
@@ -193,7 +179,13 @@ def handle_upload(client_socket, filename, client_location, client_fname = ""):
 
     #send the upload initiating request
     req_cmd = server_cmd_id
-    send_res = send_request(client_socket, START_DOWNLOAD, req_cmd, len(client_filename), client_filename)
+    pd = create_packet(command_type=START_DOWNLOAD,
+                       command_id=req_cmd,
+                       length=len(client_filename),
+                       crc_value=0,
+                       contents=client_filename)
+
+    send_res = send_request(client, pd)
     if send_res == STOP_ACTION:
         logger.error("Client requested end of UPLOAD by ack flag")
         return
@@ -207,17 +199,28 @@ def handle_upload(client_socket, filename, client_location, client_fname = ""):
             if not data:
                 #send transfer ending request
                 data = "EOF"
-                send_res = send_request(client_socket, END_DOWNLOAD, req_cmd, len(data), data)
+                pd = create_packet(command_type=END_DOWNLOAD,
+                                   command_id=req_cmd,
+                                   length=len(data),
+                                   crc_value=0,
+                                   contents=data)
+
+                send_res = send_request(client, pd)
                 if send_res == SUCCESSFUL_CONF:
                     logger.debug("EOF sent successfully. Upload ended.")
                     break
             else:
                 #send the following file contents request
-                send_res = send_request(client_socket, FILE_TRANSFER, req_cmd, len(data), data)
+                pd = create_packet(command_type=FILE_TRANSFER,
+                                   command_id=req_cmd,
+                                   length=len(data),
+                                   crc_value=0,
+                                   contents=data)
+                send_res = send_request(client, pd)
             #stop transfer in case of error
             if send_res == STOP_ACTION:
                 logger.error("Received request to end UPLOAD by ack flag")
                 break
 
     except IOError as e:
-        logger.error("Could not open or read file", exc_info=True)
+        logger.exception(e)

@@ -3,6 +3,8 @@
 //TODO: set a higher priority for reader tasks?
 //TODO: is yielding necessary when waiting upon xQeueuReceive
 
+//!check if continue and break in button loop optimizes page switching
+
 /*Setting xTicksToWait to portMAX_DELAY will 
 cause the task to wait indefinitely (without timing out), 
 provided INCLUDE_vTaskSuspend is set to 1 in FreeRTOSConfig.h.*/
@@ -35,8 +37,8 @@ void touch_check_task(void* params) {
     //screen has been touched
     if (get_pos() == 1) {
 
-      watermark = uxTaskGetStackHighWaterMark(NULL);
-      Serial.printf("touch_check_task stack high water mark: %u\n", watermark);
+      // watermark = uxTaskGetStackHighWaterMark(NULL);
+      // Serial.printf("touch_check_task stack high water mark: %u\n", watermark);
       int btn_id = UNABLE;
       for (int i = 0; i < NAV_BTN_COUNT; ++i){
         if((nav_btn[i] != nullptr) && (btn_id = nav_btn[i] -> checkTouch(pos[0], pos[1])) != UNABLE) {
@@ -331,7 +333,7 @@ void establish_connection_task(void* params) {
       if(retries >= max_retries){
         WiFi.disconnect();
         retries = 0;
-      }
+      }//fix this to not skip the delay!
       WiFi.begin(WIFI_SSID, WIFI_PWD);
       continue;
     } else {

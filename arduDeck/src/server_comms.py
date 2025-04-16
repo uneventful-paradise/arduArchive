@@ -1,24 +1,9 @@
 import random
-import time
-import basic_comms
+from src import basic_comms
 from utils.execute_funcs import *
 from utils.btn_funcs import *
-
-# Load current key-action configuration into a global dictionary
-# to be used by the action executing functions
-
-
-MAX_CLIENTS = 5
-threads = []
-HOST = "0.0.0.0"
-PORT = 65432
-
-# Initialize the main connection socket. Bind and listen
-# will be called on it resulting in client connection sockets.
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-s.bind((HOST, PORT))
-s.listen(5)
+from client_model.base_client import BaseClient
+import socket
 
 #FILENAME = "media/haskell-register.log"
 #FILENAME = "media/tw.txt"
@@ -37,26 +22,26 @@ with the proper arguments.
 
 Actions are functions mapped to an action name field in the config of every button.
 The arguments are also defined within the button configuration."""
-def execute_command(client_socket, command_id, request_contents):
+def execute_command(client: BaseClient, command_id: int, request_contents: any):
     # print(ACT_DICT.keys())
     #check for button existence and validity
+    with button_lock:
+        if not any(button["button_id"] == request_contents for button in BUTTON_LIST):
+            raise ValueError("Invalid command id")
 
-    if not any(button["button_id"] == request_contents for button in BUTTON_LIST):
-        raise ValueError("Invalid command id")
-
-    #get button actions
-    actions = []
-    for button in BUTTON_LIST:
-        if button["button_id"] == request_contents:
-            actions = button["actions"]
-            break
+        #get button actions
+        actions = []
+        for button in BUTTON_LIST:
+            if button["button_id"] == request_contents:
+                actions = button["actions"]
+                break
 
     #get action arguments and execute the action
     for action in actions:
         logger.debug("Action has command_id: %s", action["command_id"])
         if action["command_id"] in ACT_DICT.keys():
             logger.debug("Action has arguments: %s", action["command_args"])
-            ACT_DICT[action["command_id"]](client_socket, command_id, *action["command_args"])
+            ACT_DICT[action["command_id"]](client, command_id, *action["command_args"])
         else:
             logger.warning("Invalid command id in dictionary")
 
@@ -78,18 +63,6 @@ def check_connection(client_socket):
         return True
     return True
 
-def initialize_deck(client_socket):
-    #get all images and send them to esp one by one
-    for button in BUTTON_LIST:
-
-        file_path = button["image_path"]
-        client_filename = "{btn_index}.jpg".format(btn_index=button["button_id"])
-        logger.debug(f"sending {file_path}")
-
-        handle_upload(client_socket, file_path, DEFAULT_CLIENT_DOWNLOAD_FOLDER, client_filename)
-
-        time.sleep(1)
-
 """Receives a request header from the client. Parses the header converting it
 from network byte order (`!` format element) to host order.
 
@@ -99,7 +72,7 @@ from the socket. Finally, it checks the command type:
 If the message is a confirmation message (CFCF flag) then the request is passed to the ack queue
 If the message is a macro command (MCCF flag) then the request is forwarded to the execute function
 """
-def handle_request(client_socket, addr):
+def handle_request(client):
     while True:
         pd = request_queue.get()
         logger.debug("Request has type %d, id %d, len %d, CRC %s, contents: %s\n",
@@ -111,21 +84,21 @@ def handle_request(client_socket, addr):
         # executing command associated to the button id
         if pd.header_data.command_type == MACRO_COMMAND:
             try:
-                execute_command(client_socket, pd.header_data.command_id, int(pd.contents))
+                execute_command(client, pd.header_data.command_id, int(pd.contents))
             except ValueError as e:
                 logger.exception(e)
             except Exception as e:
                 logger.exception(e)
 """Function to be called by the reader thread. It loops indefinitely listening for 
 client request headers."""
-def receive_request(client_socket, client_addr):
+def receive_request(client, client_addr):
     logger.debug("Created new thread of client %s", client_addr)
     while True:
         try:
-            request = read_all(client_socket, HEADER_SIZE)
+            request = client.read_all(HEADER_SIZE)
 
             if not request:
-                client_socket.close()
+                client.close()
                 logger.error("Client disconnected")
                 return None
             # logger.debug("Client %s requested %s", client_addr, req)
@@ -142,7 +115,7 @@ def receive_request(client_socket, client_addr):
                          hex(header_data.crc_value))
 
             # get payload contents
-            req_contents = read_all(client_socket, header_data.length)
+            req_contents = client.read_all(header_data.length)
             readable_req_contents = req_contents.decode("utf-8")
 
             logger.debug("REQUEST CONTENTS: %s\n", readable_req_contents)
@@ -162,7 +135,7 @@ def receive_request(client_socket, client_addr):
 
 """Function to be called by the writer thread. It will deal with listening to and 
 performing user requests."""
-def handle_server_send(client_socket, client_addr):
+def handle_server_send(client):
     responses = ["hey dude thanks for letting me know",
                  "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum",
                  "hyaimamanannanan",
@@ -172,14 +145,27 @@ def handle_server_send(client_socket, client_addr):
         user_input = input(">")
 
         if user_input == "u":
-            handle_upload(client_socket, FILENAME, DEFAULT_CLIENT_DOWNLOAD_FOLDER)
-        elif user_input == "i":
-            initialize_deck(client_socket)
+            handle_upload(client, FILENAME, DEFAULT_CLIENT_DOWNLOAD_FOLDER)
+            redraw_contents="redraw"
+            pd = create_packet(command_type=REDRAW_COMMAND,
+                               command_id=basic_comms.server_cmd_id,
+                               length=len(redraw_contents),
+                               crc_value=0,
+                               contents=redraw_contents)
+            send_result = send_request(client, pd)
+            if send_result != basic_comms.SUCCESSFUL_CONF:
+                logger.error("Message send failed")
+
         elif user_input == "m":
             msg_index = random.randint(0, len(responses) - 1)
+            pd = create_packet(command_type=INITIALIZE_ROUTINE,
+                               command_id=basic_comms.server_cmd_id,
+                               length=len(responses[msg_index]),
+                               crc_value=0,
+                               contents=responses[msg_index])
+
             # print(f'server cmd id = {basic_comms.server_cmd_id}')
-            send_result = send_request(client_socket, INITIALIZE_ROUTINE, basic_comms.server_cmd_id
-                         , len(responses[msg_index]), responses[msg_index])
+            send_result = send_request(client, pd)
             if send_result != basic_comms.SUCCESSFUL_CONF:
                 logger.error("Message send failed")
         elif user_input == "add1":
@@ -192,7 +178,7 @@ def handle_server_send(client_socket, client_addr):
                     BUTTON_LIST
                 )
 
-                send_new_config(client_socket, "/configs", basic_comms.server_cmd_id)
+                send_new_config(client, "/configs", basic_comms.server_cmd_id)
                 write_updates()
 
             except ValueError as e:
@@ -203,14 +189,14 @@ def handle_server_send(client_socket, client_addr):
                               6,
                               [("HARD_KEY_PRESS", ["pLa revedere frate"])],
                               "media/icons/vscode.jpg")
-                send_new_config(client_socket, "/configs", basic_comms.server_cmd_id)
+                send_new_config(client, "/configs", basic_comms.server_cmd_id)
                 write_updates()
             except ValueError as e:
                 logger.exception(e)
         elif user_input == "add3":
             try:
                 delete_button(10)
-                send_new_config(client_socket, "/configs", basic_comms.server_cmd_id)
+                send_new_config(client, "/configs", basic_comms.server_cmd_id)
                 write_updates()
             except ValueError as e:
                 logger.exception(e)
@@ -223,11 +209,10 @@ def handle_server_send(client_socket, client_addr):
                     BUTTON_LIST
                 )
 
-                send_new_config(client_socket, "/configs", basic_comms.server_cmd_id)
+                send_new_config(client, "/configs", basic_comms.server_cmd_id)
                 write_updates()
 
             except ValueError as e:
                 logger.error("Handle request exception: %s", e, exc_info=True)
         elif user_input == "e":
-            client_socket.close()
-            s.close()
+            client.close()
