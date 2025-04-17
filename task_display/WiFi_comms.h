@@ -1,9 +1,9 @@
 #ifndef _WIFI_H_
-#define _WIFI_H
+#define _WIFI_H_
 
-#include "Utilities.h"
+#include "NwClient.h"
 
-WiFiClient client;
+WiFiClient wfc;
 
 void printWifiStatus() {
   Serial.print("\nSSID: ");
@@ -23,7 +23,7 @@ completely written on the socket.
 
 TODO: change structure of Package_data to dynamically allocated contents
 to avoid sending unnecessary data around.*/
-void send_request(Package_data* data) {
+void send_request(Package_data* data, BaseClient* bc) {
   // Serial.printf("Got data type %u id %u len %u CRC %04x \n%s\n", cmd_type, cmd_id, req_len, crc_value, req);
   unsigned int packet_id = data->header.command_id;
   unsigned int packet_len = data->header.length;
@@ -56,7 +56,7 @@ void send_request(Package_data* data) {
   //Loop to send all the data in the packet (TCP can fail to send all the bytes in a single send call).
   //Casting data to char/byte to clarify we are sending raw bytes
   while (bytes_sent < packet_size) {
-    int sent = client.write(((uint8_t*)data) + bytes_sent, packet_size - bytes_sent);
+    int sent = bc -> write_all(((uint8_t*)data) + bytes_sent, packet_size - bytes_sent);
     if (sent > 0) {
       bytes_sent += sent;  // move forward in the buffer
     } else {
@@ -241,18 +241,6 @@ int handle_download(Package_data* pd) {
   // Serial.printf("package type does not match download format\n");
   A_ERR("package type does not match download format\n");
   return 0;
-}
-
-void connect_to_server() {
-  // Serial.println("\nConnecting to server...");
-  A_DBG("Connecting to server...");
-  if (!client.connect(SERVER_IP, PORT)) {
-    Serial.println("Connection failed!");
-    delay(1000);
-  } else {
-    // Serial.println("Connected to server.");
-    A_DBG("Connected to server.");
-  }
 }
 
 #endif

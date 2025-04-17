@@ -50,12 +50,6 @@ void setup() {
     Serial.print("Free Heap before loading image: ");
     Serial.println(ESP.getFreeHeap());
 
-    // draw_main_screen(gfx);
-
-    // init_paths("/configs/path_config_2.txt");
-    // if (!init_icons("/init_icons")) {
-    //   A_ERR("Icon initialization failed\n");
-    // }
     /*Initializing mutexes*/
     xPrintMutex = xSemaphoreCreateMutex();
     if (xPrintMutex == NULL) {
@@ -66,14 +60,19 @@ void setup() {
     if (xButtonsMutex == NULL) {
       A_ERR("Failed to create buttons mutex");
     }
-    
+    // xConnEventGrpMutex = xSemaphoreCreateMutex();
+    // of (xConnEventGrpMutex == NULL){
+    //   A_ERR("Failed to create xConnEventGrpMutex mutex");
+    // }
+    connection_event_group = xEventGroupCreate();
+    if (!connection_event_group) {
+      A_ERR("Failed to create event group");
+    }
+    nw_client = new NwClient(wfc, connection_event_group);
+    current_client = (BaseClient*) nw_client;
+
     if (!init_icons_from_config("/configs/btn_config.txt")) {
       A_ERR("Icon read failed");
-    }
-    
-    connection_event_group = xEventGroupCreate();
-    if(!connection_event_group){
-      A_ERR("Failed to create event group");
     }
 
     /*Creating task queues. The queue takes event size as parameter 

@@ -1,5 +1,5 @@
-#ifndef _SPRITE_MANAGER_H
-#define _SPRITE_MANAGER_H
+#ifndef _SPRITE_MANAGER_H_
+#define _SPRITE_MANAGER_H_
 
 #include "Sprite.h"
 

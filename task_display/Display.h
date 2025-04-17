@@ -95,7 +95,7 @@ void draw_nav_btns(){
       int id = nav_btn[i] -> getId();
       char* fname = nav_btn[i] -> getFilename();
   
-      A_DBG("Now drawing %d, of path %s\n", id, fname);
+      // A_DBG("Now drawing %d, of path %s\n", id, fname);
       nav_btn[i] -> draw(jpegDrawCallback);
     }
   }
@@ -121,7 +121,7 @@ void draw_main_screen() {
         char* fname = buttons[i] -> getFilename();
     
         if(buttons[i] -> getId() / BUTTONS_PER_PAGE == page){
-          A_DBG("Now drawing %d, of path %s\n", id, fname);
+          // A_DBG("Now drawing %d, of path %s\n", id, fname);
           buttons[i] -> draw(jpegDrawCallback);
         }
       }

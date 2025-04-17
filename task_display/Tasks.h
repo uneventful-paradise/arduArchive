@@ -5,10 +5,6 @@
 
 //!check if continue and break in button loop optimizes page switching
 
-/*Setting xTicksToWait to portMAX_DELAY will 
-cause the task to wait indefinitely (without timing out), 
-provided INCLUDE_vTaskSuspend is set to 1 in FreeRTOSConfig.h.*/
-
 #include "Display.h"
 #include "WiFi_comms.h"
 
@@ -18,12 +14,12 @@ struct Touch_event {
   int buttonId;
 };
 
+EventGroupHandle_t connection_event_group;
 QueueHandle_t selection_queue;
 QueueHandle_t wifi_request_queue; 
 
-EventGroupHandle_t connection_event_group;
-#define WIFI_CONNECTED_BIT (1 << 0)
-#define CLIENT_CONNECTED_BIT (1 << 1)
+NwClient* nw_client;
+BaseClient* current_client;
 
 /*This taks's purpose is to listen to incoming touches, determine whether the touch has selected a valid icon
 and send the selection information to the server via a Package_Data object.*/
@@ -69,10 +65,10 @@ void touch_check_task(void* params) {
         A_DBG("Count is %d", (sprite_manager.getCount()));
 
         for (int i = 0; i < sprite_manager.getCount(); i++) {
-          A_DBG("checking button %d", i);
+          // A_DBG("checking button %d", i);
           //buton_id is redeclared here so multiple buttons can be pressed at same time
           if ((buttons[i] == nullptr) || (buttons[i] -> getId() / BUTTONS_PER_PAGE != sprite_manager.getCurrentPage())) {
-            A_DBG("button %d is nullptr or not on page", i);
+            // A_DBG("button %d is nullptr or not on page", i);
             continue;
           }
 
@@ -100,14 +96,6 @@ void touch_check_task(void* params) {
             header.crc_value = crc_string(data.contents, header.length);
             data.header = header;
             A_DBG("Selected value is %s\n", data.contents);
-
-            // xStatus = xQueueSend(selection_queue, &event, portMAX_DELAY);
-            // if (xStatus != pdPASS) {
-            //   /*The send operation could not complete because the queue was full-
-            //       this must be an error since xTicksToWait = portMAX_DELAY so the 
-            //       task blocks indefinitely until there is enough space to write the data*/
-            //   vPrintString("touch_check_task failed to send data to the selection_queue.\r\n");
-            // }
 
             // watermark = uxTaskGetStackHighWaterMark(NULL);
             // Serial.printf("touch_check_task stack high water mark (MID): %u\n", watermark);
@@ -288,81 +276,13 @@ object in the `ui_updates_queue` for the task to process.
 */
 //!try event driven approach in case this fails to reestablish connection
 void establish_connection_task(void* params) {
-
-  int status =- 2;
-  unsigned int retries = 0;
-  unsigned int max_retries = 6;
-  EventBits_t xEventGroupValue;
-
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PWD);
-
-  //no WiFi connection established initially
-  send_connection_status(status);
-  
-  //Initial connection attempt
-  A_DBG("Connecting to WiFi...");
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
-    vTaskDelay(500 / portTICK_PERIOD_MS);
-  }
-  // if (!configured_timestamp) {
-  //   configure_timestamp();
-  //   configured_timestamp = true;
-  // }
-  A_DBG("WiFi Connected!");
-  printWifiStatus();
-
+  current_client -> initiate_connection();
   // UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
   // A_DBG("stack high water mark (PRE-LOOP): %u\n", watermark);
 
   //Connecting to and monitoring connection to server and network.
-  while (1) {
-
-    xEventGroupValue = xEventGroupGetBits(connection_event_group);
-    
-    if (WiFi.status() != WL_CONNECTED) {
-      if (xEventGroupValue & WIFI_CONNECTED_BIT) {
-        //client was connected, therefore we lost connection
-        xEventGroupClearBits(connection_event_group, WIFI_CONNECTED_BIT);
-        status = -2;
-        send_connection_status(status);
-        A_WRN("WiFi disconnected! Reconnecting...");
-      }
-      retries++;
-      if(retries >= max_retries){
-        WiFi.disconnect();
-        retries = 0;
-      }//fix this to not skip the delay!
-      WiFi.begin(WIFI_SSID, WIFI_PWD);
-      continue;
-    } else {
-      if (!(xEventGroupValue & WIFI_CONNECTED_BIT)) {
-        //client was not connected, therefore connection was established
-        xEventGroupSetBits(connection_event_group, WIFI_CONNECTED_BIT);
-        status = -1;
-        send_connection_status(status);
-        A_DBG("WiFi connected!");
-      }
-    }
-
-    if (!client.connected()) {
-      if (xEventGroupValue & CLIENT_CONNECTED_BIT) {
-        xEventGroupClearBits(connection_event_group, CLIENT_CONNECTED_BIT);
-        status = 0;
-        send_connection_status(status);
-      }
-      A_WRN("Client disconnected! Reconnecting...");
-      connect_to_server();
-    }else{
-      if (!(xEventGroupValue & CLIENT_CONNECTED_BIT)) {
-        //client was not connected, therefore connection was established
-        xEventGroupSetBits(connection_event_group, CLIENT_CONNECTED_BIT);
-        status = 1;
-        send_connection_status(status);
-        A_DBG("Client connected!")
-      }
-    }
+  while (true) {
+    current_client -> check_connection();
     vTaskDelay(500 / portTICK_PERIOD_MS);
   }
 }
@@ -376,33 +296,18 @@ void send_request_task(void* params) {
   Touch_event event;
   Package_data data;
 
-  EventBits_t xEventGroupValue;
-  const EventBits_t xBitsToWaitFor = ( WIFI_CONNECTED_BIT | CLIENT_CONNECTED_BIT );
- 
   while (true) {
-    xEventGroupValue = xEventGroupWaitBits(
-      /* The event group to read */
-      connection_event_group,
-      /* Bits to test */
-      xBitsToWaitFor,
-      /* Clear bits on exit if the
-      unblock condition is met */
-      pdFALSE,
-      /* wait for all bits. 
-      before proceeding to read */
-      pdTRUE,
-      /* Don't time out.*/
-      portMAX_DELAY );
-    //only attempt to send while client is connected otherwise go back to waiting/blocked state
-    if (client.connected()) {
-      xStatus = xQueueReceive(send_queue, &data, portMAX_DELAY);
-      if (xStatus == pdPASS) {
-        //send request to server
-        data.header.command_id = client_cmd_id;
-        send_request(&data);
-      } else {
-        vPrintString("[ERROR] [send_request_task] failed to receive from send_queue.\r\n");
-      }
+    current_client -> wait_on_connection();
+    //!only attempt to send while client is connected otherwise go back to waiting/blocked state
+    // if (client.connected()) {
+    // }
+    xStatus = xQueueReceive(send_queue, &data, portMAX_DELAY);
+    if (xStatus == pdPASS) {
+      //send request to server
+      data.header.command_id = client_cmd_id;
+      send_request(&data, current_client);
+    } else {
+      vPrintString("[ERROR] [send_request_task] failed to receive from send_queue.\r\n");
     }
   }
 }
@@ -437,37 +342,24 @@ void receive_request_task(void* params) {
 
   // const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
   BaseType_t xStatus;
-  EventBits_t xEventGroupValue;
-  const EventBits_t xBitsToWaitFor = ( WIFI_CONNECTED_BIT | CLIENT_CONNECTED_BIT );
     
   int read_threshold = HEADER_SIZE;
   size_t bytes_read = 0;
 
   while (true) {
-    xEventGroupValue = xEventGroupWaitBits(
-      /* The event group to read */
-      connection_event_group,
-      /* Bits to test */
-      xBitsToWaitFor,
-      /* Clear bits on exit if the
-      unblock condition is met */
-      pdFALSE,
-      /* wait for all bits. 
-      before proceeding to read */
-      pdTRUE,
-      /* Don't time out.*/
-      portMAX_DELAY );
-    //?((xEventGroupValue & (CONNECTED_TO_CLIENT | CONNECTED_TO_WIFI)) == (CONNECTED_TO_CLIENT | CONNECTED_TO_WIFI)) && 
-    //TODO: can this busy loop be removed so that a touch isnt blocked by the read?
-    if (client.available() >= read_threshold) {
+    current_client -> wait_on_connection();
+    //TODO: can this busy loop be removed?
+    if ( current_client -> get_available() >= read_threshold) {
       // A_WRN("passed threshold. waiting to read");
       //read and parse the header data. readbytes blocks until the specified number of bytes is available to read from the socket
       //we use ntohl because the data is sent in big-endian (networking standard) while the esp device operates in little-endian. ntohl converts integers to host byte order
       Header_data header;
-      bytes_read = client.readBytes((char*)&header, sizeof(header));
+      bytes_read = current_client -> read_all((char*)&header, sizeof(header));
+
+      //!if bytes_read is 0 then no data is available
       if (bytes_read != sizeof(header)) {
         Serial.printf("Error: Expected to read %u bytes but got %u bytes\n", sizeof(header), bytes_read);
-        //how to delete junk from socket?
+        // current_client -> clear_channel();
       }
       /*use ntohl to converts values from network byte order(big endian) to host byte order
       the conversion is needed because network format is big endian while esp32 runs on small endian.*/
@@ -483,11 +375,8 @@ void receive_request_task(void* params) {
       //only read the data if it follows the protocol defined maximum length
       if (header.length > CHUNK_SIZE) {
         A_ERR("Chunk size %u exceeded for received data. Skipping request %u", header.length, header.command_id);
-        //TODO: try to disconnect and reconnect? client.stop()
-        A_WRN("emptying socket and requesting resend");
-        while(client.available()){
-          client.read();
-        }
+        //alternatively try to disconnect and reconnect using client.stop(). send a -2?
+        current_client -> clear_channel();
         send_ack(-1);
         continue;
       }
@@ -498,7 +387,7 @@ void receive_request_task(void* params) {
         send_ack(-1);
         continue;
       }
-      client.readBytes(req_contents, header.length);
+      current_client -> read_all(req_contents, header.length);
 
       Package_data data;
       data.header = header;

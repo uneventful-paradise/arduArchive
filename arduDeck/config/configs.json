@@ -112,5 +112,35 @@
       }
     ],
     "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 15,
+    "actions": [
+      {
+        "command_id": "SOFT_KEY_PRESS",
+        "command_args": [
+          "dKEY_VOLUME_MUTE+w500+uKEY_VOLUME_MUTE+dKEY_LWIN+dKEY_SHIFT+dKEY_C+r"
+        ]
+      }
+    ],
+    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/steam.jpg"
+  },
+  {
+    "button_id": 30,
+    "actions": [
+      {
+        "command_id": "HARD_KEY_PRESS",
+        "command_args": [
+          "aaa"
+        ]
+      },
+      {
+        "command_id": "START_PROCESS",
+        "command_args": [
+          "bb"
+        ]
+      }
+    ],
+    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/obs.jpg"
   }
 ]
