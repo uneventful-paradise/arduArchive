@@ -1,19 +1,37 @@
 // ESP32: send length header (uint32_t LE) + message bytes over Serial1
+const unsigned int CHUNK_SIZE = 1024;
+const unsigned int serial_buffer = 240;
+char* buffer[CHUNK_SIZE];
 void setup() {
-  Serial.begin(115200);       // for debugging
-  Serial1.begin(115200, SERIAL_8N1, 16, 17);  // TX=16, RX=17 (adjust pins if needed)
+  Serial.begin(115200);
 }
-
+unsigned int avail;
+int packet = 0;
 void loop() {
-  const char *msg = "Hello from ESP32!";
-  uint32_t len = strlen(msg);                // message length in bytes
-
-  // send length header (4 bytes, little-endian)
-  Serial.write((uint8_t*)&len, sizeof(len));
-
-  // send message payload
-  Serial.write((const uint8_t*)msg, len);
-
-  Serial1.printf("Sent message of length %d\n", len);
-  delay(1000);
+  int total = 0;
+  while(total < CHUNK_SIZE){  //add timeout in case server dies?
+    avail = Serial.available();
+    if(avail == 0){
+      // Serial.println("0 bytes available, skipping!");
+      continue;
+    }
+    size_t to_read = CHUNK_SIZE - total;
+    
+    if(to_read > avail){
+      to_read = avail;
+    }
+    size_t read = Serial.readBytes((uint8_t*)(buffer+total), to_read);
+    
+    if (read <= 0) {
+      Serial.println("ERROR: no available data");
+    }
+    else if(read != to_read){
+      Serial.printf("WARNING: partial read %d\n", packet);
+    }
+    
+    total += read;
+  }
+  packet++;
+  Serial.printf("Success packet %d:\n%s", packet, buffer);
+  delay(200);
 }

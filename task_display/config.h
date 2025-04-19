@@ -98,7 +98,11 @@
 #define SD_CONFIG SdSpiConfig(SD_CS, SHARED_SPI, SPI_CLOCK)
 #endif  // HAS_TEENSY_SDIO
 
-#define A_DBG(fmt, ...) { printf("[%s:%d]: " fmt "\n", __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__); }
+
+#define DEBUG 0
+
+#define A_DBG(fmt, ...) do { if (DEBUG) { printf("[%s:%d]: " fmt "\n", __func__, __LINE__  __VA_OPT__(, ) __VA_ARGS__); } } while (0)
+// #define A_DBG(fmt, ...) { printf("[%s:%d]: " fmt "\n", __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__); }
 // {update_timestamp(); printf("[%s:%s:%d]: " fmt "\n", current_timestamp, __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__);}
 
 #define A_ERR(fmt, ...) A_DBG("[ERROR] " fmt __VA_OPT__(, ) __VA_ARGS__)

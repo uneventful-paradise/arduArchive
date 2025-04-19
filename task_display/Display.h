@@ -41,7 +41,7 @@ static int jpegDrawCallback(JPEGDRAW *pDraw) {
 }
 
 void drawLog(const char *filename, int x, int y) {
-  Serial.printf("Drawing image %s at x = %d, y = %d\n", filename, x, y);
+  A_DBG("Drawing image %s at x = %d, y = %d\n", filename, x, y);
 }
 
 void touch_init(void) {

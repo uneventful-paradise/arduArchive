@@ -75,7 +75,7 @@ void Sprite::setGFX(Arduino_RPi_DPI_RGBPanel *gfx) {
 
 void Sprite::draw(JPEG_DRAW_CALLBACK *jpegDrawCallback) {
   if (this -> filename == NULL) {
-    Serial.printf("ERROR: filename not assigned for button %d\n", this -> id);
+    A_ERR("filename not assigned for button %d\n", (this -> id));
     return;
   }
 

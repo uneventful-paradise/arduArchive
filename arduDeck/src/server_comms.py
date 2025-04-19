@@ -7,11 +7,12 @@ import socket
 
 #FILENAME = "media/haskell-register.log"
 #FILENAME = "media/tw.txt"
-#FILENAME = "media/pdfs/rtos.pdf"
+FILENAME = "media/pdfs/rtos.pdf"
 # FILENAME = "media/pdfs/com.pdf"
-FILENAME = "media/images/landscape.jpg"
+# FILENAME = "media/images/landscape.jpg"
 # FILENAME = "media/images/wanda.jpg"
 # FILENAME = "media/txts/haskell-register.log"
+# FILENAME = "testing/long_ipsum.txt"
 DEFAULT_CLIENT_DOWNLOAD_FOLDER = "/init_icons"
 
 request_queue = queue.Queue()
@@ -95,6 +96,9 @@ def receive_request(client, client_addr):
     logger.debug("Created new thread of client %s", client_addr)
     while True:
         try:
+            # data = client.read_all(HEADER_SIZE)
+            # logger.debug(data)
+            # continue
             request = client.read_all(HEADER_SIZE)
 
             if not request:
@@ -166,6 +170,7 @@ def handle_server_send(client):
 
             # print(f'server cmd id = {basic_comms.server_cmd_id}')
             send_result = send_request(client, pd)
+            # send_test_file(client)
             if send_result != basic_comms.SUCCESSFUL_CONF:
                 logger.error("Message send failed")
         elif user_input == "add1":

@@ -5,7 +5,7 @@ from xml.etree.ElementTree import indent
 from ..utils.btn_funcs import BUTTON_LIST
 from tkinter import filedialog, messagebox
 from ..utils.btn_funcs import send_new_config, write_updates, gui_upload, button_lock
-from ..basic_comms import get_client
+from ..basic_comms import get_client, logger
 #todo add id checking for add and update func
 #todo preselect text in command args or register key inputs?
 
@@ -290,8 +290,8 @@ class StreamDeckGUI(tk.Tk):
         def save_changes():
             with button_lock:
                 action["command_id"] = cmd_id_var.get()
-                action["command_args"] = cmd_args_text.get("1.0", "end-1c")
-                print("edited action!")
+                action["command_args"] = [cmd_args_text.get("1.0", "end-1c")]
+                logger.debug("edited action!")
             edit_win.destroy()
             # Optionally, update the displayed actions.
             self.on_button_click(btn_info)

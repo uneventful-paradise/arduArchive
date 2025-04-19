@@ -76,7 +76,7 @@ def check_ack(req_id):
     elif int(ack) == STOP_ACTION:
         return STOP_ACTION
     else:
-        logger.warning("ACK got unexpected value %d while expecting %d/%d\n", ack, req_id, server_cmd_id)
+        logger.warning("ACK got unexpected value %d while expecting %d/%d\n", int(ack), req_id, server_cmd_id)
         return STOP_ACTION
 
 """Compose a protocol compliant message and send it to the client.
@@ -208,6 +208,7 @@ def handle_upload(client: BaseClient, filename: str, client_location: str, clien
                 send_res = send_request(client, pd)
                 if send_res == SUCCESSFUL_CONF:
                     logger.debug("EOF sent successfully. Upload ended.")
+                    file_obj.close()
                     break
             else:
                 #send the following file contents request

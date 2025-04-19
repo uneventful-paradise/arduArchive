@@ -18,6 +18,7 @@ EventGroupHandle_t connection_event_group;
 QueueHandle_t selection_queue;
 QueueHandle_t wifi_request_queue; 
 
+SrClient* sr_client;
 NwClient* nw_client;
 BaseClient* current_client;
 
@@ -86,7 +87,7 @@ void touch_check_task(void* params) {
 
             memset(data.contents, 0, sizeof(data.contents));
             if (snprintf(data.contents, sizeof(data.contents), "%d", button_id) < 0) {
-              Serial.println("snprintf failed in touch_check_task");
+              A_ERR("snprintf failed in touch_check_task");
               continue;
             }
 
@@ -349,8 +350,8 @@ void receive_request_task(void* params) {
   while (true) {
     current_client -> wait_on_connection();
     //TODO: can this busy loop be removed?
+    // A_DBG("Ser available is %d", current_client -> get_available());
     if ( current_client -> get_available() >= read_threshold) {
-      // A_WRN("passed threshold. waiting to read");
       //read and parse the header data. readbytes blocks until the specified number of bytes is available to read from the socket
       //we use ntohl because the data is sent in big-endian (networking standard) while the esp device operates in little-endian. ntohl converts integers to host byte order
       Header_data header;
@@ -358,7 +359,7 @@ void receive_request_task(void* params) {
 
       //!if bytes_read is 0 then no data is available
       if (bytes_read != sizeof(header)) {
-        Serial.printf("Error: Expected to read %u bytes but got %u bytes\n", sizeof(header), bytes_read);
+        A_ERR("Error: Expected to read %u bytes but got %u bytes\n", sizeof(header), bytes_read);
         // current_client -> clear_channel();
       }
       /*use ntohl to converts values from network byte order(big endian) to host byte order
@@ -396,12 +397,13 @@ void receive_request_task(void* params) {
       memcpy(data.contents, req_contents, header.length);
 
       // Serial.printf("Received content %d, length: %d\n", data.cmd_id, data.length);
-      // A_DBG("%s\n", data.contents);
+      A_DBG("%s\n", data.contents);
       // better way to convert to hex?
-      for (int i = 0; i < data.header.length; ++i) {
-        printf("%02x", data.contents[i]);
-      }
-      printf("\n\n");
+
+      // for (int i = 0; i < data.header.length; ++i) {
+      //   printf("%02x", data.contents[i]);
+      // }
+      // printf("\n\n");
 
       //send request to queue to be processed
       xStatus = xQueueSend(wifi_request_queue, &data, portMAX_DELAY);

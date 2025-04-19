@@ -1,7 +1,7 @@
 #include "NwClient.h"
 
-NwClient::NwClient(WiFiClient wfc, EventGroupHandle_t evg){
-    this -> client = wfc;
+NwClient::NwClient(WiFiClient& wfc, EventGroupHandle_t evg) : client(wfc) {
+    // this -> client = wfc;
     this -> connection_event_group = evg;
     A_DBG("Created wifi client");
 }
@@ -34,7 +34,7 @@ void NwClient::initiate_connection(){
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PWD);
   //no WiFi connection established initially
-  send_connection_status(status);
+  send_connection_status(this -> status);
   
   //Initial connection attempt
   A_DBG("Connecting to WiFi...");
@@ -99,7 +99,7 @@ void NwClient::check_connection(){
             xEventGroupSetBits( this -> connection_event_group, CLIENT_CONNECTED_BIT );
             this -> status = 1;
             send_connection_status( this -> status);
-            A_DBG("Client connected!")
+            A_DBG("Client connected!");
         }
     }
 }

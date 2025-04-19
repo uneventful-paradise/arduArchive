@@ -16,7 +16,7 @@ void setup() {
   delay(1000);
 
   ledcSetup(PWM_CHANNEL, PWM_FREQ, pwm_resolution_bits);
-  ledcAttachPin(TFT_BL, PWM_CHANNEL);
+  // ledcAttachPin(TFT_BL, PWM_CHANNEL);
 
   ledcWrite(PWM_CHANNEL, 1023);  // output PWM
 
@@ -36,7 +36,7 @@ void setup() {
   SPI.begin(SD_SCK, SD_MISO, SD_MOSI);
   if (!sd.begin(SdSpiConfig(SD_CS, SHARED_SPI, SD_SCK_MHZ(50)))) {
     sd.initErrorHalt();
-    Serial.println(F("ERROR: SD Mount Failed!"));
+    A_ERR("ERROR: SD Mount Failed!");
     // while(1)
     {
       gfx->fillScreen(WHITE);
@@ -47,9 +47,6 @@ void setup() {
       delay(3000);
     }
   } else {
-    Serial.print("Free Heap before loading image: ");
-    Serial.println(ESP.getFreeHeap());
-
     /*Initializing mutexes*/
     xPrintMutex = xSemaphoreCreateMutex();
     if (xPrintMutex == NULL) {
@@ -68,8 +65,9 @@ void setup() {
     if (!connection_event_group) {
       A_ERR("Failed to create event group");
     }
+    sr_client = new SrClient(Serial);
     nw_client = new NwClient(wfc, connection_event_group);
-    current_client = (BaseClient*) nw_client;
+    current_client = (BaseClient*) sr_client;
 
     if (!init_icons_from_config("/configs/btn_config.txt")) {
       A_ERR("Icon read failed");
@@ -83,18 +81,18 @@ void setup() {
     wifi_request_queue = xQueueCreate(20, sizeof(Package_data));
 
     if (selection_queue == NULL) {
-      Serial.println("Failed to create selection_queue");
+      A_ERR("Failed to create selection_queue");
     }
     if (send_queue == NULL) {
-      Serial.println("Failed to create send_queue");
+      A_ERR("Failed to create send_queue");
     }
 
     if (ui_updates_queue == NULL) {
-      Serial.println("Failed to create ui_updates_queue");
+      A_ERR("Failed to create ui_updates_queue");
     }
 
     if (wifi_request_queue == NULL) {
-      Serial.println("Failed to create ui_updates_queue");
+      A_ERR("Failed to create ui_updates_queue");
     }
 
     xTaskCreatePinnedToCore(

@@ -2,19 +2,21 @@
 #define _WIFI_H_
 
 #include "NwClient.h"
+#include "SrClient.h"
 
 WiFiClient wfc;
 
 void printWifiStatus() {
-  Serial.print("\nSSID: ");
-  Serial.println(WiFi.SSID());
+  A_DBG("wifi status?");
+  // A_DBG("\nSSID: ");
+  // A_DBG(WiFi.SSID());
 
-  Serial.print("IP Address: ");
-  Serial.println(WiFi.localIP());
+  // A_DBG("IP Address: ");
+  // A_DBG(WiFi.localIP());
 
-  Serial.print("Signal strength (RSSI): ");
-  Serial.print(WiFi.RSSI());
-  Serial.println(" dBm");
+  // A_DBG("Signal strength (RSSI): ");
+  // A_DBG(WiFi.RSSI());
+  // A_DBG(" dBm");
 }
 /*Send the package of data to the server.
 Convert data to network format (big endian by default) and

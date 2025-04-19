@@ -1,22 +1,17 @@
-#ifndef _NW_CLIENT_H_
-#define _NW_CLIENT_H_
+#ifndef _SR_CLIENT_H_
+#define _SR_CLIENT_H_
 #include "BaseClient.h"
 
-#define WIFI_CONNECTED_BIT (1 << 0)
-#define CLIENT_CONNECTED_BIT (1 << 1)
-
-class NwClient : public BaseClient{
+class SrClient : public BaseClient{
 private:
-    WiFiClient& client;
-    EventGroupHandle_t connection_event_group;
-    EventBits_t xEventGroupValue;
-    int status =- 2;
-    unsigned int retries = 0;
-    unsigned int max_retries = 6;
-    const EventBits_t xBitsToWaitFor = ( WIFI_CONNECTED_BIT | CLIENT_CONNECTED_BIT );
+    Stream& serial;
+    // bool last_connected = false;
+    int status = 1;
+    // SemaphoreHandle_t conn_lock;
 public:
-    NwClient(WiFiClient& wfc, EventGroupHandle_t evg);
-    virtual ~NwClient() override;
+    // NwClient(Stream* ser, SemaphoreHandle_t lock);
+    SrClient(Stream& ser);
+    virtual ~SrClient() override;
     virtual void initiate_connection() override;
     void connect_to_server();
     virtual void wait_on_connection() override;

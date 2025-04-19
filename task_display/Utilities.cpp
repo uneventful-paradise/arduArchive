@@ -63,43 +63,43 @@ bool get_file_obj(const char* filename) {
   }
   //no slash found
   if (slash_pos == -1) {
-    Serial.println("Invalid filename");
+    A_ERR("Invalid filename");
     return false;
   }
   //get directory path
   if (slash_pos > 0) {
     directory = strndup(filename, slash_pos);
-    Serial.printf("Directory is %s\n", directory);
+    A_DBG("Directory is %s\n", directory);
   } else {
-    Serial.println("Requested directory is root");
+    A_DBG("Requested directory is root");
   }
   //create directory if it doesn't exist
-  Serial.printf("Moving onto directory creation\n");
+  A_DBG("Moving onto directory creation\n");
   if (!sd.exists(directory)) {
-    Serial.println("Parent dir does not exist. Creating it");
+    A_DBG("Parent dir does not exist. Creating it");
     if (!sd.mkdir(directory)) {
-      Serial.println("Failed to create directory");
+      A_ERR("Failed to create directory");
       return false;
     } else {
-      Serial.println("Successfully created directory");
+      A_DBG("Successfully created directory");
     }
   } else {
-    Serial.println("Directory already exists");
+    A_DBG("Directory already exists");
   }
   //opening or creating file
-  Serial.printf("Attempting to open or create %s\n", filename);
+  A_DBG("Attempting to open or create %s\n", filename);
   if (sd.exists(filename)) {
-    Serial.println("File already exists");
+    A_DBG("File already exists");
   }
   /*open file in approapriate mode (append will be called 
   in case the writing process fails mid way)*/
 
 
   if (!file_obj.open(filename, O_RDWR | O_CREAT | O_TRUNC)) {
-    Serial.println("Error opening or creating file");
+    A_ERR("Error opening or creating file");
     return false;
   }
-  Serial.println("File opened successfully");
+  A_DBG("File opened successfully");
   if (directory) {
     free(directory);
   }
@@ -113,12 +113,12 @@ void vPrintString(const char* pString, bool debug) {
     //created mutex if it doesn't exist
     if (xPrintMutex == NULL) {
       // xPrintMutex = xSemaphoreCreateMutex();
-      Serial.printf("xPrintMutex hasn't been initialized\n");
+      A_ERR("xPrintMutex hasn't been initialized\n");
       return;
     }
     //Perform a blocking wait to acquire mutex
     if (xSemaphoreTake(xPrintMutex, portMAX_DELAY) == pdTRUE) {
-      Serial.printf("%s", pString);
+      A_DBG("%s", pString);
       //Release mutex
       xSemaphoreGive(xPrintMutex);
     }
@@ -157,7 +157,7 @@ void hard_press(char* sequence) {
       //convert string key value to decimal value
       code = strtoull(token + 1, NULL, 10);
       if (code == 0L) {
-        Serial.println("stroull failed for token conversion");
+        A_ERR("stroull failed for token conversion");
       }
     }
     //perform the appropriate action given the command type
@@ -170,7 +170,7 @@ void hard_press(char* sequence) {
           Keyboard.release(code);
         }
 
-        Serial.printf("key_up selected for %c\n", c);
+        A_DBG("key_up selected for %c\n", c);
         // log(log_msg);
         break;
       }
@@ -182,24 +182,24 @@ void hard_press(char* sequence) {
           Keyboard.press(code);
         }
 
-        Serial.printf("key_down selected for %c\n", c);
+        A_DBG("key_down selected for %c\n", c);
         break;
       }
       case 'w':{
         delay(code);
 
-        Serial.printf("delay selected for %ld\n", code);
+        A_DBG("delay selected for %ld\n", code);
         break;
       }
       case 'r':{
         Keyboard.releaseAll();
 
-        Serial.printf("release all selected\n");
+        A_DBG("release all selected\n");
         break;
       }
       case 'p':{
         Keyboard.printf(token + 1);
-        Serial.printf("print selected\n");
+        A_DBG("print selected\n");
         break;
       }
     }
@@ -212,7 +212,7 @@ struct tm time_info;
 
 void configure_timestamp() {
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.printf("Not connected to network. Failed to fetch current time\n");
+    A_DBG("Not connected to network. Failed to fetch current time\n");
   }
 
   const char* ntpServer = "pool.ntp.org";
@@ -221,7 +221,7 @@ void configure_timestamp() {
 
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 
-  Serial.printf("Updated time info\n");
+  A_DBG("Updated time info\n");
 }
 
 const int timestamp_size = 30;
@@ -229,15 +229,15 @@ char current_timestamp[timestamp_size];
 
 bool update_timestamp() {
   if (!getLocalTime(&time_info)) {
-    Serial.println("Failed to update time");
+    A_ERR("Failed to update time");
     return false;
   }
   // Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
   if (!strftime(current_timestamp, timestamp_size, "%m-%d %H:%M:%S", &time_info)) {
-    Serial.printf("Failed to write time\n");
+    A_ERR("Failed to write time\n");
     return true;
   } else {
-    Serial.printf("Succesfully wrote time %s\n", current_timestamp);
+    A_DBG("Succesfully wrote time %s\n", current_timestamp);
     return false;
   }
 }
@@ -268,13 +268,13 @@ void send_connection_status(int change){
     }
     default:{
       temp_text = "Uknown connection case";
-      Serial.printf("ERROR invalid status value in send_connection_status\n");
+      A_ERR("ERROR invalid status value in send_connection_status\n");
       break;
     }
   }
 
   if(snprintf(update.message, sizeof(update.message), "%s", temp_text) < 0){
-    Serial.printf("update message creation failed in send_connection_status\n");
+    A_ERR("update message creation failed in send_connection_status\n");
   }  
 
   update.type = CONNECTION_CHECK;
