@@ -6,6 +6,7 @@ from client_model.base_client import BaseClient
 import threading
 
 from src.client_model.network_client import NetworkClient
+from src.client_model.serial_client import SerialClient
 from utils.data_format import HeaderData, PackageData
 from server_params import *
 
@@ -13,6 +14,9 @@ server_cmd_id = 0
 client_lock = threading.Lock()
 
 client: BaseClient = None
+nw_client = NetworkClient(HOST, PORT)
+sr_client = SerialClient(port='COM5', baudrate=115200, timeout=1.0)
+
 def read_all(client: BaseClient, req_len: int) -> bytes:
     with client_lock:
         return client.read_all(req_len)
@@ -30,7 +34,7 @@ def set_client(new_client: BaseClient):
     global client
     with client_lock:
         if client is not None:
-            client.close()
+            # client.close()
             client = None
         client = new_client
     logger.debug("Successfully swapped client")
@@ -46,6 +50,17 @@ def get_server_cmd_id():
 def set_server_cmd_id(new_server_cmd_id: int) -> None:
     global server_cmd_id
     server_cmd_id = new_server_cmd_id
+
+def swap_client():
+    current_client = get_client()
+    if isinstance(current_client, NetworkClient):
+        current_client.close()
+        set_client(sr_client)
+        sr_client.initiate_connection()
+    elif isinstance(current_client, SerialClient):
+        set_client(nw_client)
+        nw_client.initiate_connection()
+
 
 """In the context of data transfers the server sends a packet then
 waits for confirmation before sending the next one. The queue is used to
@@ -146,6 +161,25 @@ def send_request(client: BaseClient, pd: PackageData):
     server_cmd_id = pd.header_data.command_id + 1
     return result
 
+def send_conf(client: BaseClient, cmd_id: int):
+    hd = HeaderData(command_type=CONFIRMATION_FLAG, command_id=cmd_id, length=len(str(cmd_id)), crc_value=0)
+    req_contents = str(cmd_id).encode('utf-8')
+    pd = PackageData(hd, req_contents)
+    crc_value = binascii.crc32(req_contents) & 0xffffffff
+    pd.header_data.crc_value = crc_value
+    packet = struct.pack("!IIII",
+                         pd.header_data.command_type,
+                         pd.header_data.command_id,
+                         pd.header_data.length,
+                         pd.header_data.crc_value) + req_contents
+
+    client.write_all(packet)
+    logger.debug("SENT packet of type %d, id %d, size %d, CRC %s\n%s\n",
+                 pd.header_data.command_type,
+                 pd.header_data.command_id,
+                 len(req_contents),
+                 hex(pd.header_data.crc_value),
+                 req_contents.decode('utf-8'))
 
 """Opens the upload source file and sends predefined sized chunks of data to client.
 

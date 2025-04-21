@@ -30,6 +30,7 @@
 #define CONFIRMATION_FLAG 5
 #define REDRAW_COMMAND 6
 #define CONNECTION_CHECK 7
+#define CLIENT_SWAP 8
 
 #define TOUCH_SDA 17
 #define TOUCH_SCL 18
@@ -60,7 +61,9 @@
 #define NAV_BTN_COUNT 3
 #define BUTTON_PREV 100
 #define BUTTON_NEXT 101
-#define BUTTON_SET  102
+#define BUTTON_SWAP 102
+#define SR_CLIENT_MODE 0
+#define NW_CLIENT_MODE 1
 
 //micro SD card
 #define SD_SCK 12
@@ -99,7 +102,7 @@
 #endif  // HAS_TEENSY_SDIO
 
 
-#define DEBUG 0
+#define DEBUG 1
 
 #define A_DBG(fmt, ...) do { if (DEBUG) { printf("[%s:%d]: " fmt "\n", __func__, __LINE__  __VA_OPT__(, ) __VA_ARGS__); } } while (0)
 // #define A_DBG(fmt, ...) { printf("[%s:%d]: " fmt "\n", __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__); }

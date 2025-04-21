@@ -7,9 +7,9 @@ import socket
 
 #FILENAME = "media/haskell-register.log"
 #FILENAME = "media/tw.txt"
-FILENAME = "media/pdfs/rtos.pdf"
+# FILENAME = "media/pdfs/rtos.pdf"
 # FILENAME = "media/pdfs/com.pdf"
-# FILENAME = "media/images/landscape.jpg"
+FILENAME = "media/images/landscape.jpg"
 # FILENAME = "media/images/wanda.jpg"
 # FILENAME = "media/txts/haskell-register.log"
 # FILENAME = "testing/long_ipsum.txt"
@@ -23,7 +23,7 @@ with the proper arguments.
 
 Actions are functions mapped to an action name field in the config of every button.
 The arguments are also defined within the button configuration."""
-def execute_command(client: BaseClient, command_id: int, request_contents: any):
+def execute_command(current_client: BaseClient, command_id: int, request_contents: any):
     # print(ACT_DICT.keys())
     #check for button existence and validity
     with button_lock:
@@ -42,7 +42,7 @@ def execute_command(client: BaseClient, command_id: int, request_contents: any):
         logger.debug("Action has command_id: %s", action["command_id"])
         if action["command_id"] in ACT_DICT.keys():
             logger.debug("Action has arguments: %s", action["command_args"])
-            ACT_DICT[action["command_id"]](client, command_id, *action["command_args"])
+            ACT_DICT[action["command_id"]](current_client, command_id, *action["command_args"])
         else:
             logger.warning("Invalid command id in dictionary")
 
@@ -73,9 +73,10 @@ from the socket. Finally, it checks the command type:
 If the message is a confirmation message (CFCF flag) then the request is passed to the ack queue
 If the message is a macro command (MCCF flag) then the request is forwarded to the execute function
 """
-def handle_request(client):
+def handle_request():
     while True:
         pd = request_queue.get()
+        current_client = get_client()
         logger.debug("Request has type %d, id %d, len %d, CRC %s, contents: %s\n",
                      pd.header_data.command_type,
                      pd.header_data.command_id,
@@ -85,24 +86,24 @@ def handle_request(client):
         # executing command associated to the button id
         if pd.header_data.command_type == MACRO_COMMAND:
             try:
-                execute_command(client, pd.header_data.command_id, int(pd.contents))
+                execute_command(current_client, pd.header_data.command_id, int(pd.contents))
             except ValueError as e:
                 logger.exception(e)
             except Exception as e:
                 logger.exception(e)
-"""Function to be called by the reader thread. It loops indefinitely listening for 
-client request headers."""
-def receive_request(client, client_addr):
-    logger.debug("Created new thread of client %s", client_addr)
+
+def receive_request():
     while True:
+        current_client = get_client()
         try:
             # data = client.read_all(HEADER_SIZE)
             # logger.debug(data)
             # continue
-            request = client.read_all(HEADER_SIZE)
+            request = current_client.read_all(HEADER_SIZE)
 
             if not request:
-                client.close()
+                logger.error("read 0")
+                current_client.close()
                 logger.error("Client disconnected")
                 return None
             # logger.debug("Client %s requested %s", client_addr, req)
@@ -119,7 +120,7 @@ def receive_request(client, client_addr):
                          hex(header_data.crc_value))
 
             # get payload contents
-            req_contents = client.read_all(header_data.length)
+            req_contents = current_client.read_all(header_data.length)
             readable_req_contents = req_contents.decode("utf-8")
 
             logger.debug("REQUEST CONTENTS: %s\n", readable_req_contents)
@@ -128,6 +129,10 @@ def receive_request(client, client_addr):
             if header_data.command_type == CONFIRMATION_FLAG:
                 ack_queue.put(package_data.contents)
                 logger.debug(f"put {readable_req_contents} in queue")
+            elif header_data.command_type == CLIENT_SWAP:
+                logger.warning("Received request to swap client")
+                send_conf(current_client, header_data.command_id)
+                swap_client()
             else:
                 logger.debug(f"put a pd in queue")
                 request_queue.put(package_data)
@@ -136,10 +141,10 @@ def receive_request(client, client_addr):
         except ValueError as e:
             logger.error("Handle request exception: %s", e, exc_info=True)
 
-
+#TODO: ADD QUEUE FOR SENDING!!
 """Function to be called by the writer thread. It will deal with listening to and 
 performing user requests."""
-def handle_server_send(client):
+def handle_server_send():
     responses = ["hey dude thanks for letting me know",
                  "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum",
                  "hyaimamanannanan",
@@ -147,16 +152,17 @@ def handle_server_send(client):
 
     while True:
         user_input = input(">")
+        current_client = get_client()
 
         if user_input == "u":
-            handle_upload(client, FILENAME, DEFAULT_CLIENT_DOWNLOAD_FOLDER)
+            handle_upload(current_client, FILENAME, DEFAULT_CLIENT_DOWNLOAD_FOLDER)
             redraw_contents="redraw"
             pd = create_packet(command_type=REDRAW_COMMAND,
                                command_id=basic_comms.server_cmd_id,
                                length=len(redraw_contents),
                                crc_value=0,
                                contents=redraw_contents)
-            send_result = send_request(client, pd)
+            send_result = send_request(current_client, pd)
             if send_result != basic_comms.SUCCESSFUL_CONF:
                 logger.error("Message send failed")
 
@@ -169,7 +175,7 @@ def handle_server_send(client):
                                contents=responses[msg_index])
 
             # print(f'server cmd id = {basic_comms.server_cmd_id}')
-            send_result = send_request(client, pd)
+            send_result = send_request(current_client, pd)
             # send_test_file(client)
             if send_result != basic_comms.SUCCESSFUL_CONF:
                 logger.error("Message send failed")
@@ -183,7 +189,7 @@ def handle_server_send(client):
                     BUTTON_LIST
                 )
 
-                send_new_config(client, "/configs", basic_comms.server_cmd_id)
+                send_new_config(current_client, "/configs", basic_comms.server_cmd_id)
                 write_updates()
 
             except ValueError as e:
@@ -194,14 +200,14 @@ def handle_server_send(client):
                               6,
                               [("HARD_KEY_PRESS", ["pLa revedere frate"])],
                               "media/icons/vscode.jpg")
-                send_new_config(client, "/configs", basic_comms.server_cmd_id)
+                send_new_config(current_client, "/configs", basic_comms.server_cmd_id)
                 write_updates()
             except ValueError as e:
                 logger.exception(e)
         elif user_input == "add3":
             try:
                 delete_button(10)
-                send_new_config(client, "/configs", basic_comms.server_cmd_id)
+                send_new_config(current_client, "/configs", basic_comms.server_cmd_id)
                 write_updates()
             except ValueError as e:
                 logger.exception(e)
@@ -214,10 +220,10 @@ def handle_server_send(client):
                     BUTTON_LIST
                 )
 
-                send_new_config(client, "/configs", basic_comms.server_cmd_id)
+                send_new_config(current_client, "/configs", basic_comms.server_cmd_id)
                 write_updates()
 
             except ValueError as e:
                 logger.error("Handle request exception: %s", e, exc_info=True)
         elif user_input == "e":
-            client.close()
+            current_client.close()

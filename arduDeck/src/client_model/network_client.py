@@ -3,8 +3,24 @@ import socket
 from ..server_params import CHUNK_SIZE, logger
 
 class NetworkClient(BaseClient):
-    def __init__(self, sock:socket.socket):
-        self.sock = sock
+    def __init__(self, host:str, port: int):
+        self.host = host
+        self.port = port
+
+        server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server_sock.bind((self.host, self.port))
+        server_sock.listen(1)
+
+        self.server_sock = server_sock
+        self.sock = None
+
+
+    def initiate_connection(self):
+        logger.debug("Network Server initialized. Waiting for clients")
+        conn, addr = self.server_sock.accept()
+        logger.debug("Connected by %s", addr)
+        self.sock = conn
 
     """Loop to send all data to server.
 

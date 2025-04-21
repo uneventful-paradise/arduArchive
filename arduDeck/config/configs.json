@@ -166,5 +166,17 @@
       }
     ],
     "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/obs.jpg"
+  },
+  {
+    "button_id": 36,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "www.x.com"
+        ]
+      }
+    ],
+    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/word.jpg"
   }
 ]

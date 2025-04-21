@@ -7,14 +7,22 @@ import time
 
 class SerialClient(BaseClient):
     def __init__(self, port: str, baudrate: int = 115200, timeout: float = 1.0):
-        self.serial = serial.Serial(port, baudrate, timeout=None)
-        logger.debug('Serial client connected')
+        self.port = port
+        self.baudrate = baudrate
+        self.timeout = timeout
+        self.serial = None
+        self.serial = serial.Serial(port=self.port, baudrate=self.baudrate, timeout=None)
+        data = self.serial.readline()
+        logger.debug(data)
+
+    def initiate_connection(self):
+        logger.debug('Serial server initialized. Waiting for connection')
         data = self.serial.readline()
         # while data != 'serial_start\n':
         while data != b'serial_start\n':
-            logger.debug(data.decode("utf-8"))
             data = self.serial.readline()
-        logger.debug("Starting effective communication")
+            logger.debug(data.decode("utf-8"))
+        logger.debug("Serial starting effective communication")
 
     def read_all(self, req_len: int) -> bytes:
         if req_len > CHUNK_SIZE:

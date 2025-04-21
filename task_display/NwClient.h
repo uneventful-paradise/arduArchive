@@ -14,11 +14,14 @@ private:
     unsigned int retries = 0;
     unsigned int max_retries = 6;
     const EventBits_t xBitsToWaitFor = ( WIFI_CONNECTED_BIT | CLIENT_CONNECTED_BIT );
+    // const TickType_t xTicksToWait = 100 / portTICK_PERIOD_MS;
 public:
     NwClient(WiFiClient& wfc, EventGroupHandle_t evg);
     virtual ~NwClient() override;
     virtual void initiate_connection() override;
     void connect_to_server();
+    void mark_connected();
+    void mark_disconnected();
     virtual void wait_on_connection() override;
     virtual void check_connection() override;
     virtual int get_available() override;

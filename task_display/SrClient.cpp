@@ -13,7 +13,7 @@ void SrClient::initiate_connection(){
     // while (!(this->serial)) {
     //     vTaskDelay(500 / portTICK_PERIOD_MS); 
     // }
-
+    delay(1000);
     send_connection_status(this -> status);
     this->serial.printf("\nserial_start\n");
 }
@@ -79,6 +79,6 @@ size_t SrClient::write_all(const uint8_t* data, size_t length){
 }
 
 void SrClient::close(){
-    A_DBG("Closing wifi client");
+    A_DBG("Closing serial client");
     // this -> serial.end(); //!stream doesnt have end
 }

@@ -20,8 +20,10 @@ const uint32_t PROGMEM crc_table[16] = {
 USBHIDKeyboard Keyboard;
 
 QueueHandle_t send_queue;
+QueueHandle_t conf_queue;
 SemaphoreHandle_t xPrintMutex = NULL;
 SemaphoreHandle_t xButtonsMutex = NULL;
+SemaphoreHandle_t xClientMutex = NULL;
 SemaphoreHandle_t xConnEventGrpMutex = NULL;
 
 QueueHandle_t ui_updates_queue;
@@ -250,6 +252,10 @@ void send_connection_status(int change){
   UI_update update;
   char* temp_text;
   switch(change){
+    case -3:{
+      temp_text = "Swapping Clients";
+      break;
+    }
     case -2:{
       temp_text = "Network connection Lost.";
       break;

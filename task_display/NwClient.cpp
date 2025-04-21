@@ -34,13 +34,22 @@ void NwClient::initiate_connection(){
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PWD);
   //no WiFi connection established initially
+  this -> status = -2;
   send_connection_status(this -> status);
   
   //Initial connection attempt
   A_DBG("Connecting to WiFi...");
   while (WiFi.status() != WL_CONNECTED) {
+    A_WRN("WiFi disconnected! Reconnecting...");
+    this->retries++;
+    if ( this -> retries >= this -> max_retries) {
+        A_DBG("Disconnecting from WiFi");
+        WiFi.disconnect();
+        this -> retries = 0;
+        WiFi.begin(WIFI_SSID, WIFI_PWD);
+    }
     Serial.print(".");
-    vTaskDelay(500 / portTICK_PERIOD_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 
   A_DBG("WiFi Connected!");
@@ -51,7 +60,7 @@ void NwClient::connect_to_server(){
     A_DBG("Connecting to server...");
     if (!this->client.connect(SERVER_IP, PORT)) {
         A_WRN("Connection failed!");
-        vTaskDelay(1000);
+        vTaskDelay(500);
     } else {
         A_DBG("Connected to server.");
     }
@@ -69,6 +78,7 @@ void NwClient::check_connection(){
         }
         this->retries++;
         if ( this -> retries >= this -> max_retries) {
+            A_DBG("Disconnecting from WiFi");
             WiFi.disconnect();
             this -> retries = 0;
         }
@@ -130,4 +140,19 @@ size_t NwClient::write_all(const uint8_t* data, size_t req_len){
 void NwClient::close(){
     A_DBG("Closing wifi client");
     this -> client.stop();
+    WiFi.disconnect();
+}
+
+void NwClient::mark_connected(){
+    xEventGroupSetBits( 
+        this -> connection_event_group, 
+        WIFI_CONNECTED_BIT | CLIENT_CONNECTED_BIT
+    );
+}
+
+void NwClient::mark_disconnected(){
+    xEventGroupClearBits( 
+        this -> connection_event_group, 
+        WIFI_CONNECTED_BIT  | CLIENT_CONNECTED_BIT
+    );
 }

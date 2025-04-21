@@ -12,8 +12,10 @@ extern SdFile file_obj;
 extern USBHIDKeyboard Keyboard;
 
 extern QueueHandle_t send_queue;
+extern QueueHandle_t conf_queue;
 extern SemaphoreHandle_t xPrintMutex;
 extern SemaphoreHandle_t xButtonsMutex;
+extern SemaphoreHandle_t xClientMutex;
 extern SemaphoreHandle_t xConnEventGrpMutex;
 
 struct Header_data {

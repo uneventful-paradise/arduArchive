@@ -25,18 +25,23 @@ SpriteManager::SpriteManager(Arduino_RPi_DPI_RGBPanel* GFX, const unsigned int D
 
   //!create function for init nav_buttons
   Sprite* btn_next = new Sprite();
-  btn_next -> set(700, 400, BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_NEXT);
+  btn_next -> set(600, 400, BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_NEXT);
   btn_next -> setFilename("/85px/next.jpg");
   btn_next -> setGFX(this -> gfx);
 
   Sprite* btn_prev = new Sprite();
-  btn_prev -> set(600, 400, BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_PREV);
+  btn_prev -> set(500, 400, BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_PREV);
   btn_prev -> setFilename("/85px/prev.jpg");
   btn_prev -> setGFX(this -> gfx);
 
+  Sprite* btn_swap = new Sprite();
+  btn_swap -> set(700, 400, BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_SWAP);
+  btn_swap -> setFilename("/85px/prev.jpg");
+  btn_swap -> setGFX(this -> gfx);
+
   navigation_buttons[0] = btn_prev;
   navigation_buttons[1] = btn_next;
-  navigation_buttons[2] = nullptr;
+  navigation_buttons[2] = btn_swap;
   A_DBG("sprite manager construction complete");
 }
 
