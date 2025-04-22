@@ -81,6 +81,7 @@ void Sprite::draw(JPEG_DRAW_CALLBACK *jpegDrawCallback) {
 
   jpegDraw(this->filename, jpegDrawCallback, true /* useBigEndian */,
            this->x /* x */, this->y /* y */, this->gfx->width() /* widthLimit */, this->gfx->height() /* heightLimit */);
+  // A_DBG("Coords of button %d are (%d, %d)", this -> id, this -> x, this ->y);
 }
 
 //?swap to nullptr

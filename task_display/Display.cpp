@@ -109,17 +109,21 @@ void draw_main_screen() {
     Sprite** buttons = sprite_manager.getButtons();
     
     int page = sprite_manager.getCurrentPage();
+    int start_index = page * BUTTONS_PER_PAGE;
+    int end_index = start_index + BUTTONS_PER_PAGE;
+    if (end_index > sprite_manager.getCapacity()) {
+      end_index = sprite_manager.getCapacity();
+    }
 
-    for(int i = 0; i < sprite_manager.getCount(); ++i){ 
+    for(int i = start_index; i < end_index; ++i){ 
       if (buttons[i] != nullptr) {
-        
-        int id = buttons[i] -> getId();
-        char* fname = buttons[i] -> getFilename();
+        // int id = buttons[i] -> getId();
+        // char* fname = buttons[i] -> getFilename();
     
-        if(buttons[i] -> getId() / BUTTONS_PER_PAGE == page){
-          // A_DBG("Now drawing %d, of path %s\n", id, fname);
-          buttons[i] -> draw(jpegDrawCallback);
-        }
+        // // if(buttons[i] -> getId() / BUTTONS_PER_PAGE == page){
+        //   // }
+        // A_DBG("Now drawing %d, of path %s", id, fname);
+        buttons[i] -> draw(jpegDrawCallback);
       }
     }
 

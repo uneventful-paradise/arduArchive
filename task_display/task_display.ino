@@ -27,7 +27,9 @@ void setup() {
   delay(1000);
   touch_init();
   delay(300);
-
+  
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PWD);
   // Init Display
   gfx->begin();
 
@@ -38,7 +40,7 @@ void setup() {
   if (!sd.begin(SdSpiConfig(SD_CS, SHARED_SPI, SD_SCK_MHZ(50)))) {
     sd.initErrorHalt();
     A_ERR("ERROR: SD Mount Failed!");
-    // while(1)
+    while(true)
     {
       gfx->fillScreen(WHITE);
       gfx->setTextSize(3);
@@ -68,6 +70,7 @@ void setup() {
     if (!connection_event_group) {
       A_ERR("Failed to create event group");
     }
+
     sr_client = new SrClient(Serial);
     nw_client = new NwClient(wfc, connection_event_group);
     current_client = (BaseClient*) nw_client;
@@ -75,6 +78,8 @@ void setup() {
     if (!init_icons_from_config("/configs/btn_config.txt")) {
       A_ERR("Icon read failed");
     }
+
+    A_DBG("Free heap is %u", ESP.getFreeHeap());
 
     /*Creating task queues. The queue takes event size as parameter 
     so it can manage the memory blocks allocated for each instance of the event itself*/

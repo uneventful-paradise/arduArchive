@@ -1,7 +1,7 @@
 import json
 import time
 
-from src.basic_comms import logger, handle_upload, send_request, REDRAW_COMMAND, SUCCESSFUL_CONF, create_packet, get_server_cmd_id
+from src.basic_comms import logger, handle_upload, send_request, REDRAW_COMMAND, SUCCESSFUL_CONF, create_packet, server_cmd_id
 from src.client_model.base_client import BaseClient
 from threading import Lock
 
@@ -106,7 +106,7 @@ def send_new_config(client, client_dir, cmd_id):
         logger.error("Unexpected response")
 
 def gui_upload(client: BaseClient, btn_list: list):
-    sid = get_server_cmd_id()
+    sid = server_cmd_id.inc()
     with button_lock:
         BUTTON_LIST[:] = btn_list
     send_new_config(client, "/configs", sid)

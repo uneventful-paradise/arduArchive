@@ -157,8 +157,9 @@ def handle_server_send():
         if user_input == "u":
             handle_upload(current_client, FILENAME, DEFAULT_CLIENT_DOWNLOAD_FOLDER)
             redraw_contents="redraw"
+            sid = basic_comms.server_cmd_id.inc()
             pd = create_packet(command_type=REDRAW_COMMAND,
-                               command_id=basic_comms.server_cmd_id,
+                               command_id=sid,
                                length=len(redraw_contents),
                                crc_value=0,
                                contents=redraw_contents)
@@ -168,15 +169,17 @@ def handle_server_send():
 
         elif user_input == "m":
             msg_index = random.randint(0, len(responses) - 1)
+            sid = basic_comms.server_cmd_id.inc()
+            logger.debug("sid is %d", sid)
             pd = create_packet(command_type=INITIALIZE_ROUTINE,
-                               command_id=basic_comms.server_cmd_id,
+                               command_id=sid,
                                length=len(responses[msg_index]),
                                crc_value=0,
                                contents=responses[msg_index])
 
-            # print(f'server cmd id = {basic_comms.server_cmd_id}')
+            # print(f'server cmd id = {basic_comms.server_cmd_id.value}')
             send_result = send_request(current_client, pd)
-            # send_test_file(client)
+
             if send_result != basic_comms.SUCCESSFUL_CONF:
                 logger.error("Message send failed")
         elif user_input == "add1":
@@ -188,8 +191,8 @@ def handle_server_send():
                     "media/icons/obs.jpg",
                     BUTTON_LIST
                 )
-
-                send_new_config(current_client, "/configs", basic_comms.server_cmd_id)
+                sid = basic_comms.server_cmd_id.inc()
+                send_new_config(current_client, "/configs", sid)
                 write_updates()
 
             except ValueError as e:
@@ -200,14 +203,16 @@ def handle_server_send():
                               6,
                               [("HARD_KEY_PRESS", ["pLa revedere frate"])],
                               "media/icons/vscode.jpg")
-                send_new_config(current_client, "/configs", basic_comms.server_cmd_id)
+                sid = basic_comms.server_cmd_id.inc()
+                send_new_config(current_client, "/configs", sid)
                 write_updates()
             except ValueError as e:
                 logger.exception(e)
         elif user_input == "add3":
             try:
                 delete_button(10)
-                send_new_config(current_client, "/configs", basic_comms.server_cmd_id)
+                sid = basic_comms.server_cmd_id.inc()
+                send_new_config(current_client, "/configs", sid)
                 write_updates()
             except ValueError as e:
                 logger.exception(e)
@@ -219,8 +224,8 @@ def handle_server_send():
                     "media/icons/word.jpg",
                     BUTTON_LIST
                 )
-
-                send_new_config(current_client, "/configs", basic_comms.server_cmd_id)
+                sid = basic_comms.server_cmd_id.inc()
+                send_new_config(current_client, "/configs", sid)
                 write_updates()
 
             except ValueError as e:

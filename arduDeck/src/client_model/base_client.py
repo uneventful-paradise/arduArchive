@@ -1,6 +1,11 @@
 from abc import ABC, abstractmethod
 
 class BaseClient(ABC):
+    @property
+    @abstractmethod
+    def chunk_size(self) -> int:
+        pass
+
     @abstractmethod
     def initiate_connection(self) -> None:
         pass

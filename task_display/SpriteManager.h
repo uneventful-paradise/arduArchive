@@ -19,6 +19,9 @@ private:
 
     unsigned int current_page;
     unsigned int max_page;
+
+    unsigned int x_limit;
+    unsigned int y_limit;
 public:
     SpriteManager(Arduino_RPi_DPI_RGBPanel* GFX,
         const unsigned int DEFAULT_BTN, 
@@ -27,6 +30,7 @@ public:
         const unsigned int BNT_PER_ROW, 
         const unsigned int BTN_OFFSET);
 
+    int get_id_by_coords(int x, int y);
     Sprite* add_button(int id, char* filename);
     bool update_button(int id, char* filename);
     bool delete_button(int id);

@@ -15,6 +15,9 @@ class NetworkClient(BaseClient):
         self.server_sock = server_sock
         self.sock = None
 
+    @property
+    def chunk_size(self) -> int:
+        return 2048
 
     def initiate_connection(self):
         logger.debug("Network Server initialized. Waiting for clients")

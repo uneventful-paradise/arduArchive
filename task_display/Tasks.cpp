@@ -22,7 +22,6 @@ void touch_check_task(void* params) {
   while (true) {
     //screen has been touched
     if (get_pos() == 1) {
-
       // watermark = uxTaskGetStackHighWaterMark(NULL);
       // Serial.printf("touch_check_task stack high water mark: %u\n", watermark);
       int btn_id = UNABLE;
@@ -40,10 +39,10 @@ void touch_check_task(void* params) {
           }
           break;
         }
-        if (btn_id != UNABLE){
-          A_DBG("skipping cmd btn checks");
-          continue;
-        }
+      }
+      if (btn_id != UNABLE){
+        A_DBG("skipping cmd btn checks");
+        continue;
       }
       //!avoid maxdelay? does it make sense to allow multiple button presses?
       /* wait for task to acquire mutex before moving on
@@ -55,59 +54,45 @@ void touch_check_task(void* params) {
         }
         Sprite** buttons = sprite_manager.getButtons();
 
-        A_DBG("Pos is: %d, %d\n", pos[0], pos[1]);
-        A_DBG("Count is %d", (sprite_manager.getCount()));
+        // A_DBG("Pos is: %d, %d\n", pos[0], pos[1]);
+        // A_DBG("Count is %d", (sprite_manager.getCount()));
 
-        for (int i = 0; i < sprite_manager.getCount(); i++) {
-          // A_DBG("checking button %d", i);
-          //buton_id is redeclared here so multiple buttons can be pressed at same time
-          if ((buttons[i] == nullptr) || (buttons[i] -> getId() / BUTTONS_PER_PAGE != sprite_manager.getCurrentPage())) {
-            // A_DBG("button %d is nullptr or not on page", i);
+        int button_id = sprite_manager.get_id_by_coords(pos[0], pos[1]);
+        A_DBG("Value is: %d\n", button_id);
+
+        if (button_id != UNABLE) {
+          //creating a data packet to send command information to server
+          Package_data data;
+          Header_data header;
+          // Serial.printf("SENDING command for %s to server\n", paths[event.buttonId]);
+  
+          memset(data.contents, 0, sizeof(data.contents));
+          if (snprintf(data.contents, sizeof(data.contents), "%d", button_id) < 0) {
+            A_ERR("snprintf failed in touch_check_task");
             continue;
           }
-
-          int button_id = UNABLE;
-          //checking if button is bound to command
-
-          if ((button_id = buttons[i] -> checkTouch(pos[0], pos[1])) != UNABLE) {
-            A_DBG("Value is: %d\n", button_id);
-
-            //creating a data packet to send command information to server
-            Package_data data;
-            Header_data header;
-            // Serial.printf("SENDING command for %s to server\n", paths[event.buttonId]);
-
-            memset(data.contents, 0, sizeof(data.contents));
-            if (snprintf(data.contents, sizeof(data.contents), "%d", button_id) < 0) {
-              A_ERR("snprintf failed in touch_check_task");
-              continue;
-            }
-
-            header.command_type = MACRO_COMMAND;
-            header.command_id = 0;
-            header.length = strlen(data.contents);
-            header.crc_value = crc_string(data.contents, header.length);
-            data.header = header;
-            A_DBG("Selected value is %s\n", data.contents);
-
-            // watermark = uxTaskGetStackHighWaterMark(NULL);
-            // Serial.printf("touch_check_task stack high water mark (MID): %u\n", watermark);
-          
-
-            xStatus = xQueueSend(send_queue, &data, portMAX_DELAY);
-            if (xStatus != pdPASS) {
-              vPrintString("touch_check_task failed to send data to the send_queue.\r\n");
-            }
-
-            A_DBG("skipping check of rest of buttons");
-            break;
+  
+          header.command_type = MACRO_COMMAND;
+          header.command_id = 0;
+          header.length = strlen(data.contents);
+          header.crc_value = crc_string(data.contents, header.length);
+          data.header = header;
+          A_DBG("Selected value is %s\n", data.contents);
+  
+          // watermark = uxTaskGetStackHighWaterMark(NULL);
+          // Serial.printf("touch_check_task stack high water mark (MID): %u\n", watermark);
+        
+  
+          xStatus = xQueueSend(send_queue, &data, portMAX_DELAY);
+          if (xStatus != pdPASS) {
+            vPrintString("touch_check_task failed to send data to the send_queue.\r\n");
           }
         }
+
         if (xSemaphoreGive(xButtonsMutex) != pdTRUE){
           A_ERR("Failed to give buttons mutex");
         }
       }
-      
     }
     vTaskDelay(200 / portTICK_PERIOD_MS);
   }
@@ -219,12 +204,14 @@ void update_screen_task(void* params) {
             if (xSemaphoreGive(xButtonsMutex) != pdTRUE) {
               A_ERR("Failed to give buttons mutex");
             }
+
+            A_DBG("Free heap after modification %u", ESP.getFreeHeap());
           }
 
           if (!init_icons_from_config("/configs/btn_config.txt")) {
             A_ERR("Icon read failed");
           }
-
+          A_DBG("Free heap after modification %u", ESP.getFreeHeap());
           draw_main_screen();
           break;
         }
@@ -428,10 +415,10 @@ void receive_request_task(void* params) {
       // A_DBG("%s\n", data.contents);
       // better way to convert to hex?
 
-      for (int i = 0; i < data.header.length; ++i) {
-        printf("%02x", data.contents[i]);
-      }
-      printf("\n\n");
+      // for (int i = 0; i < data.header.length; ++i) {
+      //   printf("%02x", data.contents[i]);
+      // }
+      // printf("\n\n");
 
       //send request to queue to be processed
       if (data.header.command_type == CONFIRMATION_FLAG) {

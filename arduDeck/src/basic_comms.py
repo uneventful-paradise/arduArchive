@@ -9,8 +9,9 @@ from src.client_model.network_client import NetworkClient
 from src.client_model.serial_client import SerialClient
 from utils.data_format import HeaderData, PackageData
 from server_params import *
+from utils.atomic_int import AtomicInteger
 
-server_cmd_id = 0
+server_cmd_id = AtomicInteger(0)
 client_lock = threading.Lock()
 
 client: BaseClient = None
@@ -43,14 +44,6 @@ def get_client() -> BaseClient:
     with client_lock:
         return client
 
-#lock?
-def get_server_cmd_id():
-    return server_cmd_id
-
-def set_server_cmd_id(new_server_cmd_id: int) -> None:
-    global server_cmd_id
-    server_cmd_id = new_server_cmd_id
-
 def swap_client():
     current_client = get_client()
     if isinstance(current_client, NetworkClient):
@@ -82,6 +75,7 @@ must be stopped.
 #TODO: add timeout in case client never sends acknowledgement
 def check_ack(req_id):
     ack = ack_queue.get()
+    #? should i call task_done() here?
     if int(ack) == req_id:
         logger.debug("ack successful for req_id %d\n", req_id)
         return SUCCESSFUL_CONF
@@ -91,7 +85,7 @@ def check_ack(req_id):
     elif int(ack) == STOP_ACTION:
         return STOP_ACTION
     else:
-        logger.warning("ACK got unexpected value %d while expecting %d/%d\n", int(ack), req_id, server_cmd_id)
+        logger.warning("ACK got unexpected value %d while expecting %d/%d\n", int(ack), req_id, server_cmd_id.value)
         return STOP_ACTION
 
 """Compose a protocol compliant message and send it to the client.
@@ -107,11 +101,11 @@ or an id that increments regardless of the acknowledgement status.
 """
 
 def send_request(client: BaseClient, pd: PackageData):
-    global server_cmd_id
+    # global server_cmd_id
     req_len = pd.header_data.length
     req_contents = pd.contents
     #format: < = small endian (! for network = big endian)
-    if req_len > CHUNK_SIZE:
+    if req_len > client.chunk_size:
         logger.warning("send %d exceeded size limit", req_len)
         raise ValueError("Payload length exceeds chunk size")
 
@@ -158,7 +152,7 @@ def send_request(client: BaseClient, pd: PackageData):
         logger.error("Packet reached MAX_RETRIES. Ending upload")
         result = STOP_ACTION
 
-    server_cmd_id = pd.header_data.command_id + 1
+    # server_cmd_id = pd.header_data.command_id + 1
     return result
 
 def send_conf(client: BaseClient, cmd_id: int):
@@ -212,7 +206,7 @@ def handle_upload(client: BaseClient, filename: str, client_location: str, clien
     logger.debug("writing to %s", client_filename)
 
     #send the upload initiating request
-    req_cmd = server_cmd_id
+    req_cmd = server_cmd_id.inc()
     pd = create_packet(command_type=START_DOWNLOAD,
                        command_id=req_cmd,
                        length=len(client_filename),
@@ -227,8 +221,8 @@ def handle_upload(client: BaseClient, filename: str, client_location: str, clien
         file_obj = open(filename, 'rb')
         while True:
             #read a chunk of data from file
-            data = file_obj.read(CHUNK_SIZE)
-            req_cmd = server_cmd_id
+            data = file_obj.read(client.chunk_size)
+            req_cmd = server_cmd_id.inc()
 
             if not data:
                 #send transfer ending request
@@ -256,6 +250,7 @@ def handle_upload(client: BaseClient, filename: str, client_location: str, clien
             if send_res == STOP_ACTION:
                 logger.error("Received request to end UPLOAD by ack flag")
                 break
-
+    except ValueError as e:
+        logger.exception(e)
     except IOError as e:
         logger.exception(e)
