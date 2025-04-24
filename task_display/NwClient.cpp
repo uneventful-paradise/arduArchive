@@ -31,6 +31,8 @@ void NwClient::wait_on_connection(){
 }
 
 void NwClient::initiate_connection(){
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PWD);
   //no WiFi connection established initially
   this -> status = -2;
   send_connection_status(this -> status);
@@ -48,7 +50,7 @@ void NwClient::initiate_connection(){
         WiFi.begin(WIFI_SSID, WIFI_PWD);
     }
     Serial.print(".");
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 
   A_DBG("WiFi Connected!");

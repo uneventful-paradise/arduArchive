@@ -1,6 +1,6 @@
-from .base_client import BaseClient
+from src.client_model.base_client import BaseClient
 import socket
-from ..server_params import CHUNK_SIZE, logger
+from src.server_params import CHUNK_SIZE, logger
 import serial
 import time
 # open serial port (adjust port name and baud to match ESP32)
@@ -66,3 +66,7 @@ class SerialClient(BaseClient):
     def close(self) -> None:
         logger.warning("Closed serial connection")
         self.serial.close()
+
+s = '(2,2)'
+pos = (tuple(int(x) for x in s.strip("()").split(',')))
+print(pos)

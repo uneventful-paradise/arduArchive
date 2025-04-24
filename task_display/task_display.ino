@@ -28,8 +28,8 @@ void setup() {
   touch_init();
   delay(300);
   
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PWD);
+  // WiFi.mode(WIFI_STA);
+  // WiFi.begin(WIFI_SSID, WIFI_PWD);
   // Init Display
   gfx->begin();
 

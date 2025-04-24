@@ -2,14 +2,14 @@ import struct
 import binascii
 import queue
 
-from client_model.base_client import BaseClient
+from src.client_model.base_client import BaseClient
 import threading
 
 from src.client_model.network_client import NetworkClient
 from src.client_model.serial_client import SerialClient
-from utils.data_format import HeaderData, PackageData
-from server_params import *
-from utils.atomic_int import AtomicInteger
+from src.utils.data_format import HeaderData, PackageData
+from src.server_params import *
+from src.utils.atomic_int import AtomicInteger
 
 server_cmd_id = AtomicInteger(0)
 client_lock = threading.Lock()
@@ -53,6 +53,7 @@ def swap_client():
     elif isinstance(current_client, SerialClient):
         set_client(nw_client)
         nw_client.initiate_connection()
+        sr_client.close()
 
 
 """In the context of data transfers the server sends a packet then

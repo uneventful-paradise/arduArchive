@@ -1,3 +1,4 @@
+# http://www.kbdedit.com/manual/low_level_vk_list.html
 key_vkcodes = {
     "KEY_LBUTTON": 0x01,  # Left mouse button
     "KEY_RBUTTON": 0x02,  # Right mouse button
@@ -5,15 +6,15 @@ key_vkcodes = {
     "KEY_MBUTTON": 0x04,  # Middle mouse button (three-button mouse)
     "KEY_XBUTTON1": 0x05,  # X1 mouse button
     "KEY_XBUTTON2": 0x06,  # X2 mouse button
-    "KEY_BACK": 0x08,  # BACKSPACE key
+    "KEY_BACKSPACE": 0x08,  # BACKSPACE key
     "KEY_TAB": 0x09,  # TAB key
     "KEY_CLEAR": 0x0C,  # CLEAR key
-    "KEY_RETURN": 0x0D,  # ENTER key
+    "KEY_ENTER": 0x0D,  # ENTER key
     "KEY_SHIFT": 0x10,  # SHIFT key
     "KEY_CONTROL": 0x11,  # CTRL key
-    "KEY_MENU": 0x12,  # ALT key
+    "KEY_ALT": 0x12,  # ALT key
     "KEY_PAUSE": 0x13,  # PAUSE key
-    "KEY_CAPITAL": 0x14,  # CAPS LOCK key
+    "KEY_CAPSLOCK": 0x14,  # CAPS LOCK key
     "KEY_KANA": 0x15,  # IME Kana mode
     "KEY_HANGUL": 0x15,  # IME Hangul mode (same as VK_KANA)
     "KEY_JUNJA": 0x17,  # IME Junja mode
@@ -26,8 +27,8 @@ key_vkcodes = {
     "KEY_ACCEPT": 0x1E,  # IME accept
     "KEY_MODECHANGE": 0x1F,  # IME mode change request
     "KEY_SPACE": 0x20,  # SPACEBAR
-    "KEY_PRIOR": 0x21,  # PAGE UP key
-    "KEY_NEXT": 0x22,  # PAGE DOWN key
+    "KEY_PAGEUP": 0x21,  # PAGE UP key
+    "KEY_PAGEDOWN": 0x22,  # PAGE DOWN key
     "KEY_END": 0x23,  # END key
     "KEY_HOME": 0x24,  # HOME key
     "KEY_LEFT": 0x25,  # LEFT ARROW key
@@ -37,7 +38,7 @@ key_vkcodes = {
     "KEY_SELECT": 0x29,  # SELECT key
     "KEY_PRINT": 0x2A,  # PRINT key
     "KEY_EXECUTE": 0x2B,  # EXECUTE key
-    "KEY_SNAPSHOT": 0x2C,  # PRINT SCREEN key
+    "KEY_PRINT_SCREEN": 0x2C,  # PRINT SCREEN key
     "KEY_INSERT": 0x2D,  # INS key
     "KEY_DELETE": 0x2E,  # DEL key
     "KEY_HELP": 0x2F,  # HELP key
@@ -86,13 +87,13 @@ key_vkcodes = {
     "KEY_F23": 0x86,  # F23 key
     "KEY_F24": 0x87,  # F24 key
     "KEY_NUMLOCK": 0x90,  # NUM LOCK key
-    "KEY_SCROLL": 0x91,  # SCROLL LOCK key
+    "KEY_SCROLL_LOCK": 0x91,  # SCROLL LOCK key
     "KEY_LSHIFT": 0xA0,            # Left SHIFT key, decimal: 160
     "KEY_RSHIFT": 0xA1,            # Right SHIFT key, decimal: 161
     "KEY_LCONTROL": 0xA2,          # Left CONTROL key, decimal: 162
     "KEY_RCONTROL": 0xA3,          # Right CONTROL key, decimal: 163
-    "KEYK_LMENU": 0xA4,             # Left MENU key, decimal: 164
-    "KEYK_RMENU": 0xA5,             # Right MENU key, decimal: 165
+    "KEY_LALT": 0xA4,             # Left MENU key, decimal: 164
+    "KEY_RALT": 0xA5,             # Right MENU key, decimal: 165
     "KEY_BROWSER_BACK": 0xA6,      # Browser Back key, decimal: 166
     "KEY_BROWSER_FORWARD": 0xA7,   # Browser Forward key, decimal: 167
     "KEY_BROWSER_REFRESH": 0xA8,   # Browser Refresh key, decimal: 168
@@ -103,8 +104,8 @@ key_vkcodes = {
     "KEY_VOLUME_MUTE": 0xAD,       # Volume Mute key, decimal: 173
     "KEY_VOLUME_DOWN": 0xAE,       # Volume Down key, decimal: 174
     "KEY_VOLUME_UP": 0xAF,         # Volume Up key, decimal: 175
-    "KEY_MEDIA_NEXT_TRACK": 0xB0,  # Next Track key, decimal: 176
-    "KEY_MEDIA_PREV_TRACK": 0xB1,  # Previous Track key, decimal: 177
+    "KEY_MEDIA_NEXT": 0xB0,  # Next Track key, decimal: 176
+    "KEY_MEDIA_PREV": 0xB1,  # Previous Track key, decimal: 177
     "KEY_MEDIA_STOP": 0xB2,        # Stop Media key, decimal: 178
     "KEY_MEDIA_PLAY_PAUSE": 0xB3,  # Play/Pause Media key, decimal: 179
     "KEY_LAUNCH_MAIL": 0xB4,       # Start Mail key, decimal: 180

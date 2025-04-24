@@ -17,9 +17,12 @@ class SerialClient(BaseClient):
 
     @property
     def chunk_size(self) -> int:
-        return 200 #set this as 240
+        return 240 #set this as 240
 
     def initiate_connection(self):
+        self.serial = serial.Serial(port=self.port, baudrate=self.baudrate, timeout=None)
+        data = self.serial.readline()
+        logger.debug(data)
         logger.debug('Serial server initialized. Waiting for connection')
         data = self.serial.readline()
         # while data != 'serial_start\n':

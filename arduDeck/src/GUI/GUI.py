@@ -1,11 +1,11 @@
 import tkinter as tk
 from tkinter import ttk
-from xml.etree.ElementTree import indent
 
-from ..utils.btn_funcs import BUTTON_LIST
 from tkinter import filedialog, messagebox
-from ..utils.btn_funcs import send_new_config, write_updates, gui_upload, button_lock
+from ..utils.btn_funcs import gui_upload, button_lock
 from ..basic_comms import get_client, logger
+from .macro_rec import KeyRecorder, rec_callback
+
 #todo add id checking for add and update func
 #todo preselect text in command args or register key inputs?
 
@@ -43,6 +43,7 @@ class StreamDeckGUI(tk.Tk):
         # Shortcuts for adding a button and quitting program
         self.bind("<KeyPress-a>", lambda event: self.open_add_button_window())
         self.bind("<KeyPress-q>", lambda event: self.quit())
+        self.bind("<Shift-KeyRelease>", lambda event: self.macro_rec_window())
 
         # Use grid to divide the window equally into left and right.
         self.grid_columnconfigure(0, weight=1)
@@ -255,7 +256,8 @@ class StreamDeckGUI(tk.Tk):
         # "Done" button: closes the window.
         tk.Button(add_win, text="Return to HUB", command=add_win.destroy).grid(row=4, column=1, padx=5, pady=5)
 
-
+    def macro_rec_window(self):
+        mrw = KeyRecorder(self, rec_callback)
 
     def edit_action_window(self, action, btn_info):
         # Open a Toplevel window for editing an action.
