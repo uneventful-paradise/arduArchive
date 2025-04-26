@@ -8,6 +8,7 @@ TODO: block some tasks from running before internet connection or during transfe
 
 void setup() {
   Serial.begin(115200);
+  A_DBG("Debug mode is set to %d", DEBUG);
   pinMode(TOUCH_RST, OUTPUT);
   delay(100);
   digitalWrite(TOUCH_RST, LOW);
@@ -16,7 +17,7 @@ void setup() {
   delay(1000);
 
   ledcSetup(PWM_CHANNEL, PWM_FREQ, pwm_resolution_bits);
-  ledcAttachPin(TFT_BL, PWM_CHANNEL);
+  // ledcAttachPin(TFT_BL, PWM_CHANNEL);
 
   ledcWrite(PWM_CHANNEL, 1023);  // output PWM
 
@@ -26,7 +27,9 @@ void setup() {
   delay(1000);
   touch_init();
   delay(300);
-
+  
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PWD);
   // Init Display
   gfx->begin();
 
@@ -36,8 +39,8 @@ void setup() {
   SPI.begin(SD_SCK, SD_MISO, SD_MOSI);
   if (!sd.begin(SdSpiConfig(SD_CS, SHARED_SPI, SD_SCK_MHZ(50)))) {
     sd.initErrorHalt();
-    Serial.println(F("ERROR: SD Mount Failed!"));
-    // while(1)
+    A_ERR("ERROR: SD Mount Failed!");
+    while(true)
     {
       gfx->fillScreen(WHITE);
       gfx->setTextSize(3);
@@ -47,50 +50,67 @@ void setup() {
       delay(3000);
     }
   } else {
-    Serial.print("Free Heap before loading image: ");
-    Serial.println(ESP.getFreeHeap());
-
-    // draw_main_screen(gfx);
-
-    init_paths("/configs/path_config_2.txt");
     /*Initializing mutexes*/
     xPrintMutex = xSemaphoreCreateMutex();
-    
     if (xPrintMutex == NULL) {
       A_ERR("Failed to create print mutex!");
     }
+    xButtonsMutex = xSemaphoreCreateMutex();
+    
+    if (xButtonsMutex == NULL) {
+      A_ERR("Failed to create buttons mutex");
+    }
+    // xClientMutex = xSemaphoreCreateMutex();
+    // if (xClientMutex == NULL){
+    //   A_ERR("Failed to create xClientMutex mutex");
+    // }
+    xConnCheckMutex = xSemaphoreCreateMutex();
+    if (xConnCheckMutex == NULL){
+      A_ERR("Failed to create xConnCheckMutex mutex");
+    }
 
     connection_event_group = xEventGroupCreate();
-    if(!connection_event_group){
+    if (!connection_event_group) {
       A_ERR("Failed to create event group");
     }
 
+    sr_client = new SrClient(Serial);
+    nw_client = new NwClient(wfc, connection_event_group);
+    current_client = (BaseClient*) nw_client;
+
+    if (!init_icons_from_config("/configs/btn_config.txt")) {
+      A_ERR("Icon read failed");
+    }
+
+    A_DBG("Free heap is %u", ESP.getFreeHeap());
+
     /*Creating task queues. The queue takes event size as parameter 
     so it can manage the memory blocks allocated for each instance of the event itself*/
-    selection_queue = xQueueCreate(10, sizeof(Touch_event));
     send_queue = xQueueCreate(20, sizeof(Package_data));
+    conf_queue = xQueueCreate(5, sizeof(Package_data));
     ui_updates_queue = xQueueCreate(10, sizeof(UI_update));
     wifi_request_queue = xQueueCreate(20, sizeof(Package_data));
 
-    if (selection_queue == NULL) {
-      Serial.println("Failed to create selection_queue");
-    }
     if (send_queue == NULL) {
-      Serial.println("Failed to create send_queue");
+      A_ERR("Failed to create send_queue");
+    }
+
+    if (conf_queue == NULL) {
+      A_ERR("Failed to create conf_queue");
     }
 
     if (ui_updates_queue == NULL) {
-      Serial.println("Failed to create ui_updates_queue");
+      A_ERR("Failed to create ui_updates_queue");
     }
 
     if (wifi_request_queue == NULL) {
-      Serial.println("Failed to create ui_updates_queue");
+      A_ERR("Failed to create ui_updates_queue");
     }
 
     xTaskCreatePinnedToCore(
       touch_check_task,
       "touch_check",
-      4096,
+      8192,
       NULL,
       1,
       &touch_task_handle,
@@ -99,15 +119,6 @@ void setup() {
     xTaskCreatePinnedToCore(
       update_screen_task,
       "update_screen_task",
-      4096,
-      NULL,
-      1,
-      NULL,
-      1);
-
-    xTaskCreatePinnedToCore(
-      handle_command,
-      "handle_command",
       4096,
       NULL,
       1,
@@ -152,7 +163,6 @@ void setup() {
   }
 }
 
-//interrupt upload if something goes wrong?
 //constants vs macros
 void loop() {
   // if(configured_timestamp){

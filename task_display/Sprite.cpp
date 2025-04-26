@@ -5,76 +5,52 @@ Sprite::Sprite() {
   this->y = 0;
   this->w = 0;
   this->h = 0;
-  this->text = "";
-  this->textSize = DEFAULT_TEXT_SIZE;
-  this->value = UNABLE;
+  this->id = UNABLE;
 }
 
 
-Sprite::Sprite(int x, int y, int w, int h, String text, int value, int textSize) {
+Sprite::Sprite(int x, int y, int w, int h, int id) {
   this->x = x;
   this->y = y;
   this->w = w;
   this->h = h;
-  this->text = text;
-  this->textSize = textSize;
-  this->value = value;
+  this->id = id;
 }
 
 Sprite::Sprite(Arduino_RPi_DPI_RGBPanel *gfx) {
   this->gfx = gfx;
 }
 
-void Sprite::set(int x, int y, int w, int h, String text, int value, int textSize) {
+void Sprite::set(int x, int y, int w, int h, int id) {
   this->x = x;
   this->y = y;
   this->w = w;
   this->h = h;
-  this->text = text;
-  this->textSize = textSize;
-  this->value = value;
+  this->id = id;
 }
 
-void Sprite::getFoDraw(int *x, int *y, int *w, int *h, String *text, int *textSize) {
+void Sprite::getFoDraw(int *x, int *y, int *w, int *h) {
   *x = this->x;
   *y = this->y;
   *w = this->w;
   *h = this->h;
-  *text = this->text;
-  *textSize = this->textSize;
 }
 
 int Sprite::checkTouch(int x, int y) {
-  if (value == UNABLE) {
+  if (id == UNABLE) {
     return UNABLE;
   } else if (x > this->x && x < this->x + this->w && y > this->y && y < this->y + this->h) {
-    return this->value;
+    return this->id;
   } else
     return UNABLE;
 }
 
-void Sprite::setText(String t) {
-  this->text = t;
+void Sprite::setId(int v) {
+  this->id = v;
 }
 
-String Sprite::getText() {
-  return this->text;
-}
-//? this->attr
-void Sprite::setPath(String p) {
-  this->path = p;
-}
-
-String Sprite::getPath() {
-  return this->path;
-}
-
-void Sprite::setValue(int v) {
-  this->value = v;
-}
-
-int Sprite::getValue() {
-  return this->value;
+int Sprite::getId() {
+  return this->id;
 }
 
 int Sprite::getWidth() {
@@ -85,12 +61,8 @@ int Sprite::getHeight() {
   return this->h;
 }
 
-void Sprite::setTextSize(int textSize) {
-  this->textSize = textSize;
-}
-
 void Sprite::setFilename(char *filename) {
-  this->filename = filename;
+  this->filename = strdup(filename);
 }
 
 char *Sprite::getFilename() {
@@ -102,7 +74,20 @@ void Sprite::setGFX(Arduino_RPi_DPI_RGBPanel *gfx) {
 }
 
 void Sprite::draw(JPEG_DRAW_CALLBACK *jpegDrawCallback) {
+  if (this -> filename == NULL) {
+    A_ERR("filename not assigned for button %d\n", (this -> id));
+    return;
+  }
 
   jpegDraw(this->filename, jpegDrawCallback, true /* useBigEndian */,
            this->x /* x */, this->y /* y */, this->gfx->width() /* widthLimit */, this->gfx->height() /* heightLimit */);
+  // A_DBG("Coords of button %d are (%d, %d)", this -> id, this -> x, this ->y);
+}
+
+//?swap to nullptr
+Sprite::~Sprite(){
+  if (this->filename != NULL) {
+    free(this->filename);
+  }
+  this->filename = NULL;
 }

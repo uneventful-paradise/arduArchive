@@ -3,13 +3,13 @@
     "button_id": 0,
     "actions": [
       {
-        "command_id": "START_PROCESS",
+        "command_id": "START_URL",
         "command_args": [
-          "C:\\Users\\dante\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"
+          "https://example.com"
         ]
       }
     ],
-    "image_path": "media/icons/white_pycharm.jpg"
+    "image_path": "media/icons/word.jpg"
   },
   {
     "button_id": 1,
@@ -17,55 +17,55 @@
       {
         "command_id": "START_URL",
         "command_args": [
-          "https://www.dw.com/en/top-stories/s-9097"
-        ]
-      }
-    ],
-    "image_path": "media/icons/adobe.jpg"
-  },
-  {
-    "button_id": 2,
-    "actions": [
-      {
-        "command_id": "HARD_KEY_PRESS",
-        "command_args": [
-          "dA+w500+dB+w500+uA+uB"
-        ]
-      }
-    ],
-    "image_path": "media/icons/steam.jpg"
-  },
-  {
-    "button_id": 3,
-    "actions": [
-      {
-        "command_id": "HARD_KEY_PRESS",
-        "command_args": [
-          "dLEFT_CTRL+dR+w500+r"
+          "https://openai.com"
         ]
       }
     ],
     "image_path": "media/icons/obs.jpg"
   },
   {
-    "button_id": 4,
+    "button_id": 2,
     "actions": [
       {
-        "command_id": "HARD_KEY_PRESS",
+        "command_id": "START_URL",
         "command_args": [
-          "dLEFT_GUI+dr+w500+r"
+          "https://github.com"
+        ]
+      }
+    ],
+    "image_path": "media/icons/white_pycharm.jpg"
+  },
+  {
+    "button_id": 3,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://stackoverflow.com"
         ]
       }
     ],
     "image_path": "media/icons/vscode.jpg"
   },
   {
-    "button_id": 5,
+    "button_id": 4,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://reddit.com"
+        ]
+      }
+    ],
+    "image_path": "media/icons/steam.jpg"
+  },
+  {
+    "button_id": 6,
     "actions": [
       {
         "command_id": "HARD_KEY_PRESS",
         "command_args": [
-          "pSalut frate"
+          "pLa revedere frate"
         ]
       }
     ],
@@ -75,39 +75,21 @@
     "button_id": 6,
     "actions": [
       {
-        "command_id": "SOFT_KEY_PRESS",
+        "command_id": "START_URL",
         "command_args": [
-          "kdKEY_LWIN+kdKEY_R+wt500+ra"
-        ]
-      },
-      {
-        "command_id": "SOFT_KEY_PRESS",
-        "command_args": [
-          "ptC:\\Users\\dante\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"
-        ]
-      },
-      {
-        "command_id": "SOFT_KEY_PRESS",
-        "command_args": [
-          "kdKEY_RETURN+wt100+ra"
+          "https://google.com"
         ]
       }
     ],
-    "image_path": "media/icons/adobe.jpg"
+    "image_path": "media/icons/calculator.jpg"
   },
   {
     "button_id": 7,
     "actions": [
       {
-        "command_id": "START_PROCESS",
-        "command_args": [
-          "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE"
-        ]
-      },
-      {
         "command_id": "START_URL",
         "command_args": [
-          "https://github.com/uneventful-paradise/arduArchive/tree/main"
+          "https://bing.com"
         ]
       }
     ],
@@ -117,13 +99,13 @@
     "button_id": 8,
     "actions": [
       {
-        "command_id": "SOFT_KEY_PRESS",
+        "command_id": "START_URL",
         "command_args": [
-          "kdKEY_VOLUME_MUTE+wt500+uKEY_VOLUME_MUTE+kdKEY_LWIN+kdKEY_SHIFT+kdKEY_C+ra"
+          "https://yahoo.com"
         ]
       }
     ],
-    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/steam.jpg"
+    "image_path": "media/icons/word.jpg"
   },
   {
     "button_id": 9,
@@ -131,11 +113,11 @@
       {
         "command_id": "START_URL",
         "command_args": [
-          "www.bing.com"
+          "https://duckduckgo.com"
         ]
       }
     ],
-    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/vscode.jpg"
+    "image_path": "media/icons/word.jpg"
   },
   {
     "button_id": 10,
@@ -143,29 +125,59 @@
       {
         "command_id": "START_URL",
         "command_args": [
-          "www.x.com"
-        ]
-      },
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "www.gmail.com"
+          "https://twitter.com"
         ]
       }
     ],
-    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/obs.jpg"
+    "image_path": "media/icons/word.jpg"
   },
   {
     "button_id": 11,
     "actions": [
       {
-        "command_id": "START_PROCESS",
+        "command_id": "START_URL",
         "command_args": [
-          "C:/Users/dante/AppData/Local/Discord/app-1.0.9189/Discord.exe"
+          "https://facebook.com"
         ]
       }
     ],
-    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/obs.jpg"
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 12,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://linkedin.com"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 13,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://instagram.com"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 14,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://youtube.com"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
   },
   {
     "button_id": 15,
@@ -258,6 +270,18 @@
         "command_id": "START_URL",
         "command_args": [
           "https://dw.com"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 23,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://reuters.com"
         ]
       }
     ],
@@ -750,15 +774,15 @@
     "image_path": "media/icons/word.jpg"
   },
   {
-    "button_id": 13,
+    "button_id": 5,
     "actions": [
       {
-        "command_id": "SOFT_KEY_PRESS",
+        "command_id": "START_URL",
         "command_args": [
-          "mm(344, 204)+wt0.006+mm(366, 200)+wt0.046+mm(388, 195)+wt0.011+mm(410, 190)+wt0.007+mm(431, 185)+wt0.005+mm(455, 179)+wt0.006+mm(481, 173)+wt0.005+mm(504, 168)+wt0.005+mm(534, 161)+wt0.005+mm(556, 155)+wt0.004+mm(582, 148)+wt0.004+mm(629, 136)+wt0.008+mm(650, 130)+wt0.003+mm(677, 123)+wt0.004+mm(702, 117)+wt0.004+mm(727, 110)+wt0.004+mm(748, 106)+wt0.003+mm(773, 100)+wt0.004+mm(800, 95)+wt0.004+mm(824, 90)+wt0.004+mm(847, 86)+wt0.004+mm(870, 83)+wt0.005+mm(894, 80)+wt0.005+mm(915, 78)+wt0.006+mm(925, 99)+wt1.127+mm(939, 120)+wt6.337+mm(940, 141)+wt0.132+mm(940, 162)+wt0.151+mm(940, 183)+wt0.16+mm(937, 204)+wt0.133+mm(935, 225)+wt0.099+mm(934, 246)+wt0.099+mm(934, 267)+wt0.084+mm(936, 288)+wt0.078+mm(938, 309)+wt0.075+mm(940, 330)+wt0.081+mm(943, 351)+wt0.088+mm(945, 372)+wt0.101+mm(945, 393)+wt0.098+mm(945, 414)+wt0.113+mm(943, 435)+wt0.15+mm(940, 456)+wt0.111+mm(937, 477)+wt0.203+mm(938, 498)+wt0.487+mm(959, 499)+wt2.895+mm(980, 496)+wt0.015+mm(1002, 494)+wt0.01+mm(1024, 491)+wt0.008+mm(1048, 489)+wt0.007+mm(1070, 487)+wt0.007+mm(1093, 485)+wt0.006+mm(1115, 484)+wt0.006+mm(1136, 483)+wt0.006+mm(1157, 483)+wt0.007+mm(1180, 483)+wt0.007+mm(1201, 483)+wt0.006+mm(1222, 485)+wt0.007+mm(1243, 487)+wt0.01+mm(1264, 491)+wt0.016+mm(1285, 489)+wt0.289+mm(1306, 489)+wt0.026+mm(1328, 487)+wt0.023+mm(1350, 485)+wt0.016+mm(1372, 482)+wt0.013+mm(1397, 478)+wt0.012+mm(1418, 474)+wt0.01+mm(1440, 471)+wt0.009+mm(1463, 468)+wt0.009+mm(1485, 466)+wt0.008+mm(1509, 465)+wt0.008+mm(1532, 465)+wt0.008+mm(1555, 464)+wt0.008+mm(1578, 464)+wt0.007+mm(1600, 463)+wt0.007+mm(1623, 461)+wt0.008+mm(1644, 460)+wt0.007+mm(1667, 459)+wt0.009+mm(1688, 459)+wt0.011+mm(1709, 459)+wt0.016+mm(1730, 460)+wt0.266+mm(1751, 464)+wt0.035+mm(1772, 467)+wt0.037+mm(1793, 470)+wt0.044+mm(1814, 473)+wt0.074+mm(1835, 476)+wt0.241+mm(1856, 480)+wt0.366+mm(1835, 478)+wt4.92+mm(1814, 475)+wt0.022+mm(1792, 472)+wt0.019+mm(1770, 470)+wt0.016+mm(1749, 468)+wt0.015+mm(1728, 467)+wt0.013+mm(1707, 465)+wt0.014+mm(1686, 463)+wt0.012+mm(1664, 460)+wt0.013+mm(1643, 457)+wt0.012+mm(1621, 455)+wt0.013+mm(1600, 454)+wt0.014+mm(1579, 453)+wt0.012+mm(1558, 452)+wt0.014+mm(1536, 451)+wt0.014+mm(1515, 449)+wt0.014+mm(1494, 448)+wt0.016+mm(1473, 448)+wt0.02+mm(1452, 448)+wt0.022+mm(1431, 448)+wt0.028+mm(1410, 448)+wt0.027+mm(1389, 448)+wt0.021+mm(1368, 448)+wt0.022+mm(1347, 448)+wt0.026+mm(1325, 449)+wt0.317+mm(1304, 452)+wt0.014+mm(1282, 454)+wt0.012+mm(1261, 455)+wt0.01+mm(1238, 457)+wt0.009+mm(1216, 459)+wt0.008+mm(1194, 461)+wt0.007+mm(1173, 462)+wt0.006+mm(1152, 464)+wt0.006+mm(1128, 467)+wt0.006+mm(1105, 469)+wt0.006+mm(1084, 471)+wt0.005+mm(1058, 474)+wt0.006+mm(1032, 476)+wt0.006+mm(1009, 478)+wt0.005+mm(983, 480)+wt0.006+mm(957, 482)+wt0.006+mm(935, 483)+wt0.005+mm(911, 485)+wt0.006+mm(886, 485)+wt0.006+mm(864, 485)+wt0.006+mm(842, 485)+wt0.007+mm(818, 485)+wt0.007+mm(797, 483)+wt0.007+mm(775, 481)+wt0.012+mm(753, 479)+wt0.004+mm(731, 477)+wt0.009+mm(710, 475)+wt0.01+mm(689, 473)+wt0.012+mm(667, 470)+wt0.013+mm(646, 467)+wt0.021+mm(625, 467)+wt0.318+mm(604, 467)+wt0.023+mm(583, 467)+wt0.017+mm(561, 466)+wt0.015+mm(539, 465)+wt0.014+mm(518, 465)+wt0.013+mm(496, 464)+wt0.014+mm(474, 464)+wt0.017+mm(453, 464)+wt0.019+mm(432, 462)+wt0.02+mm(411, 459)+wt0.025+mm(390, 457)+wt0.042+mm(369, 451)+wt0.09+mm(348, 447)+wt0.165+mm(336, 426)+wt1.851+mm(336, 405)+wt0.093+mm(335, 384)+wt0.046+mm(331, 363)+wt0.03+mm(326, 342)+wt0.024+mm(319, 321)+wt0.024+mm(314, 300)+wt0.021+mm(310, 279)+wt0.022+mm(305, 258)+wt0.026+mm(302, 237)+wt0.04+mm(303, 216)+wt0.093+mm(301, 195)+wt0.264+kdKEY_RCONTROL+wt1.97+kuKEY_RCONTROL+wt0.106"
+          "www.google.com"
         ]
       }
     ],
-    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/obs.jpg"
+    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/adobe.jpg"
   }
 ]

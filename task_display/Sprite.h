@@ -19,38 +19,30 @@ private:
   int h;
 
   //Button text
-  String path;
   char *filename;
-  String text;
-  int textSize;
   Arduino_RPi_DPI_RGBPanel *gfx;
-
-  //Button value, default value = -1 is untouchable
-  int value;
+  //Button id, default id = -1 is untouchable
+  int id;
 
 public:
   Sprite();
-  Sprite(int x, int y, int w, int h, String text, int value, int textSize = DEFAULT_TEXT_SIZE);
+  Sprite(int x, int y, int w, int h, int id);
   Sprite(Arduino_RPi_DPI_RGBPanel *gfx);
 
-  void set(int x, int y, int w, int h, String text, int value, int textSize = DEFAULT_TEXT_SIZE);
-  void getFoDraw(int *x, int *y, int *w, int *h, String *text, int *textSize);
+  void set(int x, int y, int w, int h, int id);
+  void getFoDraw(int *x, int *y, int *w, int *h);
 
-  void setText(String t);
-  String getText();
-  void setPath(String path);
-  String getPath();
-  void setValue(int v);
-  int getValue();
-  char *getFilename();
+  void setId(int v);
+  int getId();
+  char* getFilename();
   void setFilename(char *filename);
-  void setTextSize(int textSize);
   int checkTouch(int x, int y);
   void setGFX(Arduino_RPi_DPI_RGBPanel *gfx);
   int getWidth();
   int getHeight();
 
   void draw(JPEG_DRAW_CALLBACK *jpegDrawCallback);
+  ~Sprite();
 };
 
 #endif

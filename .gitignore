@@ -1,6 +1,6 @@
 *.txt
 logs/
 arduDeck/media/*
-!media/icons/*
-!media/icons/**
+!arduDeck/media/icons/
+!arduDeck/media/icons/**
 .vscode/
