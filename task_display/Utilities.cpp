@@ -253,11 +253,11 @@ void send_connection_status(int change){
   char* temp_text;
   switch(change){
     case -3:{
-      temp_text = "Swapping Clients";
+      temp_text = "Atempting reconnection.";
       break;
     }
     case -2:{
-      temp_text = "Network connection Lost.";
+      temp_text = "Awaiting network connection.";
       break;
     }
     case -1:{
@@ -265,7 +265,7 @@ void send_connection_status(int change){
       break;
     }
     case 0:{
-      temp_text = "Client Disconnected.";
+      temp_text = "Awaiting client connection.";
       break;
     }
     case 1:{

@@ -105,6 +105,19 @@ def send_new_config(client, client_dir, cmd_id):
     else:
         logger.error("Unexpected response")
 
+def soft_upload(btn_list: list):
+    try:
+        with button_lock:
+            BUTTON_LIST[:] = btn_list
+
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(BUTTON_LIST, f, indent=2)
+
+    except IOError as e:
+        logger.exception(e)
+    except Exception as e:
+        logger.exception(e)
+
 def gui_upload(client: BaseClient, btn_list: list):
     sid = server_cmd_id.inc()
     with button_lock:

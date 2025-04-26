@@ -146,7 +146,7 @@ def receive_request():
 performing user requests."""
 def handle_server_send():
     responses = ["hey dude thanks for letting me know",
-                 "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum",
+                 "Lorem Ipsum is simply dummy text of the printing and typesetting industry. ",
                  "hyaimamanannanan",
                  "buna ziuaaa"]
 
@@ -182,53 +182,6 @@ def handle_server_send():
 
             if send_result != basic_comms.SUCCESSFUL_CONF:
                 logger.error("Message send failed")
-        elif user_input == "add1":
-            try:
-                add_button(
-                    46,
-                    [("START_PROCESS", ["C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE"]),
-                     ("START_URL", ["https://github.com/uneventful-paradise/arduArchive/tree/main"])],
-                    "media/icons/obs.jpg",
-                    BUTTON_LIST
-                )
-                sid = basic_comms.server_cmd_id.inc()
-                send_new_config(current_client, "/configs", sid)
-                write_updates()
 
-            except ValueError as e:
-                logger.error("Handle request exception: %s", e, exc_info=True)
-        elif user_input == "add2":
-            try:
-                update_button(5,
-                              6,
-                              [("HARD_KEY_PRESS", ["pLa revedere frate"])],
-                              "media/icons/vscode.jpg")
-                sid = basic_comms.server_cmd_id.inc()
-                send_new_config(current_client, "/configs", sid)
-                write_updates()
-            except ValueError as e:
-                logger.exception(e)
-        elif user_input == "add3":
-            try:
-                delete_button(10)
-                sid = basic_comms.server_cmd_id.inc()
-                send_new_config(current_client, "/configs", sid)
-                write_updates()
-            except ValueError as e:
-                logger.exception(e)
-        elif user_input == "add4":
-            try:
-                add_button(
-                    15,
-                    [("SOFT_KEY_PRESS", ["dKEY_VOLUME_MUTE+w500+uKEY_VOLUME_MUTE+dKEY_LWIN+dKEY_SHIFT+dKEY_C+r"])],
-                    "media/icons/word.jpg",
-                    BUTTON_LIST
-                )
-                sid = basic_comms.server_cmd_id.inc()
-                send_new_config(current_client, "/configs", sid)
-                write_updates()
-
-            except ValueError as e:
-                logger.error("Handle request exception: %s", e, exc_info=True)
         elif user_input == "e":
             current_client.close()

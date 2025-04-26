@@ -40,6 +40,7 @@ def char2key(c):
 class KeyRecorder(tk.Toplevel):
     def __init__(self, parent, callback):
         super().__init__(parent)
+        self.bind_all("<KeyRelease-Control_R>", lambda e: self.finish())
         self.callback = callback
         self.pressed = {}   # keycode -> timestamp
         self.history = []   # list of (keycode, action, time, duration)

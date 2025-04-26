@@ -556,5 +556,233 @@
       }
     ],
     "image_path": "media/icons/obs.jpg"
+  },
+  {
+    "button_id": 46,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://theguardian.com"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 47,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://bloomberg.com"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 48,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://wsj.com"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 49,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://forbes.com"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 50,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://techcrunch.com"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 51,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://wired.com"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 52,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://engadget.com"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 53,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://theverge.com"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 54,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://cnet.com"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 55,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://medium.com"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 56,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://dev.to"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 57,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://hashnode.com"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 58,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://mozilla.org"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 59,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://python.org"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 60,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://nodejs.org"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 61,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://java.com"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 62,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://kotlinlang.org"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 63,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://flutter.dev"
+        ]
+      }
+    ],
+    "image_path": "media/icons/word.jpg"
+  },
+  {
+    "button_id": 5,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "www.google.com"
+        ]
+      }
+    ],
+    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/adobe.jpg"
   }
 ]

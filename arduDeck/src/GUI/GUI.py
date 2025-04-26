@@ -1,15 +1,16 @@
 import tkinter as tk
 from tkinter import ttk
 
+from src.server_params import MAX_BUTTONS
 from tkinter import filedialog, messagebox
-from ..utils.btn_funcs import gui_upload, button_lock
-from ..basic_comms import get_client, logger
-from .macro_rec import KeyRecorder, rec_callback
+from src.utils.btn_funcs import gui_upload, button_lock, soft_upload
+from src.basic_comms import get_client
+from src.GUI.macro_rec import KeyRecorder, rec_callback
 
 #todo add id checking for add and update func
 #todo preselect text in command args or register key inputs?
 
-COMMAND_TYPES = ["HARD_KEY_PRESS", "SOFT_KEY_PRESS", "START_URL", "START_PROCESS"]
+COMMAND_TYPES = ["SOFT_KEY_PRESS", "HARD_KEY_PRESS",  "START_URL", "START_PROCESS"]
 
 class StreamDeckGUI(tk.Tk):
     def __init__(self, button_list):
@@ -188,6 +189,8 @@ class StreamDeckGUI(tk.Tk):
                             borderwidth=2, relief="groove", bg="white",
                             command=lambda: self.update_image_path(btn_info))
         img_btn.pack(pady=5, padx=5, fill=tk.X, anchor="w")
+
+        self.canvas.yview_moveto(0.0)
         
     def update_image_path(self, btn_info):
         # Update image path the image path.
@@ -211,114 +214,214 @@ class StreamDeckGUI(tk.Tk):
             return path
         return None
 
+
+    def _start_macro_record(self, target_text_widget):
+
+        self.withdraw()
+
+        if hasattr(self, "_last_add_win") and self._last_add_win.winfo_exists():
+            self._last_add_win.withdraw()
+
+        def on_done(history_json, macro_string):
+            # put the recorded JSON back into your Text widget
+            target_text_widget.insert("1.0", macro_string)
+
+            # show both windows again
+            self.deiconify()
+            if hasattr(self, "_last_add_win") and self._last_add_win.winfo_exists():
+                self._last_add_win.deiconify()
+
+        KeyRecorder(self, on_done)
+
     def add_action_window(self, btn_info):
-        # This window remains open until "Done" is pressed, allowing the user to add multiple actions.
-        add_win = tk.Toplevel(self)
-        add_win.title("Add Action")
-        add_win.geometry("400x250")
-        # Make this window transient with respect to the main application window.
-        add_win.transient(self) 
-        # Grab the focus so that it is modal.
-        add_win.grab_set()
-        # Force the window to come to the front.
-        add_win.focus_force()
+        win = tk.Toplevel(self)
+        self._last_add_win = win
+        win.title("Add Action")
+        win.geometry("500x300")
+        win.transient(self)
+        win.grab_set()
+        # win.focus_force()
 
+        notebook = ttk.Notebook(win)
+        notebook.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # Row 1: Label and Combobox for Command Type.
-        tk.Label(add_win, text="Command Type:", anchor="e").grid(row=1, column=0, padx=5, pady=5, sticky="e")
-        cmd_id_var = tk.StringVar(value=COMMAND_TYPES[0])
-        combobox = ttk.Combobox(add_win, textvariable=cmd_id_var, values=COMMAND_TYPES, state="readonly", width=28)
-        combobox.grid(row=1, column=1, padx=5, pady=5, sticky="w")
+        # 1) Soft Key Press tab
+        soft_frame = ttk.Frame(notebook)
+        notebook.add(soft_frame, text="SOFT_KEY_PRESS")
+        tk.Label(soft_frame, text="Soft Key Sequence:", anchor="w").pack(anchor="w", padx=5, pady=(5, 0))
+        soft_text = tk.Text(soft_frame, height=3, wrap="word")
+        soft_text.pack(fill="x", padx=5, pady=5)
+        soft_btn = tk.Button(
+            soft_frame,
+            text="Record…",
+            command=lambda: self._start_macro_record(soft_text)
+        )
+        soft_btn.pack(padx=5)
 
-        tk.Label(add_win, text="Command Args:", anchor="ne").grid(row=2, column=0, padx=5, pady=5, sticky="ne")
-        cmd_args_text = tk.Text(add_win, wrap="word", width=30, height=4)
-        cmd_args_text.grid(row=2, column=1, padx=5, pady=5)
+        # 2) Hard Key Press tab
+        hard_frame = ttk.Frame(notebook)
+        notebook.add(hard_frame, text="HARD_KEY_PRESS")
+        tk.Label(hard_frame, text="Hard Key Code(s):", anchor="w").pack(anchor="w", padx=5, pady=(5, 0))
+        hard_entry = tk.Entry(hard_frame)
+        hard_entry.pack(fill="x", padx=5, pady=5)
+
+        # 3) Start URL tab
+        url_frame = ttk.Frame(notebook)
+        notebook.add(url_frame, text="START_URL")
+        tk.Label(url_frame, text="URL to open:", anchor="w").pack(anchor="w", padx=5, pady=(5, 0))
+        url_entry = tk.Entry(url_frame)
+        url_entry.pack(fill="x", padx=5, pady=5)
+
+        # 4) Start Process tab
+        proc_frame = ttk.Frame(notebook)
+        notebook.add(proc_frame, text="START_PROCESS")
+        tk.Label(proc_frame, text="Executable path:", anchor="w").pack(anchor="w", padx=5, pady=(5, 0))
+        proc_var = tk.StringVar()
+        proc_entry = tk.Entry(proc_frame, textvariable=proc_var)
+        proc_entry.pack(fill="x", padx=5, pady=5)
+        tk.Button(proc_frame, text="Browse…",
+                  command=lambda: proc_var.set(filedialog.askopenfilename(
+                      title="Select EXE", filetypes=[("EXE", "*.exe"), ("All", "*.*")]) or "")
+                  ).pack(padx=5)
+
+        # bottom buttons
+        btn_frame = tk.Frame(win)
+        btn_frame.pack(fill="x", pady=10)
 
         def add_action():
-            with button_lock:
-                actions = btn_info.get("actions", [])
+            tab = notebook.index(notebook.select())
+            cmd_type = COMMAND_TYPES[tab]
+            if tab == 0:
+                args = [soft_text.get("1.0", "end-1c")]
+            elif tab == 1:
+                args = [hard_entry.get()]
+            elif tab == 2:
+                args = [url_entry.get()]
+            else:
+                args = [proc_var.get()]
 
-                action_id = cmd_id_var.get()
-                new_action = {"command_id": action_id, "command_args": [cmd_args_text.get("1.0", "end-1c")]}
 
-                actions.append(new_action)
-                btn_info["actions"] = actions
+            actions = btn_info.setdefault("actions", [])
+            actions.append({
+                "command_id": cmd_type,
+                "command_args": args
+            })
+            soft_upload(self.button_list)
 
-            # Clear the entry fields for the next action.
-            cmd_id_var.set("")
-            cmd_args_text.delete("1.0", "end")
-
-            # Optionally, update the right frame to reflect the newly added action.
+            # refresh right pane
             self.on_button_click(btn_info)
+            # clear inputs for next action
+            soft_text.delete("1.0", "end")
+            hard_entry.delete(0, "end")
+            url_entry.delete(0, "end")
+            proc_var.set("")
 
-        tk.Button(add_win, text="Add Action", command=add_action).grid(row=4, column=0, padx=5, pady=5)
 
-        # "Done" button: closes the window.
-        tk.Button(add_win, text="Return to HUB", command=add_win.destroy).grid(row=4, column=1, padx=5, pady=5)
+        tk.Button(btn_frame, text="Add Action", command=add_action).pack(side="left", padx=5)
+        tk.Button(btn_frame, text="Done", command=win.destroy).pack(side="right", padx=5)
 
     def macro_rec_window(self):
         mrw = KeyRecorder(self, rec_callback)
 
     def edit_action_window(self, action, btn_info):
-        # Open a Toplevel window for editing an action.
-        edit_win = tk.Toplevel(self)
-        edit_win.title("Edit Action")
-        edit_win.geometry("400x250")
-        # Make this window transient with respect to the main application window.
-        edit_win.transient(self) 
-        # Grab the focus so that it is modal.
-        edit_win.grab_set()
-        # Force the window to come to the front.
-        edit_win.focus_force()
+        win = tk.Toplevel(self)
+        win.title("Edit Action")
+        win.geometry("500x300")
+        win.transient(self)
+        win.grab_set()
 
-        # Row 1: Label and Combobox for Command Type.
-        tk.Label(edit_win, text="Command Type:", anchor="e").grid(row=1, column=0, padx=5, pady=5, sticky="e")
-        cmd_id_var = tk.StringVar(value=action.get("command_type", COMMAND_TYPES[0]))
-        combobox = ttk.Combobox(edit_win, textvariable=cmd_id_var, values=COMMAND_TYPES, state="readonly", width=28)
-        combobox.grid(row=0, column=1, padx=5, pady=5, sticky="w")
+        notebook = ttk.Notebook(win)
+        notebook.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # Command Args: use a Text widget for multi-line input with wrapping.
-        tk.Label(edit_win, text="Command Args:", anchor="ne").grid(row=2, column=0, padx=5, pady=5, sticky="ne")
-        # Create a Text widget
-        cmd_args_text = tk.Text(edit_win, wrap="word", width=30, height=5)
-        # Insert current command args (convert to string if necessary)
-        cmd_args_text.insert("1.0", str(action.get("command_args", "")))
-        cmd_args_text.grid(row=1, column=1, padx=5, pady=5)
+        soft_frame = ttk.Frame(notebook)
+        notebook.add(soft_frame, text="SOFT_KEY_PRESS")
+        tk.Label(soft_frame, text="Soft Key Sequence:", anchor="w").pack(anchor="w", padx=5, pady=(5, 0))
+        soft_text = tk.Text(soft_frame, height=3, wrap="word")
+        soft_text.pack(fill="x", padx=5, pady=5)
+        soft_btn = tk.Button(
+            soft_frame,
+            text="Record…",
+            command=lambda: self._start_macro_record(soft_text)
+        )
+        soft_btn.pack(padx=5)
 
-        # Create a frame for the buttons at the bottom.
-        btn_frame = tk.Frame(edit_win)
-        btn_frame.grid(row=2, column=0, columnspan=2, pady=10)
+        hard_frame = ttk.Frame(notebook)
+        notebook.add(hard_frame, text="HARD_KEY_PRESS")
+        tk.Label(hard_frame, text="Hard Key Code(s):", anchor="w").pack(anchor="w", padx=5, pady=(5, 0))
+        hard_entry = tk.Entry(hard_frame)
+        hard_entry.pack(fill="x", padx=5, pady=5)
 
-        def save_changes():
-            with button_lock:
-                action["command_id"] = cmd_id_var.get()
-                action["command_args"] = [cmd_args_text.get("1.0", "end-1c")]
-                logger.debug("edited action!")
-            edit_win.destroy()
-            # Optionally, update the displayed actions.
+        url_frame = ttk.Frame(notebook)
+        notebook.add(url_frame, text="START_URL")
+        tk.Label(url_frame, text="URL to open:", anchor="w").pack(anchor="w", padx=5, pady=(5, 0))
+        url_entry = tk.Entry(url_frame)
+        url_entry.pack(fill="x", padx=5, pady=5)
+
+        proc_frame = ttk.Frame(notebook)
+        notebook.add(proc_frame, text="START_PROCESS")
+        tk.Label(proc_frame, text="Executable path:", anchor="w").pack(anchor="w", padx=5, pady=(5, 0))
+        proc_var = tk.StringVar()
+        proc_entry = tk.Entry(proc_frame, textvariable=proc_var)
+        proc_entry.pack(fill="x", padx=5, pady=5)
+        tk.Button(proc_frame, text="Browse…",
+                  command=lambda: proc_var.set(filedialog.askopenfilename(
+                      title="Select EXE",
+                      filetypes=[("EXE", "*.exe"), ("All", "*.*")]) or "")
+                  ).pack(padx=5)
+
+        # Pre‐select the right tab and populate fields from `action`
+        try:
+            tab_index = COMMAND_TYPES.index(action["command_id"])
+        except ValueError:
+            tab_index = 0
+        notebook.select(tab_index)
+
+        # fill the right widget
+        existing_args = action.get("command_args", [""])[0]
+        if tab_index == 0:
+            soft_text.insert("1.0", existing_args)
+        elif tab_index == 1:
+            hard_entry.insert(0, existing_args)
+        elif tab_index == 2:
+            url_entry.insert(0, existing_args)
+        else:
+            proc_var.set(existing_args)
+
+
+        btn_frame = tk.Frame(win)
+        btn_frame.pack(fill="x", pady=10)
+
+        # Save / update action in place
+        def save_action():
+            sel = notebook.index(notebook.select())
+            cmd_type = COMMAND_TYPES[sel]
+            if sel == 0:
+                args = [soft_text.get("1.0", "end-1c")]
+            elif sel == 1:
+                args = [hard_entry.get()]
+            elif sel == 2:
+                args = [url_entry.get()]
+            else:
+                args = [proc_var.get()]
+
+            action["command_id"] = cmd_type
+            action["command_args"] = args
+            soft_upload(self.button_list)
+
             self.on_button_click(btn_info)
-   
+            win.destroy()
 
+        # Remove this action entirely
         def remove_action():
-            # Remove the action from the button's action list.
             with button_lock:
-                actions = btn_info.get("actions", [])
-                if action in actions:
-                    actions.remove(action)
-                    btn_info["actions"] = actions
-                    print("removed action!")
-            edit_win.destroy()
+                btn_info["actions"].remove(action)
+                soft_upload(self.button_list)
+
             self.on_button_click(btn_info)
+            win.destroy()
 
-        save_btn = tk.Button(btn_frame, text="Save", width=12)
-        remove_btn = tk.Button(btn_frame, text="Remove Action", width=12)
-        save_btn.grid(row=2, column=0, padx=5, pady=10)
-        remove_btn.grid(row=2, column=1, padx=5, pady=10, sticky="w")
-
-        # Set the commands
-        save_btn.config(command=save_changes)
-        remove_btn.config(command=remove_action)
-        edit_win.bind("<Return>", lambda event: save_changes())
+        tk.Button(btn_frame, text="Save", command=save_action).pack(side="left", padx=5)
+        tk.Button(btn_frame, text="Delete", command=remove_action).pack(side="right", padx=5)
 
     def open_add_button_window(self):
         add_win = tk.Toplevel(self)
@@ -333,6 +436,7 @@ class StreamDeckGUI(tk.Tk):
         # Calculate the maximum allowed button id.
         total_cells = self.ROWS * self.COLS
         max_allowed = (self.max_pages + 2) * total_cells - 1
+        max_allowed = min(MAX_BUTTONS, max_allowed)
         
         tk.Label(add_win, text="Button ID:").grid(row=0, column=0, padx=5, pady=5, sticky="e")
         button_id_var = tk.StringVar()
@@ -350,7 +454,7 @@ class StreamDeckGUI(tk.Tk):
         def add_new_button():
             try:
                 bid = int(button_id_var.get())
-                if bid > max_allowed:
+                if bid >= max_allowed:
                     messagebox.showerror("Error", f"Button ID must be ≤ {max_allowed}")
                     return
             except ValueError:
