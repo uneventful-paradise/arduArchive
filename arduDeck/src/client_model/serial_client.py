@@ -1,3 +1,5 @@
+from serial.serialutil import SerialException
+
 from .base_client import BaseClient
 import socket
 from ..server_params import CHUNK_SIZE, logger
@@ -10,19 +12,31 @@ class SerialClient(BaseClient):
         self.port = port
         self.baudrate = baudrate
         self.timeout = timeout
-        self.serial = None
-        # self.serial = serial.Serial(port=self.port, baudrate=self.baudrate, timeout=None)
-        # data = self.serial.readline()
-        # logger.debug(data)
+
+        self.serial = serial.Serial()
+        self.serial.dtr = False
+        self.serial.rts = False
+        self.serial.port = self.port
+        self.serial.baudrate = self.baudrate
+        self.serial.timeout = None
+        # try:
+        #     self.serial = serial.Serial(port=self.port, baudrate=self.baudrate, timeout=None)
+        #     data = self.serial.readline()
+        #     logger.debug(data)
+        # except SerialException as e:
+        #     logger.error(e)
 
     @property
     def chunk_size(self) -> int:
         return 240 #set this as 240
 
     def initiate_connection(self):
-        self.serial = serial.Serial(port=self.port, baudrate=self.baudrate, timeout=None)
-        data = self.serial.readline()
-        logger.debug(data)
+        try:
+            self.serial.open()
+            data = self.serial.readline()
+            logger.debug(data)
+        except SerialException as e:
+            logger.error(e)
         logger.debug('Serial server initialized. Waiting for connection')
         data = self.serial.readline()
         # while data != 'serial_start\n':

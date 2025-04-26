@@ -23,8 +23,9 @@ QueueHandle_t send_queue;
 QueueHandle_t conf_queue;
 SemaphoreHandle_t xPrintMutex = NULL;
 SemaphoreHandle_t xButtonsMutex = NULL;
-SemaphoreHandle_t xClientMutex = NULL;
+// SemaphoreHandle_t xClientMutex = NULL;
 SemaphoreHandle_t xConnEventGrpMutex = NULL;
+SemaphoreHandle_t xConnCheckMutex = NULL;
 
 QueueHandle_t ui_updates_queue;
 

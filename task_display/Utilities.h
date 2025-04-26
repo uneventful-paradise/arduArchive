@@ -15,8 +15,9 @@ extern QueueHandle_t send_queue;
 extern QueueHandle_t conf_queue;
 extern SemaphoreHandle_t xPrintMutex;
 extern SemaphoreHandle_t xButtonsMutex;
-extern SemaphoreHandle_t xClientMutex;
-extern SemaphoreHandle_t xConnEventGrpMutex;
+// extern SemaphoreHandle_t xClientMutex;
+extern SemaphoreHandle_t xConnEventGrpMutex; //not used?
+extern SemaphoreHandle_t xConnCheckMutex;
 
 struct Header_data {
   unsigned int command_type;

@@ -11,8 +11,21 @@ BaseClient* current_client;
 //dynamic_cast would be cool to use to check current client type but has large memory footprint
 int current_client_type = NW_CLIENT_MODE;
 
-/*This taks's purpose is to listen to incoming touches, determine whether the touch has selected a valid icon
-and send the selection information to the server via a Package_Data object.*/
+void protected_check_connection(){
+  if (xConnCheckMutex != NULL) {
+    if (xSemaphoreTake(xConnCheckMutex, portMAX_DELAY) != pdTRUE){
+      A_ERR("Failed to take client mutex");
+      return;
+    }
+
+    current_client -> check_connection();
+
+    if(xSemaphoreGive(xConnCheckMutex) != pdTRUE){
+      A_ERR("Failed to give client mutex");
+    }
+  }
+}
+
 void touch_check_task(void* params) {
   // BaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);                    //checking for available stack
   // Serial.printf("touch_check_task stack high water mark: %u\n", watermark);
@@ -236,7 +249,7 @@ void establish_connection_task(void* params) {
 
   //Connecting to and monitoring connection to server and network.
   while (true) {
-    current_client -> check_connection();
+    protected_check_connection();
     vTaskDelay(500 / portTICK_PERIOD_MS);
   }
 }
@@ -301,23 +314,47 @@ void swap_client_type(){
     switch(current_client_type){
         case NW_CLIENT_MODE:{
           //client is in wifi mode and wants to go serial
-          //stop wifi??
-          current_client -> close();
-          send_connection_status(-3);
-          current_client = sr_client;
-          //!put a lock/sem here to prevent the conn_check task from updating this again
-          nw_client -> mark_connected();
-          current_client -> initiate_connection();
-          current_client_type = SR_CLIENT_MODE;
+          //!disconnect wifi and block read/write tasks
+          //?vTaskDelay here?
+          //!while reading and writing tasks are blocked waiting for connection
+          if (xConnCheckMutex != NULL) {
+            if (xSemaphoreTake(xConnCheckMutex, portMAX_DELAY) != pdTRUE){
+              A_ERR("Failed to take client mutex");
+              return;
+            }
+            current_client -> close();
+            send_connection_status(-3);
+
+            current_client = sr_client;
+            //!put a lock/sem here to prevent the conn_check task from updating this again
+            nw_client -> mark_connected();
+            current_client -> initiate_connection();
+                  
+            current_client_type = SR_CLIENT_MODE;
+            if(xSemaphoreGive(xConnCheckMutex) != pdTRUE){
+              A_ERR("Failed to give client mutex");
+            }
+          }
           break;
         }
         case SR_CLIENT_MODE:{
-          current_client -> close();
-          send_connection_status(-3);
-          current_client = nw_client;
-          nw_client -> mark_disconnected();
-          current_client -> initiate_connection();
-          current_client_type = NW_CLIENT_MODE;
+          if (xConnCheckMutex != NULL) {
+            if (xSemaphoreTake(xConnCheckMutex, portMAX_DELAY) != pdTRUE){
+              A_ERR("Failed to take client mutex");
+              return;
+            }
+            current_client -> close();
+            send_connection_status(-3);
+
+            current_client = nw_client;
+            nw_client -> mark_disconnected();
+            current_client -> initiate_connection();
+        
+            current_client_type = NW_CLIENT_MODE;
+            if(xSemaphoreGive(xConnCheckMutex) != pdTRUE){
+              A_ERR("Failed to give client mutex");
+            }
+          }
           break;
         }
         default:{
@@ -412,7 +449,7 @@ void receive_request_task(void* params) {
       memcpy(data.contents, req_contents, header.length);
 
       // Serial.printf("Received content %d, length: %d\n", data.cmd_id, data.length);
-      // A_DBG("%s\n", data.contents);
+      A_DBG("%s\n", data.contents);
       // better way to convert to hex?
 
       // for (int i = 0; i < data.header.length; ++i) {

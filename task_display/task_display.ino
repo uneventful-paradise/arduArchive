@@ -60,11 +60,14 @@ void setup() {
     if (xButtonsMutex == NULL) {
       A_ERR("Failed to create buttons mutex");
     }
-    xClientMutex = xSemaphoreCreateMutex();
-    if (xClientMutex == NULL){
-      A_ERR("Failed to create xClientMutex mutex");
+    // xClientMutex = xSemaphoreCreateMutex();
+    // if (xClientMutex == NULL){
+    //   A_ERR("Failed to create xClientMutex mutex");
+    // }
+    xConnCheckMutex = xSemaphoreCreateMutex();
+    if (xConnCheckMutex == NULL){
+      A_ERR("Failed to create xConnCheckMutex mutex");
     }
-
 
     connection_event_group = xEventGroupCreate();
     if (!connection_event_group) {

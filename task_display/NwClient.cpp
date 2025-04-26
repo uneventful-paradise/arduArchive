@@ -31,29 +31,29 @@ void NwClient::wait_on_connection(){
 }
 
 void NwClient::initiate_connection(){
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PWD);
-  //no WiFi connection established initially
-  this -> status = -2;
-  send_connection_status(this -> status);
-  
-  //Initial connection attempt
-  A_DBG("Connecting to WiFi...");
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(WIFI_SSID, WIFI_PWD);
+    //no WiFi connection established initially
+    this -> status = -2;
+    send_connection_status(this -> status);
+    
+    //Initial connection attempt
+    A_DBG("Connecting to WiFi...");
 //   wl_status_t res = WiFi.waitForConnectResult(20000);
-  while (WiFi.status() != WL_CONNECTED) {
-    A_WRN("WiFi disconnected! Reconnecting...");
-    this->retries++;
-    if ( this -> retries >= this -> max_retries) {
-        A_DBG("Disconnecting from WiFi");
-        WiFi.disconnect();
-        this -> retries = 0;
-        WiFi.begin(WIFI_SSID, WIFI_PWD);
+    while (WiFi.status() != WL_CONNECTED) {
+        A_WRN("WiFi disconnected! Reconnecting...");
+        this->retries++;
+        if ( this -> retries >= this -> max_retries ) {
+            A_DBG("Disconnecting from WiFi");
+            WiFi.disconnect();
+            this -> retries = 0;
+            WiFi.begin(WIFI_SSID, WIFI_PWD);
+        }
+        Serial.print(".");
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
-    Serial.print(".");
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-  }
 
-  A_DBG("WiFi Connected!");
+    A_DBG("WiFi Connected!");
 //   printWifiStatus();
 }
 

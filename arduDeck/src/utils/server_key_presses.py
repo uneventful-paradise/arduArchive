@@ -226,6 +226,10 @@ def sc_print():
     # time.sleep(0.1)
     # sc_release(key_scancodes["KEY_R"])
 
+def paste_contents(value):
+    for event in keyboard_stream(value):
+        SendInput(event)
+
 def vk_send():
     time.sleep(1.5)
     SendInput(Keyboard(key_vkcodes['KEY_LWIN']))
@@ -282,9 +286,10 @@ class Mouse:
     def move_mouse(self, pos):
         """move the mouse to the specified coordinates"""
         (x, y) = pos
+        #TODO: old pos is wrong also wrong mouse scaling
         old_pos = self.get_position()
-        x =  x if (x != -1) else old_pos[0]
-        y =  y if (y != -1) else old_pos[1]
+        # x =  x if (x != -1) else old_pos[0]
+        # y =  y if (y != -1) else old_pos[1]
         self._do_event(self.MOUSEEVENTF_MOVE + self.MOUSEEVENTF_ABSOLUTE, x, y, 0, 0)
         # ctypes.windll.user32.SetCursorPos(x, y)
 

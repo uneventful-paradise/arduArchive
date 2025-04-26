@@ -15,6 +15,7 @@ extern SrClient* sr_client;
 extern NwClient* nw_client;
 extern BaseClient* current_client;
 
+void protected_check_connection();
 
 void touch_check_task(void* params);
 

@@ -224,6 +224,7 @@ class StreamDeckGUI(tk.Tk):
 
         def on_done(history_json, macro_string):
             # put the recorded JSON back into your Text widget
+            target_text_widget.delete("1.0", tk.END)
             target_text_widget.insert("1.0", macro_string)
 
             # show both windows again

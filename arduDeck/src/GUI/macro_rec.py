@@ -330,7 +330,7 @@ class KeyRecorder(tk.Toplevel):
         self.destroy()
 
     def create_macro_string(self):
-        res = ''
+        segments = []
         for ev in self.history:
             seq = ''
             if ev['type'] == 'KEY_PRESS':
@@ -346,12 +346,12 @@ class KeyRecorder(tk.Toplevel):
                 seq = 'mm'+ str((ev['x'], ev['y'])) + '+wt' + str(round(ev['dt'],3))
             elif ev['type'] == 'MOUSE_SCROLL':
                 seq = 'ms' + str(ev['y'])
-
-            if res == '':
-                res += seq
             else:
-                res += '+' + seq
-        return res
+                print("Error during macro string building")
+                continue
+            segments.append(seq)
+
+        return '+'.join(segments)
 def rec_callback(json_str, macro_string):
     print("Final combo JSON:")
     print(macro_string)
