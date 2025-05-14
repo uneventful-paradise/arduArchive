@@ -1,6 +1,6 @@
-from .base_client import BaseClient
+from src.client_model.base_client import BaseClient
 import socket
-from ..server_params import CHUNK_SIZE, logger
+from src.server_params import CHUNK_SIZE, logger
 
 class NetworkClient(BaseClient):
     def __init__(self, host:str, port: int):

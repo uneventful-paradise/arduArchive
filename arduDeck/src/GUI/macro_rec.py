@@ -40,18 +40,19 @@ def char2key(c):
 class KeyRecorder(tk.Toplevel):
     def __init__(self, parent, callback):
         super().__init__(parent)
-        self.bind_all("<KeyRelease-Control_R>", lambda e: self.finish())
+        # self.bind_all("<KeyRelease-Control_R>", lambda e: self.finish())
         self.callback = callback
         self.pressed = {}   # keycode -> timestamp
         self.history = []   # list of (keycode, action, time, duration)
 
         self.title("Record a key combination")
-        self.geometry("300x100")
+        self.geometry("500x100")
         self.last_time = time.time()
+        self.rec_label = tk.Label(self, text="Press and release Right Control to stop recording")
+        self.rec_label.pack(pady=20)
 
-
-        done_btn = tk.Button(self, text="Done", command=self.finish)
-        done_btn.pack(pady=20)
+        # done_btn = tk.Button(self, text="Done", command=self.finish)
+        # done_btn.pack(pady=20)
 
         self.focus_force()
         self.recording = True
@@ -202,6 +203,11 @@ class KeyRecorder(tk.Toplevel):
             x, y))
 
     def on_key_down(self, key):
+        if key == keyboard.Key.ctrl_r:
+            print("Stopping recorder")
+            self.finish()
+            return False
+
         if not self.recording:
             return False
 

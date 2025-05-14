@@ -1,10 +1,8 @@
 from serial.serialutil import SerialException
 
-from .base_client import BaseClient
-import socket
-from ..server_params import CHUNK_SIZE, logger
+from src.client_model.base_client import BaseClient
+from src.server_params import CHUNK_SIZE, logger
 import serial
-import time
 # open serial port (adjust port name and baud to match ESP32)
 
 class SerialClient(BaseClient):

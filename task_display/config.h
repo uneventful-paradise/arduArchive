@@ -14,9 +14,11 @@
 #include "time.h"
 
 
-#define WIFI_SSID "DIGI-yWsT"
-#define WIFI_PWD "74F8ghZw"
-#define SERVER_IP "192.168.100.63"
+// #define WIFI_SSID "DIGI-yWsT"
+// #define WIFI_PWD "74F8ghZw"
+#define WIFI_SSID "testesp32"
+#define WIFI_PWD "javabanana"
+#define SERVER_IP "192.168.72.30"
 #define PORT 65432
 #define CHUNK_SIZE 2048
 #define HEADER_SIZE 16  //unsigned int cmd_type | unsigned int cmd_id | unsigned int length | unsigned int crc_value
@@ -53,7 +55,7 @@
 #define MAX_SPRITE_COUNT 64
 #define BUTTONS_PER_PAGE 15
 #define BUTTONS_PER_ROW 5
-#define BUTTON_OFFSET 15
+#define BUTTON_OFFSET 30
 #define BUTTON_DELAY 150
 #define BUTTON_WIDTH 85
 #define BUTTON_HEIGHT 85

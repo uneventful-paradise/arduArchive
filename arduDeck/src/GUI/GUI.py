@@ -1,11 +1,12 @@
 import tkinter as tk
 from tkinter import ttk
-
+from src.GUI.themes import apply_theme
 from src.server_params import MAX_BUTTONS
 from tkinter import filedialog, messagebox
 from src.utils.btn_funcs import gui_upload, button_lock, soft_upload
 from src.basic_comms import get_client
 from src.GUI.macro_rec import KeyRecorder, rec_callback
+from PIL import Image, ImageTk
 
 #todo add id checking for add and update func
 #todo preselect text in command args or register key inputs?
@@ -15,6 +16,8 @@ COMMAND_TYPES = ["SOFT_KEY_PRESS", "HARD_KEY_PRESS",  "START_URL", "START_PROCES
 class StreamDeckGUI(tk.Tk):
     def __init__(self, button_list):
         super().__init__()
+        self.add_button_btn = None
+        apply_theme(self)
         self.upload_btn = None
         self.button_frame = None
         self.canvas_window = None
@@ -44,17 +47,17 @@ class StreamDeckGUI(tk.Tk):
         # Shortcuts for adding a button and quitting program
         self.bind("<KeyPress-a>", lambda event: self.open_add_button_window())
         self.bind("<KeyPress-q>", lambda event: self.quit())
-        self.bind("<Shift-KeyRelease>", lambda event: self.macro_rec_window())
+        # self.bind("<Shift-KeyRelease>", lambda event: self.macro_rec_window())
 
         # Use grid to divide the window equally into left and right.
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        self.left_frame = tk.Frame(self, bg="gray")
+        self.left_frame = ttk.Frame(self, style="TFrame")
         self.left_frame.grid(row=0, column=0, sticky="nsew")
 
-        self.right_frame = tk.Frame(self, bg="lightgray")
+        self.right_frame = ttk.Frame(self, style="Right.TFrame")
         self.right_frame.grid(row=0, column=1, sticky="nsew")
 
         self.create_left_frame()
@@ -64,22 +67,25 @@ class StreamDeckGUI(tk.Tk):
 
     def create_left_frame(self):
         # Page navigation 
-        nav_frame = tk.Frame(self.left_frame, height=20, bg="grey")
+        nav_frame = ttk.Frame(self.left_frame, height=30, style="TFrame")
         nav_frame.pack(fill=tk.X, pady=5)
 
-        tk.Button(nav_frame, text="<", command=self.prev_page).place(relx=.45, rely=.5, anchor="center")
+        ttk.Button(nav_frame, text="◀", command=self.prev_page, style="TButton").place(relx=.40, rely=.5, anchor="center")
 
-        self.page_label = tk.Label(nav_frame, text="Page 0", bg="gray", fg="white")
+        self.page_label = ttk.Label(nav_frame, text="Page 0", style="TLabel")
         self.page_label.place(relx=.5, rely=.5, anchor="center")
 
-        tk.Button(nav_frame, text=">", command=self.next_page).place(relx=.55, rely=.5, anchor="center")
+        ttk.Button(nav_frame, text="▶", command=self.next_page, style="TButton").place(relx=.60, rely=.5, anchor="center")
 
         # Button grid container
-        self.button_frame = tk.Frame(self.left_frame, bg="gray")
-        self.button_frame.pack(padx=10, pady=100)
+        self.button_frame = ttk.Frame(self.left_frame, style="Right.TFrame")
+        self.button_frame.pack(padx=10, pady=10)
 
         # Add a button
-        self.add_button_btn = tk.Button(self.left_frame, text="Add Button", command=self.open_add_button_window)
+        self.add_button_btn = ttk.Button(self.left_frame,
+                                         text="Add Button",
+                                         command=self.open_add_button_window,
+                                         style="Blue.TButton")
         self.add_button_btn.pack(pady=5)
 
     def create_right_frame(self):
@@ -89,16 +95,20 @@ class StreamDeckGUI(tk.Tk):
         self.right_frame.grid_columnconfigure(0, weight=1)
 
         # Create the canvas for the scrollable info_frame.
-        self.canvas = tk.Canvas(self.right_frame, bg="lightgray")
+        self.canvas = tk.Canvas(self.right_frame)
         self.canvas.grid(row=0, column=0, sticky="nsew")
 
         # Create a vertical scrollbar for the canvas.
-        self.scrollbar = tk.Scrollbar(self.right_frame, orient="vertical", command=self.canvas.yview)
+        self.scrollbar = ttk.Scrollbar(self.right_frame,
+                                       orient="vertical",
+                                       command=self.canvas.yview,
+                                       style="Vertical.TScrollbar")
+
         self.scrollbar.grid(row=0, column=1, sticky="ns")
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
         # Create a frame inside the canvas to hold the info widgets.
-        self.info_frame = tk.Frame(self.canvas, bg="lightgray")
+        self.info_frame = ttk.Frame(self.canvas, style="TFrame")
         self.canvas_window = self.canvas.create_window((0, 0), window=self.info_frame, anchor="nw")
 
         # Bind the configuration event to update the scroll region.
@@ -127,17 +137,24 @@ class StreamDeckGUI(tk.Tk):
             global_idx = index_start + i
             # If button of given id exists then draw it
             if global_idx in self.btn_map.keys():
-
                 button = self.btn_map[global_idx]
+                image_path = button["image_path"]
+                # print("Image path is %s", image_path)
+                # image = ImageTk.PhotoImage(Image.open(image_path))
+                target_px = 100
+                img = Image.open(image_path).resize((target_px, target_px), Image.Resampling.LANCZOS)
+                image = ImageTk.PhotoImage(img)
 
                 text = f"Button {global_idx}"
                 # Create a button
-                btn = tk.Button(self.button_frame,
+                btn = ttk.Button(self.button_frame,
                                 text=text,
-                                width=10,
-                                height=3,
+                                image = image,
+                                compound="top",
+                                style="Icon.TButton",
                                 command=lambda info=button: self.on_button_click(info))
                 btn.grid(row=row, column=col, padx=5, pady=5)
+                btn.image = image
             else:
                 # Else draw an empty button placeholder
                 placeholder = tk.Button(self.button_frame,
@@ -159,7 +176,7 @@ class StreamDeckGUI(tk.Tk):
         title_label.pack(pady=5, padx=5, anchor="w")
 
         # Provide options: Add Action and Delete Button
-        action_btn_frame = tk.Frame(self.info_frame, bg="lightgray")
+        action_btn_frame = ttk.Frame(self.info_frame, style="TFrame")
         action_btn_frame.pack(fill=tk.X, padx=5, pady=5)
 
         tk.Button(action_btn_frame, text="Add Action", command=lambda: self.add_action_window(btn_info)).pack(side=tk.LEFT, padx=5)
@@ -428,10 +445,8 @@ class StreamDeckGUI(tk.Tk):
         add_win = tk.Toplevel(self)
         add_win.title("Add New Button")
         add_win.geometry("400x250")
-        add_win.transient(self) 
-        # Grab the focus so that it is modal.
+        add_win.transient(self)
         add_win.grab_set()
-        # Force the window to come to the front.
         add_win.focus_force()
 
         # Calculate the maximum allowed button id.
@@ -470,7 +485,7 @@ class StreamDeckGUI(tk.Tk):
                 messagebox.showerror("Error", "Please select an image (.jpg) for the button")
                 return
             
-            # Create a new button entry with an empty actions list.
+
             new_btn = {
                 "button_id": bid,
                 "actions": [],
@@ -480,10 +495,10 @@ class StreamDeckGUI(tk.Tk):
                 self.button_list.append(new_btn)
                 self.btn_map[bid] = new_btn
                 print("added button!")
-            # Refresh the left grid
+
             self.create_button_grid()
             
-            # Immediately open the add_action window to let the user add actions.
+
             self.add_action_window(new_btn)
             button_id_var.set("")
             image_path_var.set("")

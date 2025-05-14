@@ -12,7 +12,8 @@ with open(CONFIG_FILE, "r") as f:
 """Start a new process using python subprocesses.
 It starts the process in a nonblocking manner using `Popen`
 so the server is still responsive during this time"""
-def start_process(client, cmd_id, file_path):
+def start_process(client, cmd_id, args):
+    file_path = args[0]
     command = subprocess.Popen([file_path])
     logger.debug("START_PROCESS %d successful", cmd_id)
     #todo find a way to get popen result without blocking - use threads?
@@ -37,7 +38,8 @@ def start_process(client, cmd_id, file_path):
 
 """Opens a new tab or a new browser instance if none is running currently.
 This can be performed using shell but is unsafe and not recommended"""
-def start_url(client, cmd_id, url):
+def start_url(client, cmd_id, args):
+    url = args[0]
     if webbrowser.open_new_tab(url):
         logger.debug("Start_url %d successful", cmd_id)
     else:
@@ -56,7 +58,8 @@ pVALUE            - print VALUE string
 Keyboard modifiers (special keys like ALT, ESCAPE etc.) have codes assigned in the
 KEY_CODES config file.
 """
-def hard_key_press(client, cmd_id, key_sequence):
+def hard_key_press(client, cmd_id, args):
+    key_sequence = args[0]
     keys = key_sequence.split("+")
     new_keys = []
     for key in keys:
@@ -101,7 +104,8 @@ def hard_key_press(client, cmd_id, key_sequence):
         logger.error("Unexpected response")
 
 mouse = Mouse()
-def soft_key_press(client, cmd_id, key_sequence):
+def soft_key_press(client, cmd_id, args):
+    key_sequence = args[0]
     pressed_keys = []
     keys = key_sequence.split("+")
 
@@ -155,12 +159,23 @@ def soft_key_press(client, cmd_id, key_sequence):
             pass
     logger.debug(f"Finished soft key press of id {cmd_id}")
 
+def toggle_actions(client: BaseClient, cmd_id: int, args):
+    actions = args
+    logger.debug("toggle actions are: %s", str(actions))
+    exec_act = actions.pop(0)
+    logger.debug("executing first action of id %s", exec_act["command_id"])
+    ACT_DICT[exec_act["command_id"]](client, cmd_id, exec_act["command_args"])
+    logger.debug("rotating arguments")
+    actions.append(exec_act)
+    logger.debug("Succesful toggle action of id %d", cmd_id)
+
 #maps the commands to executing functions
 ACT_DICT = {
     "START_PROCESS": start_process,
     "START_URL": start_url,
     "HARD_KEY_PRESS": hard_key_press,
     "SOFT_KEY_PRESS": soft_key_press,
+    "TOGGLE_ACTIONS": toggle_actions,
 }
 
 # path = path.rstrip('\r\n')

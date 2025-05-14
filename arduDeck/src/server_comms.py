@@ -1,8 +1,8 @@
 import random
 from src import basic_comms
-from utils.execute_funcs import *
-from utils.btn_funcs import *
-from client_model.base_client import BaseClient
+from src.utils.execute_funcs import *
+from src.utils.btn_funcs import *
+from src.client_model.base_client import BaseClient
 import socket
 
 #FILENAME = "media/haskell-register.log"
@@ -42,7 +42,7 @@ def execute_command(current_client: BaseClient, command_id: int, request_content
         logger.debug("Action has command_id: %s", action["command_id"])
         if action["command_id"] in ACT_DICT.keys():
             logger.debug("Action has arguments: %s", action["command_args"])
-            ACT_DICT[action["command_id"]](current_client, command_id, *action["command_args"])
+            ACT_DICT[action["command_id"]](current_client, command_id, action["command_args"])
         else:
             logger.warning("Invalid command id in dictionary")
 

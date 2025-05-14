@@ -5,10 +5,9 @@ from src.client_model.network_client import NetworkClient
 from src.client_model.serial_client import SerialClient
 from src.server_comms import receive_request, handle_server_send, handle_request
 from src.GUI.GUI import StreamDeckGUI
-from server_params import logger
+from src.server_params import logger
 import threading
-from utils.btn_funcs import BUTTON_LIST
-import socket
+from src.utils.btn_funcs import BUTTON_LIST
 
 
 def start_server():

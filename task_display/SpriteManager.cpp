@@ -39,7 +39,7 @@ SpriteManager::SpriteManager(Arduino_RPi_DPI_RGBPanel* GFX, const unsigned int D
 
   Sprite* btn_swap = new Sprite();
   btn_swap -> set(700, 400, BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_SWAP);
-  btn_swap -> setFilename("/85px/prev.jpg");
+  btn_swap -> setFilename("/85px/swap.jpg");
   btn_swap -> setGFX(this -> gfx);
 
   navigation_buttons[0] = btn_prev;
