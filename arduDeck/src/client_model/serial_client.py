@@ -1,9 +1,12 @@
+import time
+import serial
+import serial.tools.list_ports
 from serial.serialutil import SerialException
-
+from src.basic_comms import send_conf, generate_gui_conn_update
 from src.client_model.base_client import BaseClient
 from src.server_params import CHUNK_SIZE, logger
-import serial
-# open serial port (adjust port name and baud to match ESP32)
+
+SERIAL_PORT = 'COM5'
 
 class SerialClient(BaseClient):
     def __init__(self, port: str, baudrate: int = 115200, timeout: float = 1.0):
@@ -17,31 +20,64 @@ class SerialClient(BaseClient):
         self.serial.port = self.port
         self.serial.baudrate = self.baudrate
         self.serial.timeout = None
-        # try:
-        #     self.serial = serial.Serial(port=self.port, baudrate=self.baudrate, timeout=None)
-        #     data = self.serial.readline()
-        #     logger.debug(data)
-        # except SerialException as e:
-        #     logger.error(e)
+
+        self.my_ports = self.list_ports()
+        self.my_port = None #not yet opened
+        self.connected = False
 
     @property
     def chunk_size(self) -> int:
-        return 240 #set this as 240
+        return 240
 
     def initiate_connection(self):
+        logger.debug('initiating serial connection')
+        data = b''
         try:
             self.serial.open()
             data = self.serial.readline()
             logger.debug(data)
+        except serial.PortNotOpenError as e:
+            logger.error("Port was not open during connection attempt")
+            # logger.exception(e)
+            generate_gui_conn_update(f"[FAIL]Port {SERIAL_PORT} is not open")
+            time.sleep(3)
         except SerialException as e:
-            logger.error(e)
+            generate_gui_conn_update("[FAIL]Serial Error")
+            logger.exception(e)
+
         logger.debug('Serial server initialized. Waiting for connection')
-        data = self.serial.readline()
-        # while data != 'serial_start\n':
         while data != b'serial_start\n':
-            data = self.serial.readline()
-            logger.debug(data.decode("utf-8"))
+            try:
+                data = self.serial.readline()
+                logger.debug(data.decode("utf-8"))
+            except serial.PortNotOpenError as e:
+                generate_gui_conn_update(f"[FAIL]Port {SERIAL_PORT} is not open")
+                time.sleep(3)
+            except SerialException as e:
+                generate_gui_conn_update(f"[FAIL] Serial Error")
+                logger.exception(e)
+
+        send_conf(current_client=self, cmd_id=0)
         logger.debug("Serial starting effective communication")
+        self.connected = True
+
+    def list_ports(self) -> list:
+        my_ports = [tuple(p) for p in list(serial.tools.list_ports.comports())]
+        return my_ports
+
+    def check_connection(self) -> bool:
+        try:
+            self.my_port = [port for port in self.my_ports if SERIAL_PORT in port][0]
+            my_ports = self.list_ports()
+            if self.my_port not in my_ports or not self.connected:
+                return False
+            return True
+        except IndexError as e:
+            logger.error("Requested port is out of range")
+            self.my_ports = self.list_ports()
+            # logger.exception(e)
+            self.connected = False
+            time.sleep(2)
 
     def read_all(self, req_len: int) -> bytes:
         if req_len > CHUNK_SIZE:
@@ -107,3 +143,4 @@ class SerialClient(BaseClient):
     def close(self) -> None:
         logger.warning("Closed serial connection")
         self.serial.close()
+        self.connected = False

@@ -76,7 +76,7 @@ void setup() {
 
     sr_client = new SrClient(Serial);
     nw_client = new NwClient(wfc, connection_event_group);
-    current_client = (BaseClient*) nw_client;
+    current_client = (BaseClient*) sr_client;
 
     if (!init_icons_from_config("/configs/btn_config.txt")) {
       A_ERR("Icon read failed");

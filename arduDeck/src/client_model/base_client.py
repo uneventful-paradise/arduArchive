@@ -11,6 +11,10 @@ class BaseClient(ABC):
         pass
 
     @abstractmethod
+    def check_connection(self) -> bool:
+        pass
+
+    @abstractmethod
     def read_all(self, req_len: int) -> bytes:
         pass
 

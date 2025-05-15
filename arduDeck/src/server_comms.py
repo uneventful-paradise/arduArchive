@@ -3,14 +3,14 @@ from src import basic_comms
 from src.utils.execute_funcs import *
 from src.utils.btn_funcs import *
 from src.client_model.base_client import BaseClient
-import socket
+from src.utils.client_utils import get_client, swap_client
 
 #FILENAME = "media/haskell-register.log"
 #FILENAME = "media/tw.txt"
 # FILENAME = "media/pdfs/rtos.pdf"
 # FILENAME = "media/pdfs/com.pdf"
 # FILENAME = "media/images/landscape.jpg"
-FILENAME = "media/images/wanda2.jpg"
+FILENAME = "media/images/wanda.jpg"
 # FILENAME = "media/txts/haskell-register.log"
 # FILENAME = "testing/long_ipsum.txt"
 DEFAULT_CLIENT_DOWNLOAD_FOLDER = "/init_icons"
@@ -48,21 +48,30 @@ def execute_command(current_client: BaseClient, command_id: int, request_content
 
 """Function to continuously check for the status of the connection."""
 #TODO: interrupt functions when connection drops
-def check_connection(client_socket):
-    try:
-        data = client_socket.recv(16, socket.MSG_DONTWAIT | socket.MSG_PEEK)
-        if len(data) == 0:
-            return False
-    except BlockingIOError as e:
-        print(e)
-        return True    #socket is open and reading from it would block
-    except ConnectionResetError as e:
-        print(e)        #socket was closed
-        return False
-    except Exception as e:
-        print(e)
-        return True
-    return True
+#TODO: bool var might be incorrect in case of client swaps
+def check_connection():
+    last_connected = False
+    client_uninitialized = True
+    while True:
+        current_client = get_client()
+        if current_client is not None:
+            now_connected = current_client.check_connection()
+            if now_connected and not last_connected:
+                client_name = current_client.__class__.__name__
+                generate_gui_conn_update(f"[OK]{client_name} connected.")
+                last_connected = True
+            if not now_connected and last_connected:
+                client_name = current_client.__class__.__name__
+                generate_gui_conn_update(f"[FAIL]{client_name} disconnected.")
+                last_connected = False
+        elif client_uninitialized:
+            generate_gui_conn_update("[FAIL] Generic client disconnected.")
+            last_connected = False
+            # logger.error('uninitialized client')
+            client_uninitialized = True
+            time.sleep(2)
+        #yield
+        time.sleep(0.2)
 
 """Receives a request header from the client. Parses the header converting it
 from network byte order (`!` format element) to host order.
@@ -95,6 +104,9 @@ def handle_request():
 def receive_request():
     while True:
         current_client = get_client()
+        if current_client is None:
+            time.sleep(0.2)
+            continue
         try:
             # data = client.read_all(HEADER_SIZE)
             # logger.debug(data)

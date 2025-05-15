@@ -6,7 +6,7 @@ class SrClient : public BaseClient{
 private:
     Stream& serial;
     // bool last_connected = false;
-    int status = 1;
+    int status = 0;
     // SemaphoreHandle_t conn_lock;
 public:
     // NwClient(Stream* ser, SemaphoreHandle_t lock);

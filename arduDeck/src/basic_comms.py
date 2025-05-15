@@ -1,60 +1,22 @@
 import struct
 import binascii
 import queue
-
-from src.client_model.base_client import BaseClient
-import threading
-
-from src.client_model.network_client import NetworkClient
-from src.client_model.serial_client import SerialClient
-from src.utils.data_format import HeaderData, PackageData
 from src.server_params import *
 from src.utils.atomic_int import AtomicInteger
+from src.client_model.base_client import BaseClient
+from src.client_model.network_client import NetworkClient
+from src.utils.data_format import HeaderData, PackageData
 
 server_cmd_id = AtomicInteger(0)
-client_lock = threading.Lock()
-
-client: BaseClient = None
-nw_client = NetworkClient(HOST, PORT)
-sr_client = SerialClient(port='COM5', baudrate=115200, timeout=1.0)
-
-def read_all(client: BaseClient, req_len: int) -> bytes:
-    with client_lock:
-        return client.read_all(req_len)
-
-def write_all(client: BaseClient, data: bytes):
-    with client_lock:
-        client.write_all(data)
 
 def create_packet(command_type: int, command_id: int, length:int, crc_value: int, contents: any) -> PackageData:
     hd = HeaderData(command_type=command_type, command_id=command_id, length=length, crc_value=crc_value)
     pd = PackageData(header_data=hd, contents=contents)
     return pd
 
-def set_client(new_client: BaseClient):
-    global client
-    with client_lock:
-        if client is not None:
-            # client.close()
-            client = None
-        client = new_client
-    logger.debug("Successfully swapped client")
-
-def get_client() -> BaseClient:
-    with client_lock:
-        return client
-
-def swap_client():
-    current_client = get_client()
-    if isinstance(current_client, NetworkClient):
-        current_client.close()
-        set_client(sr_client)
-        sr_client.initiate_connection()
-    elif isinstance(current_client, SerialClient):
-        set_client(nw_client)
-        nw_client.initiate_connection()
-        sr_client.close()
-
+gui_queue = queue.Queue()
+def generate_gui_conn_update(update: str):
+    gui_queue.put(update)
 
 """In the context of data transfers the server sends a packet then
 waits for confirmation before sending the next one. The queue is used to
@@ -156,7 +118,7 @@ def send_request(client: BaseClient, pd: PackageData):
     # server_cmd_id = pd.header_data.command_id + 1
     return result
 
-def send_conf(client: BaseClient, cmd_id: int):
+def send_conf(current_client: BaseClient, cmd_id: int):
     hd = HeaderData(command_type=CONFIRMATION_FLAG, command_id=cmd_id, length=len(str(cmd_id)), crc_value=0)
     req_contents = str(cmd_id).encode('utf-8')
     pd = PackageData(hd, req_contents)
@@ -168,7 +130,7 @@ def send_conf(client: BaseClient, cmd_id: int):
                          pd.header_data.length,
                          pd.header_data.crc_value) + req_contents
 
-    client.write_all(packet)
+    current_client.write_all(packet)
     logger.debug("SENT packet of type %d, id %d, size %d, CRC %s\n%s\n",
                  pd.header_data.command_type,
                  pd.header_data.command_id,

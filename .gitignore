@@ -3,4 +3,17 @@ logs/
 arduDeck/media/*
 !arduDeck/media/icons/
 !arduDeck/media/icons/**
+!requirements.txt
+
+# ignore Python virtual environments
+.idea
 .vscode/
+.venv/
+.venv2/
+venv/
+env/
+
+# ignore Python bytecode caches
+__pycache__/
+*.py[cod]
+*$py.class

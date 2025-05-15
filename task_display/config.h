@@ -14,11 +14,11 @@
 #include "time.h"
 
 
-// #define WIFI_SSID "DIGI-yWsT"
-// #define WIFI_PWD "74F8ghZw"
-#define WIFI_SSID "testesp32"
-#define WIFI_PWD "javabanana"
-#define SERVER_IP "192.168.72.30"
+#define WIFI_SSID "DIGI-yWsT"
+#define WIFI_PWD "74F8ghZw"
+// #define WIFI_SSID "testesp32"
+// #define WIFI_PWD "javabanana"
+#define SERVER_IP "192.168.100.63"
 #define PORT 65432
 #define CHUNK_SIZE 2048
 #define HEADER_SIZE 16  //unsigned int cmd_type | unsigned int cmd_id | unsigned int length | unsigned int crc_value

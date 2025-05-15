@@ -1,12 +1,14 @@
+import queue
 import tkinter as tk
 from tkinter import ttk
-from src.GUI.themes import apply_theme
+from PIL import Image, ImageTk
 from src.server_params import MAX_BUTTONS
 from tkinter import filedialog, messagebox
-from src.utils.btn_funcs import gui_upload, button_lock, soft_upload
-from src.basic_comms import get_client
+from src.utils.client_utils import get_client
+from src.basic_comms import gui_queue, logger
 from src.GUI.macro_rec import KeyRecorder, rec_callback
-from PIL import Image, ImageTk
+from src.utils.btn_funcs import gui_upload, button_lock, soft_upload
+from src.GUI.themes import apply_theme, make_action_button, BASE
 
 #todo add id checking for add and update func
 #todo preselect text in command args or register key inputs?
@@ -16,6 +18,7 @@ COMMAND_TYPES = ["SOFT_KEY_PRESS", "HARD_KEY_PRESS",  "START_URL", "START_PROCES
 class StreamDeckGUI(tk.Tk):
     def __init__(self, button_list):
         super().__init__()
+        self.status_label = None
         self.add_button_btn = None
         apply_theme(self)
         self.upload_btn = None
@@ -64,6 +67,29 @@ class StreamDeckGUI(tk.Tk):
         # Right frame: create a scrollable canvas.
         self.create_right_frame()
         self.create_button_grid()
+        self.receive_queued_gui_updates()
+
+    def receive_queued_gui_updates(self):
+        try:
+            while True:
+                update = gui_queue.get_nowait()
+                if update.startswith("[FAIL]"):
+                    fg = "red"
+                elif update.startswith("[OK]"):
+                    fg = "lime green"
+                else:
+                    fg = "blue"
+
+                contents = update.split(']', 1)[1]
+                logger.debug(contents)
+                self.status_label.config(
+                    text=f"Status: {contents}",
+                    foreground=fg
+                )
+        except queue.Empty:
+            pass
+
+        self.after(1000, self.receive_queued_gui_updates)
 
     def create_left_frame(self):
         # Page navigation 
@@ -81,12 +107,18 @@ class StreamDeckGUI(tk.Tk):
         self.button_frame = ttk.Frame(self.left_frame, style="Right.TFrame")
         self.button_frame.pack(padx=10, pady=10)
 
-        # Add a button
-        self.add_button_btn = ttk.Button(self.left_frame,
-                                         text="Add Button",
-                                         command=self.open_add_button_window,
-                                         style="Blue.TButton")
-        self.add_button_btn.pack(pady=5)
+        # self.add_button_btn = ttk.Button(self.left_frame,
+        #                                  text="Add Button",
+        #                                  command=self.open_add_button_window,
+        #                                  style="Blue.TButton")
+        # self.add_button_btn.pack(pady=5)
+
+        self.status_label = ttk.Label(
+            self.left_frame,
+            text="Status: —",
+            style="TLabel" #can be bordered too
+        )
+        self.status_label.pack(padx=10, pady=(0, 10))
 
     def create_right_frame(self):
         # Configure right_frame to have two rows: one for the canvas (expandable) and one for the fixed upload button.
@@ -95,7 +127,12 @@ class StreamDeckGUI(tk.Tk):
         self.right_frame.grid_columnconfigure(0, weight=1)
 
         # Create the canvas for the scrollable info_frame.
-        self.canvas = tk.Canvas(self.right_frame)
+        self.canvas = tk.Canvas(self.right_frame,
+                                bg=BASE,  # panel background
+                                bd=0,  # no border
+                                highlightthickness=0,  # no focus-ring
+                                relief="flat"  # flat look
+                                )
         self.canvas.grid(row=0, column=0, sticky="nsew")
 
         # Create a vertical scrollbar for the canvas.
@@ -108,7 +145,7 @@ class StreamDeckGUI(tk.Tk):
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
         # Create a frame inside the canvas to hold the info widgets.
-        self.info_frame = ttk.Frame(self.canvas, style="TFrame")
+        self.info_frame = ttk.Frame(self.canvas, style="Bordered.TFrame")
         self.canvas_window = self.canvas.create_window((0, 0), window=self.info_frame, anchor="nw")
 
         # Bind the configuration event to update the scroll region.
@@ -118,7 +155,7 @@ class StreamDeckGUI(tk.Tk):
 
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
         # Create the upload button in a fixed row (row 1) of right_frame.
-        self.upload_btn = tk.Button(self.right_frame, text="Upload Changes", command=self.upload_changes)
+        self.upload_btn = ttk.Button(self.right_frame, text="Upload Changes", command=self.upload_changes, style="TButton")
         self.upload_btn.grid(row=1, column=0, columnspan=2, sticky="ew", padx=5, pady=5)
 
     def _on_mousewheel(self, event):
@@ -157,12 +194,11 @@ class StreamDeckGUI(tk.Tk):
                 btn.image = image
             else:
                 # Else draw an empty button placeholder
-                placeholder = tk.Button(self.button_frame,
+                placeholder = ttk.Button(self.button_frame,
                                     text="Empty",
                                     width=10,
-                                    height=3,
-                                    command=lambda: None,
-                                    bg="darkgray")
+                                    command=lambda: self.open_add_button_window(),
+                                    style="Icon.TButton")
                 placeholder.grid(row=row, column=col, padx=5, pady=5)
 
 
@@ -171,19 +207,26 @@ class StreamDeckGUI(tk.Tk):
         for widget in self.info_frame.winfo_children():
             widget.destroy()
 
-        title_label = tk.Label(self.info_frame, text=f"Button: {btn_info.get('button_id', 'Unknown')}",
-                               font=("Arial", 12), bg="lightgray")
+        title_label = ttk.Label(self.info_frame, text=f"Button: {btn_info.get('button_id', 'Unknown')}",
+                               font=("Arial", 12), style="TLabel")
         title_label.pack(pady=5, padx=5, anchor="w")
 
         # Provide options: Add Action and Delete Button
         action_btn_frame = ttk.Frame(self.info_frame, style="TFrame")
         action_btn_frame.pack(fill=tk.X, padx=5, pady=5)
 
-        tk.Button(action_btn_frame, text="Add Action", command=lambda: self.add_action_window(btn_info)).pack(side=tk.LEFT, padx=5)
-        tk.Button(action_btn_frame, text="Delete Button", command=lambda: self.delete_button(btn_info)).pack(side=tk.LEFT, padx=5)
+        (ttk.Button(action_btn_frame, style="TButton",
+                   text="Add Action",
+                   command=lambda: self.add_action_window(btn_info))
+         .pack(side=tk.LEFT, padx=5))
+        (ttk.Button(action_btn_frame,
+                   style="TButton",
+                   text="Delete Button",
+                   command=lambda: self.delete_button(btn_info))
+         .pack(side=tk.LEFT, padx=5))
 
         # Display existing actions
-        actions_header = tk.Label(self.info_frame, text="Actions:", font=("Arial", 10, "underline"), bg="lightgray")
+        actions_header = ttk.Label(self.info_frame, text="Actions:", font=("Arial", 10, "underline"), style="TLabel")
         actions_header.pack(pady=(10,5), padx=5, anchor="w")
 
         # List actions
@@ -193,17 +236,19 @@ class StreamDeckGUI(tk.Tk):
         if actions:
             for action in actions:
                 action_text = f"Command: {action.get('command_id', 'N/A')}\nArgs: {action.get('command_args', [])}"
-                act_btn = tk.Button(self.info_frame, text=action_text,
-                                    wraplength=250, justify="center",
-                                    command=lambda a=action, i=btn_info: self.edit_action_window(a, i))
+                act_btn = make_action_button(
+                    self.info_frame,
+                    text=action_text,
+                    command=lambda a=action, i=btn_info: self.edit_action_window(a, i)
+                )
                 act_btn.pack(fill=tk.X, padx=5, pady=2, anchor="center")
         else:
-            no_act_label = tk.Label(self.info_frame, text="No Actions Assigned", bg="lightgray")
+            no_act_label = ttk.Label(self.info_frame, text="No Actions Assigned", style="TLabel")
             no_act_label.pack(pady=5, padx=5, anchor="w")
 
         # Display Image Path
-        img_btn = tk.Button(self.info_frame, text=f"Image Path: {btn_info.get('image_path', 'N/A')}",
-                            borderwidth=2, relief="groove", bg="white",
+        img_btn = ttk.Button(self.info_frame, text=f"Image Path: {btn_info.get('image_path', 'N/A')}",
+                            style="TButton",
                             command=lambda: self.update_image_path(btn_info))
         img_btn.pack(pady=5, padx=5, fill=tk.X, anchor="w")
 
@@ -255,55 +300,57 @@ class StreamDeckGUI(tk.Tk):
         win = tk.Toplevel(self)
         self._last_add_win = win
         win.title("Add Action")
-        win.geometry("500x300")
+        win.geometry("800x500")
         win.transient(self)
         win.grab_set()
         # win.focus_force()
-
-        notebook = ttk.Notebook(win)
+        container = ttk.Frame(win, style="Right.TFrame")
+        container.pack(fill="both", expand=True)
+        notebook = ttk.Notebook(container, style="TNotebook")
         notebook.pack(fill="both", expand=True, padx=10, pady=10)
 
         # 1) Soft Key Press tab
-        soft_frame = ttk.Frame(notebook)
+        soft_frame = ttk.Frame(notebook, style="TFrame")
         notebook.add(soft_frame, text="SOFT_KEY_PRESS")
-        tk.Label(soft_frame, text="Soft Key Sequence:", anchor="w").pack(anchor="w", padx=5, pady=(5, 0))
+        ttk.Label(soft_frame, text="Soft Key Sequence:", anchor="w", style="TLabel").pack(anchor="w", padx=5, pady=(5, 0))
         soft_text = tk.Text(soft_frame, height=3, wrap="word")
         soft_text.pack(fill="x", padx=5, pady=5)
-        soft_btn = tk.Button(
+        soft_btn = ttk.Button(
             soft_frame,
             text="Record…",
-            command=lambda: self._start_macro_record(soft_text)
+            command=lambda: self._start_macro_record(soft_text),
+            style="TButton"
         )
         soft_btn.pack(padx=5)
 
         # 2) Hard Key Press tab
         hard_frame = ttk.Frame(notebook)
         notebook.add(hard_frame, text="HARD_KEY_PRESS")
-        tk.Label(hard_frame, text="Hard Key Code(s):", anchor="w").pack(anchor="w", padx=5, pady=(5, 0))
-        hard_entry = tk.Entry(hard_frame)
+        ttk.Label(hard_frame, text="Hard Key Code(s):", anchor="w").pack(anchor="w", padx=5, pady=(5, 0))
+        hard_entry = tk.Entry(hard_frame, font=('Arial', 10, 'bold'))
         hard_entry.pack(fill="x", padx=5, pady=5)
 
         # 3) Start URL tab
         url_frame = ttk.Frame(notebook)
         notebook.add(url_frame, text="START_URL")
-        tk.Label(url_frame, text="URL to open:", anchor="w").pack(anchor="w", padx=5, pady=(5, 0))
-        url_entry = tk.Entry(url_frame)
+        ttk.Label(url_frame, text="URL to open:", anchor="w", style="TLabel").pack(anchor="w", padx=5, pady=(5, 0))
+        url_entry = tk.Entry(url_frame, font=('Arial', 10, 'bold'))
         url_entry.pack(fill="x", padx=5, pady=5)
 
         # 4) Start Process tab
         proc_frame = ttk.Frame(notebook)
         notebook.add(proc_frame, text="START_PROCESS")
-        tk.Label(proc_frame, text="Executable path:", anchor="w").pack(anchor="w", padx=5, pady=(5, 0))
+        ttk.Label(proc_frame, text="Executable path:", anchor="w", style="TLabel").pack(anchor="w", padx=5, pady=(5, 0))
         proc_var = tk.StringVar()
-        proc_entry = tk.Entry(proc_frame, textvariable=proc_var)
+        proc_entry = tk.Entry(proc_frame, textvariable=proc_var, font=('Arial', 10, 'bold'))
         proc_entry.pack(fill="x", padx=5, pady=5)
-        tk.Button(proc_frame, text="Browse…",
+        ttk.Button(proc_frame, text="Browse…", style="TButton",
                   command=lambda: proc_var.set(filedialog.askopenfilename(
                       title="Select EXE", filetypes=[("EXE", "*.exe"), ("All", "*.*")]) or "")
                   ).pack(padx=5)
 
         # bottom buttons
-        btn_frame = tk.Frame(win)
+        btn_frame = ttk.Frame(container, style="Right.TFrame")
         btn_frame.pack(fill="x", pady=10)
 
         def add_action():
@@ -335,8 +382,8 @@ class StreamDeckGUI(tk.Tk):
             proc_var.set("")
 
 
-        tk.Button(btn_frame, text="Add Action", command=add_action).pack(side="left", padx=5)
-        tk.Button(btn_frame, text="Done", command=win.destroy).pack(side="right", padx=5)
+        ttk.Button(btn_frame, text="Add Action", command=add_action, style="TButton").pack(side="left", padx=15)
+        ttk.Button(btn_frame, text="Done", command=win.destroy, style="TButton").pack(side="right", padx=15)
 
     def macro_rec_window(self):
         mrw = KeyRecorder(self, rec_callback)
@@ -353,11 +400,12 @@ class StreamDeckGUI(tk.Tk):
 
         soft_frame = ttk.Frame(notebook)
         notebook.add(soft_frame, text="SOFT_KEY_PRESS")
-        tk.Label(soft_frame, text="Soft Key Sequence:", anchor="w").pack(anchor="w", padx=5, pady=(5, 0))
+        ttk.Label(soft_frame, text="Soft Key Sequence:", anchor="w", style="TLabel").pack(anchor="w", padx=5, pady=(5, 0))
         soft_text = tk.Text(soft_frame, height=3, wrap="word")
         soft_text.pack(fill="x", padx=5, pady=5)
-        soft_btn = tk.Button(
+        soft_btn = ttk.Button(
             soft_frame,
+            style="TButton",
             text="Record…",
             command=lambda: self._start_macro_record(soft_text)
         )
@@ -365,21 +413,21 @@ class StreamDeckGUI(tk.Tk):
 
         hard_frame = ttk.Frame(notebook)
         notebook.add(hard_frame, text="HARD_KEY_PRESS")
-        tk.Label(hard_frame, text="Hard Key Code(s):", anchor="w").pack(anchor="w", padx=5, pady=(5, 0))
-        hard_entry = tk.Entry(hard_frame)
+        ttk.Label(hard_frame, text="Hard Key Code(s):", anchor="w", style="TLabel").pack(anchor="w", padx=5, pady=(5, 0))
+        hard_entry = tk.Entry(hard_frame, font=('Arial', 10, 'bold'))
         hard_entry.pack(fill="x", padx=5, pady=5)
 
         url_frame = ttk.Frame(notebook)
         notebook.add(url_frame, text="START_URL")
-        tk.Label(url_frame, text="URL to open:", anchor="w").pack(anchor="w", padx=5, pady=(5, 0))
-        url_entry = tk.Entry(url_frame)
+        ttk.Label(url_frame, text="URL to open:", anchor="w", style="TLabel").pack(anchor="w", padx=5, pady=(5, 0))
+        url_entry = tk.Entry(url_frame, font=('Arial', 10, 'bold'))
         url_entry.pack(fill="x", padx=5, pady=5)
 
         proc_frame = ttk.Frame(notebook)
         notebook.add(proc_frame, text="START_PROCESS")
-        tk.Label(proc_frame, text="Executable path:", anchor="w").pack(anchor="w", padx=5, pady=(5, 0))
+        ttk.Label(proc_frame, text="Executable path:", anchor="w", style="TLabel").pack(anchor="w", padx=5, pady=(5, 0))
         proc_var = tk.StringVar()
-        proc_entry = tk.Entry(proc_frame, textvariable=proc_var)
+        proc_entry = tk.Entry(proc_frame, textvariable=proc_var, font=('Arial', 10, 'bold'))
         proc_entry.pack(fill="x", padx=5, pady=5)
         tk.Button(proc_frame, text="Browse…",
                   command=lambda: proc_var.set(filedialog.askopenfilename(
@@ -454,15 +502,20 @@ class StreamDeckGUI(tk.Tk):
         max_allowed = (self.max_pages + 2) * total_cells - 1
         max_allowed = min(MAX_BUTTONS, max_allowed)
         
-        tk.Label(add_win, text="Button ID:").grid(row=0, column=0, padx=5, pady=5, sticky="e")
+        ttk.Label(add_win, text="Button ID:", style="TLabel").grid(row=0, column=0, padx=5, pady=5, sticky="e")
         button_id_var = tk.StringVar()
-        tk.Entry(add_win, textvariable=button_id_var).grid(row=0, column=1, padx=5, pady=5)
-        
-        tk.Label(add_win, text="Image Path:").grid(row=2, column=0, padx=5, pady=5, sticky="e")
+        id_entry = tk.Entry(add_win, textvariable=button_id_var, font=('Arial', 10, 'bold'))
+        id_entry.configure(insertbackground="white")
+        id_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        ttk.Label(add_win, text="Image Path:", style="TLabel").grid(row=2, column=0, padx=5, pady=5, sticky="e")
         image_path_var = tk.StringVar()
         # Instead of letting the user type the path, provide a button to open a file dialog.
         
-        tk.Button(add_win, text="Select Image", command=lambda: image_path_var.set(self.select_image() or "")).grid(row=2, column=1, padx=5, pady=5, sticky="w")
+        (ttk.Button(add_win, text="Select Image",
+                    style="TButton",
+                   command=lambda: image_path_var.set(self.select_image() or ""))
+         .grid(row=2, column=1, padx=5, pady=5, sticky="w"))
         # Display the selected path:
         path_label = tk.Label(add_win, textvariable=image_path_var)
         path_label.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
@@ -503,9 +556,13 @@ class StreamDeckGUI(tk.Tk):
             button_id_var.set("")
             image_path_var.set("")
         
-        tk.Button(add_win, text="Add", command=add_new_button).grid(row=4, column=0, padx=5, pady=5)
+        ttk.Button(add_win, text="Add", command=add_new_button, style="TButton").grid(row=4, column=0, padx=5, pady=5)
         add_win.bind("<Return>", lambda event: add_new_button())
-        tk.Button(add_win, text="Done", command=lambda:[add_win.destroy(), self.create_button_grid()]).grid(row=4, column=1, padx=5, pady=5)
+        (ttk.Button(add_win,
+                  style="TButton",
+                  text="Done",
+                  command=lambda:[add_win.destroy(), self.create_button_grid()])
+         .grid(row=4, column=1, padx=5, pady=5))
 
     
     def delete_button(self, btn_info):

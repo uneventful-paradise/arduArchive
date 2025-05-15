@@ -13,11 +13,22 @@ void SrClient::initiate_connection(){
     // while (!(this->serial)) {
     //     vTaskDelay(500 / portTICK_PERIOD_MS); 
     // }
-    delay(1000);
     send_connection_status(this -> status);
-    this->serial.printf("\nserial_start\n");
+    BaseType_t xStatus;
+    const TickType_t xTicksToWait = pdMS_TO_TICKS(2000);
+    Package_data pd;
+    while(true){
+        this->serial.printf("\nserial_start\n");
+        xStatus = xQueueReceive(conf_queue, &pd, xTicksToWait);
+        if(xStatus != pdFAIL){
+            break;
+        }
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+    this->status = 1;
+    send_connection_status(this -> status);
 }
-//does nothing, serial is always conencted?
+//does nothing, serial is always connected? could send pings periodically
 void SrClient::wait_on_connection(){
 
 }
