@@ -9,7 +9,7 @@ NwClient* nw_client;
 BaseClient* current_client;
 
 //dynamic_cast would be cool to use to check current client type but has large memory footprint
-int current_client_type = NW_CLIENT_MODE;
+int current_client_type = SR_CLIENT_MODE;
 
 void protected_check_connection(){
   if (xConnCheckMutex != NULL) {

@@ -14,10 +14,6 @@ def create_packet(command_type: int, command_id: int, length:int, crc_value: int
     pd = PackageData(header_data=hd, contents=contents)
     return pd
 
-gui_queue = queue.Queue()
-def generate_gui_conn_update(update: str):
-    gui_queue.put(update)
-
 """In the context of data transfers the server sends a packet then
 waits for confirmation before sending the next one. The queue is used to
 store incoming confirmations. Thus, the client thread blocks performing a

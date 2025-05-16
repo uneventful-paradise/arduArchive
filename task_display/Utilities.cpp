@@ -266,11 +266,11 @@ void send_connection_status(int change){
       break;
     }
     case 0:{
-      temp_text = "Awaiting client connection.";
+      temp_text = "Awaiting server connection.";
       break;
     }
     case 1:{
-      temp_text = "Client Connected.";
+      temp_text = "Server Connected.";
       break;
     }
     default:{

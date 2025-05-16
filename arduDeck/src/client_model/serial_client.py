@@ -1,8 +1,8 @@
 import time
 import serial
 import serial.tools.list_ports
-from serial.serialutil import SerialException
-from src.basic_comms import send_conf, generate_gui_conn_update
+from src.utils.data_format import generate_gui_conn_update
+from src.basic_comms import send_conf
 from src.client_model.base_client import BaseClient
 from src.server_params import CHUNK_SIZE, logger
 
@@ -25,6 +25,15 @@ class SerialClient(BaseClient):
         self.my_port = None #not yet opened
         self.connected = False
 
+        # self.serial = serial.Serial(
+        #     port=self.port,
+        #     baudrate=self.baudrate,
+        #     timeout=self.timeout,  # or None for blocking
+        #     dsrdtr=False,
+        #     rtscts=False,
+        #     # do_not_open: if you want to delay .open() call, pass port=None here and assign later
+        # )
+
     @property
     def chunk_size(self) -> int:
         return 240
@@ -32,34 +41,82 @@ class SerialClient(BaseClient):
     def initiate_connection(self):
         logger.debug('initiating serial connection')
         data = b''
-        try:
-            self.serial.open()
-            data = self.serial.readline()
-            logger.debug(data)
-        except serial.PortNotOpenError as e:
-            logger.error("Port was not open during connection attempt")
-            # logger.exception(e)
-            generate_gui_conn_update(f"[FAIL]Port {SERIAL_PORT} is not open")
-            time.sleep(3)
-        except SerialException as e:
-            generate_gui_conn_update("[FAIL]Serial Error")
-            logger.exception(e)
+        port_name = SERIAL_PORT
+        timeout = 30
+        start = time.time()
+
+        while True:
+            # timeout expiry
+            if time.time() - start > timeout:
+                generate_gui_conn_update(f"[FAIL] Timed out while waiting for {port_name}")
+                logger.error("timeout")
+                break
+            # port existence
+            ports = [p.device for p in serial.tools.list_ports.comports()]
+            if port_name not in ports:
+                generate_gui_conn_update(f"[FAIL]{port_name} not found.")
+                # logger.error("port not found in list")
+                time.sleep(2)
+                continue
+
+            try:
+                if not self.serial.is_open:
+                    self.serial.open()
+                    data = self.serial.readline()
+                    logger.debug(data)
+            except FileNotFoundError:
+                logger.error("COM Port not found during init")
+                generate_gui_conn_update(f"[FAIL]Port {SERIAL_PORT} not found.")
+                continue
+            except PermissionError:
+                logger.error("Permission denied during init")
+                generate_gui_conn_update(f"[FAIL]Permission for port {SERIAL_PORT} denied.")
+                time.sleep(2)
+                continue
+            except serial.PortNotOpenError:
+                logger.error("Port was not open during init connection attempt")
+                generate_gui_conn_update(f"[FAIL]Port {SERIAL_PORT} is not open.")
+                time.sleep(2)
+                continue
+            except serial.SerialException:
+                logger.error("Serial connection failed during init")
+                generate_gui_conn_update(f"[FAIL]Generic serial exception")
+                time.sleep(2)
+                continue
+
+            logger.debug("Successfully opened port during initialization")
+            break
+
+        #Port is now open. Waiting to receive connection request
 
         logger.debug('Serial server initialized. Waiting for connection')
         while data != b'serial_start\n':
             try:
                 data = self.serial.readline()
                 logger.debug(data.decode("utf-8"))
-            except serial.PortNotOpenError as e:
-                generate_gui_conn_update(f"[FAIL]Port {SERIAL_PORT} is not open")
-                time.sleep(3)
-            except SerialException as e:
-                generate_gui_conn_update(f"[FAIL] Serial Error")
-                logger.exception(e)
+            except FileNotFoundError:
+                logger.error("COM Port not found during init read")
+                generate_gui_conn_update(f"[FAIL]Port {SERIAL_PORT} not found.")
+                continue
+            except PermissionError:
+                logger.error("Permission denied during init read")
+                generate_gui_conn_update(f"[FAIL]Permission for port {SERIAL_PORT} denied.")
+                time.sleep(2)
+                continue
+            except serial.PortNotOpenError:
+                logger.error("Port was not open during init read attempt")
+                generate_gui_conn_update(f"[FAIL]Port {SERIAL_PORT} is not open.")
+                time.sleep(2)
+                continue
+            except serial.SerialException:
+                logger.error("Serial connection failed during init read")
+                generate_gui_conn_update(f"[FAIL]Generic serial exception")
+                time.sleep(2)
+                continue
 
         send_conf(current_client=self, cmd_id=0)
-        logger.debug("Serial starting effective communication")
         self.connected = True
+        logger.debug("Serial starting effective communication")
 
     def list_ports(self) -> list:
         my_ports = [tuple(p) for p in list(serial.tools.list_ports.comports())]
@@ -67,16 +124,15 @@ class SerialClient(BaseClient):
 
     def check_connection(self) -> bool:
         try:
+            self.my_ports = self.list_ports()
             self.my_port = [port for port in self.my_ports if SERIAL_PORT in port][0]
-            my_ports = self.list_ports()
-            if self.my_port not in my_ports or not self.connected:
+            if self.my_port not in self.my_ports or not self.connected:
                 return False
             return True
         except IndexError as e:
             logger.error("Requested port is out of range")
-            self.my_ports = self.list_ports()
             # logger.exception(e)
-            self.connected = False
+            # self.connected = False
             time.sleep(2)
 
     def read_all(self, req_len: int) -> bytes:
@@ -100,7 +156,7 @@ class SerialClient(BaseClient):
         except TypeError as e:
             logger.error(e)
             #disconnect of USB -> UART occurred
-
+    #TODO: add chunking
     def write_all(self, data: bytes) -> None:
         total_sent = 0
         packets = 0

@@ -1,9 +1,12 @@
 import random
+from doctest import debug
+
 from src import basic_comms
 from src.utils.execute_funcs import *
 from src.utils.btn_funcs import *
 from src.client_model.base_client import BaseClient
 from src.utils.client_utils import get_client, swap_client
+from src.utils.data_format import generate_gui_conn_update
 
 #FILENAME = "media/haskell-register.log"
 #FILENAME = "media/tw.txt"
@@ -197,3 +200,5 @@ def handle_server_send():
 
         elif user_input == "e":
             current_client.close()
+        else:
+            logger.warning("vezi ca esti prost")

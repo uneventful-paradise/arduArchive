@@ -1,7 +1,7 @@
 import threading
+from src.client_model.base_client import BaseClient
 from src.client_model.network_client import NetworkClient
 from src.client_model.serial_client import SerialClient
-from src.client_model.base_client import BaseClient
 from src.server_params import *
 
 client_lock = threading.Lock()

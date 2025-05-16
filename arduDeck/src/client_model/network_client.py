@@ -1,5 +1,7 @@
 import select
 import socket
+
+from src.utils.data_format import generate_gui_conn_update
 from src.server_params import CHUNK_SIZE, logger
 from src.client_model.base_client import BaseClient
 
@@ -24,7 +26,9 @@ class NetworkClient(BaseClient):
         logger.debug("Network Server initialized. Waiting for clients")
         conn, addr = self.server_sock.accept()
         logger.debug("Connected by %s", addr)
+        generate_gui_conn_update("[FAIL]Network client disconnected.")
         self.sock = conn
+
     #alternative using nonblocking socket
     # def is_socket_closed(sock: socket.socket) -> bool:
     # # remember the original blocking mode

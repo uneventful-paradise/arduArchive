@@ -88,7 +88,7 @@
       {
         "command_id": "SOFT_KEY_PRESS",
         "command_args": [
-          "kdKEY_LWIN+kdKEY_R+wt500+ra"
+          "kdKEY_LWIN+kdKEY_R+wt0.5+ra"
         ]
       },
       {
@@ -100,7 +100,7 @@
       {
         "command_id": "SOFT_KEY_PRESS",
         "command_args": [
-          "kdKEY_RETURN+wt100+ra"
+          "kdKEY_ENTER+wt0.1+ra"
         ]
       }
     ],

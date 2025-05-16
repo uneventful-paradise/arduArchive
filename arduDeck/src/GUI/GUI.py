@@ -5,7 +5,8 @@ from PIL import Image, ImageTk
 from src.server_params import MAX_BUTTONS
 from tkinter import filedialog, messagebox
 from src.utils.client_utils import get_client
-from src.basic_comms import gui_queue, logger
+from src.basic_comms import logger
+from src.utils.data_format import gui_queue
 from src.GUI.macro_rec import KeyRecorder, rec_callback
 from src.utils.btn_funcs import gui_upload, button_lock, soft_upload
 from src.GUI.themes import apply_theme, make_action_button, BASE
@@ -81,7 +82,7 @@ class StreamDeckGUI(tk.Tk):
                     fg = "blue"
 
                 contents = update.split(']', 1)[1]
-                logger.debug(contents)
+                # logger.debug(contents)
                 self.status_label.config(
                     text=f"Status: {contents}",
                     foreground=fg
