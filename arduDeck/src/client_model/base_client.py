@@ -15,11 +15,15 @@ class BaseClient(ABC):
         pass
 
     @abstractmethod
+    def clear_channel(self) -> None:
+        pass
+
+    @abstractmethod
     def read_all(self, req_len: int) -> bytes:
         pass
 
     @abstractmethod
-    def write_all(self, data: bytes) -> None:
+    def write_all(self, data: bytes) -> bytes:
         pass
 
     @abstractmethod

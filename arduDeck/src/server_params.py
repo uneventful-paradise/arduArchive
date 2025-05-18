@@ -10,7 +10,7 @@ log_filename = datetime.datetime.now().strftime("logs/log_%Y-%m-%d_%H-%M-%S.log"
 # Configure logger
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s [%(levelname)s] [%(funcName)s] %(message)s',
+    format='%(asctime)s [%(levelname)s] [%(funcName)s] [%(filename)s:%(lineno)d] %(message)s',
     datefmt="%m-%d %H:%M:%S",
     handlers=[
         logging.FileHandler(log_filename),

@@ -4,11 +4,13 @@ import socket
 from src.utils.data_format import generate_gui_conn_update
 from src.server_params import CHUNK_SIZE, logger
 from src.client_model.base_client import BaseClient
-
+#TODO: add locks to writes and reads?
 class NetworkClient(BaseClient):
-    def __init__(self, host:str, port: int):
+    def __init__(self, host:str, port: int, timeout: float):
         self.host = host
         self.port = port
+        # self.timeout = timeout
+        self.timeout = None
 
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -28,6 +30,7 @@ class NetworkClient(BaseClient):
         logger.debug("Connected by %s", addr)
         generate_gui_conn_update("[FAIL]Network client disconnected.")
         self.sock = conn
+        self.sock.settimeout(self.timeout)
 
     #alternative using nonblocking socket
     # def is_socket_closed(sock: socket.socket) -> bool:
@@ -69,7 +72,7 @@ class NetworkClient(BaseClient):
         if self.sock in rlist:
             # socket is readable: either data waiting or it's closed
             try:
-                data = self.sock.recv(16, socket.MSG_PEEK)
+                data = self.sock.recv(1, socket.MSG_PEEK)
             except BlockingIOError as e:
                 logger.exception(e)
                 return True  # socket is open and reading from it would block
@@ -80,44 +83,77 @@ class NetworkClient(BaseClient):
                 logger.exception(e)
                 return True
             if not data:
+                logger.debug("Clean EOF")
                 return False  # clean EOF
         return True
 
-    """Loop to send all data to server.
+    def clear_channel(self) -> None:
+        orig_blocking = self.sock.getblocking()
+        self.sock.setblocking(False)
+        read = 0
+        try:
+            while True:
+                chunk = self.sock.recv(self.chunk_size)
+                if not chunk:
+                    break
+                read += len(chunk)
+        except BlockingIOError as e:
+            logger.exception(e)
+            pass
+        finally:
+            self.sock.setblocking(orig_blocking)
 
-    TCP might not send an entire message at once.
-    the function makes sure to send the entire chunk of information
-    by looping until there is nothing left to send"""
     def read_all(self, req_len: int) -> bytes:
+        if self.sock is None:
+            raise RuntimeError("Socket not initialized")
+
         if req_len > CHUNK_SIZE:
             raise ValueError("Payload length exceeds chunk size")
-        chunks = []
-        bytes_received = 0
+
+        data = b""
         try:
-            while bytes_received < req_len:
-                chunk = self.sock.recv(min(CHUNK_SIZE, req_len - bytes_received))
+            while len(data) < req_len:
+                chunk = self.sock.recv(min(CHUNK_SIZE, req_len - len(data)))
                 if not chunk:
                     logger.error("socket connection broken")
-                    break
-                chunks.append(chunk)
-                bytes_received += len(chunk)
-        except socket.error as e:
-            logger.error("read_all exception: %s", e, exc_info=True)
+                    raise ConnectionResetError
+                data+=chunk
 
-        return b''.join(chunks)
+            return data
 
-    """Similar to read_all. Loop until all data has been sent"""
-    def write_all(self, data: bytes) -> None:
+        except (OSError, socket.error) as e:
+            logger.error("read_all exception: %s\nRestarting connection", e, exc_info=True)
+            try:
+                self.sock.close()
+            except (OSError, socket.error):
+                logger.error("Error at closing socket")
+            self.initiate_connection()
+            return b''
+        except TimeoutError as e:
+            #todo: handle this properly - inside the while?
+            logger.error("Read operation timed out")
+
+    def write_all(self, data: bytes) -> int:
+        if self.sock is None:
+            raise RuntimeError("Socket not initialized")
+
+        total_sent = 0
         try:
-            total_sent = 0
             while total_sent < len(data):
                 sent = self.sock.send(data[total_sent:])
                 if not sent:
                     logger.error("socket connection broken")
-                    break
+                    raise ConnectionResetError
+
                 total_sent += sent
-        except socket.error as e:
-            logger.error("write_all exception: %s", e, exc_info=True)
+        except (OSError, socket.error) as e:
+            logger.error("write_all exception: %s. Restarting connection", e, exc_info=True)
+            try:
+                self.sock.close()
+            except (OSError, socket.error):
+                logger.error("Error at closing socket")
+            self.initiate_connection()
+        return total_sent
 
     def close(self) -> None:
         logger.warning("Closed network connection")

@@ -26,10 +26,54 @@ SemaphoreHandle_t xButtonsMutex = NULL;
 // SemaphoreHandle_t xClientMutex = NULL;
 SemaphoreHandle_t xConnEventGrpMutex = NULL;
 SemaphoreHandle_t xConnCheckMutex = NULL;
-
 QueueHandle_t ui_updates_queue;
 
+TimerHandle_t clock_timer, inactivity_timer;
+const int timestamp_size = 30;
+char current_timestamp[timestamp_size];
+bool configured_timestamp = false;
+struct tm time_info;
+
 unsigned int client_cmd_id = 0;
+
+void start_activity()
+{
+  xTimerStop(inactivity_timer, 0);
+  xTimerStop(clock_timer, 0);
+}
+
+void end_activity()
+{
+  xTimerReset(inactivity_timer, 0);
+}
+
+void note_activity()
+{
+  xTimerReset(inactivity_timer, 0);
+  xTimerStop(clock_timer, 0);
+}
+
+void clock_callback(TimerHandle_t xTimer)
+{
+    BaseType_t xStatus;
+    if (update_timestamp()){
+        // A_DBG("Updated timestamp to %s", current_timestamp);
+        UI_update update;
+        update.type = TIME_UPDATE;
+        update.status = 0;
+        strcpy(update.message, current_timestamp);
+        xStatus = xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
+        if (xStatus != pdPASS){
+            A_ERR("Failed to send time in ui queue");
+        }
+    }
+}
+
+void inactivity_callback(TimerHandle_t xTimer){
+  //inactivity detected. start clock timer to send ui updates
+  A_DBG("Entering inactivity");
+  xTimerStart(clock_timer, 0);
+}
 
 unsigned long crc_update(unsigned long crc, byte data) {
   byte tbl_idx;
@@ -210,39 +254,41 @@ void hard_press(char* sequence) {
   }
 }
 
-bool configured_timestamp = false;
-struct tm time_info;
-
-void configure_timestamp() {
-  if (WiFi.status() != WL_CONNECTED) {
-    A_DBG("Not connected to network. Failed to fetch current time\n");
+bool configure_timestamp(){
+  if(WiFi.status() != WL_CONNECTED){
+    A_WRN("Not connected to network. Failed to fetch current time\n");
+    return false;
   }
 
   const char* ntpServer = "pool.ntp.org";
-  const long gmtOffset_sec = 0;
-  const int daylightOffset_sec = 3600;
+  const long  gmtOffset_sec = 0;
+  const int   daylightOffset_sec = 3600;
 
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 
-  A_DBG("Updated time info\n");
+  A_DBG("Fetched time from ntp\n");
+  return true;
 }
 
-const int timestamp_size = 30;
-char current_timestamp[timestamp_size];
+bool update_timestamp(){
+  if(!configured_timestamp){
+    if(configure_timestamp()){
+      configured_timestamp = true;
+    }else{
+      return false;
+    }
+  }
 
-bool update_timestamp() {
-  if (!getLocalTime(&time_info)) {
-    A_ERR("Failed to update time");
+  if(!getLocalTime(&time_info)){
+    A_WRN("Failed to update time");
     return false;
   }
   // Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
-  if (!strftime(current_timestamp, timestamp_size, "%m-%d %H:%M:%S", &time_info)) {
-    A_ERR("Failed to write time\n");
-    return true;
-  } else {
-    A_DBG("Succesfully wrote time %s\n", current_timestamp);
+  if(!strftime(current_timestamp , timestamp_size, "%m-%d %H:%M:%S", &time_info)){
+    A_DBG("Failed to write time\n");
     return false;
   }
+  return true;
 }
 
 /*Send an update struct instance to the ui_updates_queue

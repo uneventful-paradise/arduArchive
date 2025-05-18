@@ -1,19 +1,17 @@
 import random
-from doctest import debug
-
 from src import basic_comms
 from src.utils.execute_funcs import *
 from src.utils.btn_funcs import *
 from src.client_model.base_client import BaseClient
-from src.utils.client_utils import get_client, swap_client
+from src.utils.client_utils import get_client, swap_client, safe_read_all
 from src.utils.data_format import generate_gui_conn_update
 
 #FILENAME = "media/haskell-register.log"
 #FILENAME = "media/tw.txt"
 # FILENAME = "media/pdfs/rtos.pdf"
-# FILENAME = "media/pdfs/com.pdf"
+FILENAME = "media/pdfs/com.pdf"
 # FILENAME = "media/images/landscape.jpg"
-FILENAME = "media/images/wanda.jpg"
+# FILENAME = "media/images/wanda.jpg"
 # FILENAME = "media/txts/haskell-register.log"
 # FILENAME = "testing/long_ipsum.txt"
 DEFAULT_CLIENT_DOWNLOAD_FOLDER = "/init_icons"
@@ -108,20 +106,18 @@ def receive_request():
     while True:
         current_client = get_client()
         if current_client is None:
+            logger.warning("Client is none")
             time.sleep(0.2)
             continue
-        try:
-            # data = client.read_all(HEADER_SIZE)
-            # logger.debug(data)
-            # continue
-            request = current_client.read_all(HEADER_SIZE)
 
+        try:
+            # request = safe_read_all(current_client=current_client, req_len=HEADER_SIZE)
+            request = current_client.read_all(HEADER_SIZE)
             if not request:
                 logger.error("read 0")
-                current_client.close()
-                logger.error("Client disconnected")
-                return None
-            # logger.debug("Client %s requested %s", client_addr, req)
+                # current_client.close()
+                # logger.error("Client disconnected")
+                continue
 
             # parse header
             header = struct.unpack("!IIII", request)
@@ -149,12 +145,18 @@ def receive_request():
                 send_conf(current_client, header_data.command_id)
                 swap_client()
             else:
-                logger.debug(f"put a pd in queue")
+                # logger.debug(f"put a pd in queue")
                 request_queue.put(package_data)
 
 
         except ValueError as e:
-            logger.error("Handle request exception: %s", e, exc_info=True)
+            logger.error("read_all exception: %s. Clearing channel", e, exc_info=True)
+            current_client.clear_channel()
+        except ConnectionResetError as e:
+            logger.error("connection broken: %s", e, exc_info=True)
+        except RuntimeError as e:
+            logger.exception(e)
+
 
 #TODO: ADD QUEUE FOR SENDING!!
 """Function to be called by the writer thread. It will deal with listening to and 
@@ -164,10 +166,13 @@ def handle_server_send():
                  "Lorem Ipsum is simply dummy text of the printing and typesetting industry. ",
                  "hyaimamanannanan",
                  "buna ziuaaa"]
-
     while True:
         user_input = input(">")
         current_client = get_client()
+        if current_client is None:
+            logger.warning("Client is none")
+            time.sleep(0.2)
+            continue
 
         if user_input == "u":
             handle_upload(current_client, FILENAME, DEFAULT_CLIENT_DOWNLOAD_FOLDER)

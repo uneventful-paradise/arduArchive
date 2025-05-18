@@ -9,7 +9,7 @@ NwClient* nw_client;
 BaseClient* current_client;
 
 //dynamic_cast would be cool to use to check current client type but has large memory footprint
-int current_client_type = SR_CLIENT_MODE;
+int current_client_type = NW_CLIENT_MODE;
 
 void protected_check_connection(){
   if (xConnCheckMutex != NULL) {
@@ -29,12 +29,32 @@ void protected_check_connection(){
 void touch_check_task(void* params) {
   // BaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);                    //checking for available stack
   // Serial.printf("touch_check_task stack high water mark: %u\n", watermark);
-
+  UI_update update;
   BaseType_t xStatus;
   Sprite** nav_btn = sprite_manager.getNavButtons();
   while (true) {
     //screen has been touched
     if (get_pos() == 1) {
+
+      //if clock timer is active, stop it and request to redraw main screen
+      if (xTimerIsTimerActive(clock_timer) != pdFALSE) {
+        note_activity();
+        update.type = TIME_UPDATE;
+        //status to signal that main screen should be redrawn
+        update.status = 1;
+        strcpy(update.message, "Touch detected.");
+        xStatus = xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
+        if(xStatus != pdPASS){
+          A_ERR("Failed to send time in ui queue");
+        }
+        xTimerReset(inactivity_timer, 0);
+        // A_DBG("went from inactive to active");
+        continue;
+      }
+      // reset inactivity timer on touch
+      xTimerReset(inactivity_timer, 0);
+
+      //find pressed button. first check nav buttons then action buttons
       // watermark = uxTaskGetStackHighWaterMark(NULL);
       // Serial.printf("touch_check_task stack high water mark: %u\n", watermark);
       int btn_id = UNABLE;
@@ -141,10 +161,8 @@ void update_screen_task(void* params) {
   int textX = (screenWidth - textWidth) / 2;
   int textY = screenHeight / 2 - 20;
 
+  //todo : guard transfers against idle triggers
   while (true) {
-    /*If a block time was specified (xTicksToWait was not zero), then it is possible the calling 
-    task was placed into the Blocked state to wait for data to become available on the queue, 
-    but data was successfully read from the queue before the block time expired.*/
     xStatus = xQueueReceive(ui_updates_queue, &update, portMAX_DELAY);
     if (xStatus == pdPASS) {
       // A_DBG("message is %s", update.message);
@@ -187,11 +205,13 @@ void update_screen_task(void* params) {
          
           if (update.status != 1) {
             // A_DBG("case is connection lost");
+            start_activity();
             //TODO: add animation
             //connection dropped
             clear_screen();
             draw_text(textX, textY, 3, WHITE, update.message);
           } else if (update.status == 1) {
+            end_activity();
             // A_DBG("case is connection gained");
             clear_screen();
             draw_text(textX, textY, 3, WHITE, update.message);
@@ -226,6 +246,16 @@ void update_screen_task(void* params) {
           }
           A_DBG("Free heap after modification %u", ESP.getFreeHeap());
           draw_main_screen();
+          break;
+        }
+        case TIME_UPDATE: {
+          // A_DBG("case is time update");  
+          clear_screen();
+          if (update.status == 1) {
+            draw_main_screen();
+          }else{
+            draw_text(textX, textY, 3, WHITE, update.message);
+          }
           break;
         }
         default:{

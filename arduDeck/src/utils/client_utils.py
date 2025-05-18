@@ -7,14 +7,14 @@ from src.server_params import *
 client_lock = threading.Lock()
 
 client: BaseClient = None
-nw_client = NetworkClient(HOST, PORT)
-sr_client = SerialClient(port='COM5', baudrate=115200, timeout=1.0)
+nw_client = NetworkClient(host=HOST, port=PORT, timeout=10.0)
+sr_client = SerialClient(port='COM5', baudrate=115200, timeout=10.0)
 
-def read_all(current_client: BaseClient, req_len: int) -> bytes:
+def safe_read_all(current_client: BaseClient, req_len: int) -> bytes:
     with client_lock:
         return current_client.read_all(req_len)
 
-def write_all(current_client: BaseClient, data: bytes):
+def safe_write_all(current_client: BaseClient, data: bytes):
     with client_lock:
         current_client.write_all(data)
 
