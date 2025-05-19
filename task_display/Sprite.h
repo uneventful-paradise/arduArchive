@@ -19,23 +19,26 @@ private:
   int h;
 
   //Button text
-  char *filename;
+  char *icon_path;
+  bool is_folder;
   Arduino_RPi_DPI_RGBPanel *gfx;
   //Button id, default id = -1 is untouchable
   int id;
 
 public:
   Sprite();
-  Sprite(int x, int y, int w, int h, int id);
+  Sprite(int x, int y, int w, int h, int id, bool is_folder = false);
   Sprite(Arduino_RPi_DPI_RGBPanel *gfx);
 
-  void set(int x, int y, int w, int h, int id);
+  void set(int x, int y, int w, int h, int id, bool is_folder = false);
   void getFoDraw(int *x, int *y, int *w, int *h);
 
   void setId(int v);
   int getId();
-  char* getFilename();
-  void setFilename(char *filename);
+  bool getFolderState();
+  void setFolderState(bool value);
+  char* getIconPath();
+  void setIconPath(char *icon_path);
   int checkTouch(int x, int y);
   void setGFX(Arduino_RPi_DPI_RGBPanel *gfx);
   int getWidth();

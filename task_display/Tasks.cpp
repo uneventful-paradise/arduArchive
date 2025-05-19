@@ -29,7 +29,6 @@ void protected_check_connection(){
 void touch_check_task(void* params) {
   // BaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);                    //checking for available stack
   // Serial.printf("touch_check_task stack high water mark: %u\n", watermark);
-  UI_update update;
   BaseType_t xStatus;
   Sprite** nav_btn = sprite_manager.getNavButtons();
   while (true) {
@@ -37,31 +36,28 @@ void touch_check_task(void* params) {
     if (get_pos() == 1) {
 
       //if clock timer is active, stop it and request to redraw main screen
-      if (xTimerIsTimerActive(clock_timer) != pdFALSE) {
-        note_activity();
-        update.type = TIME_UPDATE;
-        //status to signal that main screen should be redrawn
-        update.status = 1;
-        strcpy(update.message, "Touch detected.");
-        xStatus = xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
-        if(xStatus != pdPASS){
-          A_ERR("Failed to send time in ui queue");
-        }
-        xTimerReset(inactivity_timer, 0);
-        // A_DBG("went from inactive to active");
+      if (reset_inactivity()) {
         continue;
       }
-      // reset inactivity timer on touch
-      xTimerReset(inactivity_timer, 0);
-
       //find pressed button. first check nav buttons then action buttons
       // watermark = uxTaskGetStackHighWaterMark(NULL);
       // Serial.printf("touch_check_task stack high water mark: %u\n", watermark);
       int btn_id = UNABLE;
+      unsigned int folder_page = sprite_manager.getFolderPage();
       for (int i = 0; i < NAV_BTN_COUNT; ++i){
-        if((nav_btn[i] != nullptr) && (btn_id = nav_btn[i] -> checkTouch(pos[0], pos[1])) != UNABLE) {
+        if((nav_btn[i] != nullptr) && 
+        (btn_id = nav_btn[i] -> checkTouch(pos[0], pos[1])) != UNABLE) {
           A_DBG("button is a nav button");
+
           if (btn_id == BUTTON_PREV || btn_id == BUTTON_NEXT) {
+              if (folder_page > 0){
+                A_DBG("User pressed a nav button in folder mode");
+                sprite_manager.clear_folder_buttons();
+                sprite_manager.setFolderPage(0);
+                clear_screen();
+                draw_main_screen();
+                break;
+              }
               sprite_manager.switchPage(btn_id);
               if (sprite_manager.getMaxPage() > 0) {
                 clear_screen();
@@ -98,13 +94,13 @@ void touch_check_task(void* params) {
           Package_data data;
           Header_data header;
           // Serial.printf("SENDING command for %s to server\n", paths[event.buttonId]);
-  
+          button_id += folder_page * 100;
+
           memset(data.contents, 0, sizeof(data.contents));
           if (snprintf(data.contents, sizeof(data.contents), "%d", button_id) < 0) {
             A_ERR("snprintf failed in touch_check_task");
-            continue;
           }
-  
+          
           header.command_type = MACRO_COMMAND;
           header.command_id = 0;
           header.length = strlen(data.contents);
@@ -112,18 +108,30 @@ void touch_check_task(void* params) {
           data.header = header;
           A_DBG("Selected value is %s\n", data.contents);
   
-          // watermark = uxTaskGetStackHighWaterMark(NULL);
-          // Serial.printf("touch_check_task stack high water mark (MID): %u\n", watermark);
-        
-  
           xStatus = xQueueSend(send_queue, &data, portMAX_DELAY);
           if (xStatus != pdPASS) {
             vPrintString("touch_check_task failed to send data to the send_queue.\r\n");
-          }
+          }  
         }
 
         if (xSemaphoreGive(xButtonsMutex) != pdTRUE){
           A_ERR("Failed to give buttons mutex");
+        }
+        //open folder if icon is folder button
+        if (button_id != UNABLE && !folder_page 
+          && buttons[button_id] != nullptr && buttons[button_id] -> getFolderState()) {
+          A_DBG("User pressed a folder button");
+          char config_path[20];
+          if (snprintf(config_path, sizeof(config_path), "/configs/%d.txt", button_id) < 0) {
+            A_ERR("snprintf failed in touch_check_task");
+          }else{
+            A_DBG("Config path is %s", config_path);
+          }
+          if (!init_icons_from_config(config_path, true)){
+            A_ERR("Failed to create folder icons");
+          }
+          sprite_manager.setFolderPage(button_id+1);
+          draw_folder_contents();
         }
       }
     }
@@ -172,6 +180,7 @@ void update_screen_task(void* params) {
 
       switch (update.type) {
         case START_DOWNLOAD:{
+          start_activity();
           // A_DBG("case is start_download");
           clear_screen();
           draw_text(textX, textY, 3, WHITE, update.message);
@@ -194,10 +203,10 @@ void update_screen_task(void* params) {
           // A_DBG("case is end_download");
           draw_text(textX, textY + 100, 3, WHITE, update.message);
           vTaskDelay(500 / portTICK_PERIOD_MS);
-          
           // clear_screen(gfx);
           // draw_main_screen(gfx);
           vTaskDelay(1000 / portTICK_PERIOD_MS);
+          end_activity();
           break;
         }
         case CONNECTION_CHECK: {
@@ -214,6 +223,8 @@ void update_screen_task(void* params) {
             end_activity();
             // A_DBG("case is connection gained");
             clear_screen();
+            sprite_manager.clear_folder_buttons();
+            sprite_manager.setFolderPage(0);
             draw_text(textX, textY, 3, WHITE, update.message);
             vTaskDelay(500 / portTICK_PERIOD_MS);
             clear_screen();
@@ -240,8 +251,9 @@ void update_screen_task(void* params) {
 
             A_DBG("Free heap after modification %u", ESP.getFreeHeap());
           }
-
-          if (!init_icons_from_config("/configs/btn_config.txt")) {
+          sprite_manager.clear_folder_buttons();
+          sprite_manager.setFolderPage(0);
+          if (!init_icons_from_config(BASE_CONFIG_PATH)) {
             A_ERR("Icon read failed");
           }
           A_DBG("Free heap after modification %u", ESP.getFreeHeap());

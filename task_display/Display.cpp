@@ -89,7 +89,7 @@ void draw_nav_btns(){
   for(int i = 0; i < NAV_BTN_COUNT; ++i){ 
     if(nav_btn[i] != nullptr){
       int id = nav_btn[i] -> getId();
-      char* fname = nav_btn[i] -> getFilename();
+      char* fname = nav_btn[i] -> getIconPath();
   
       // A_DBG("Now drawing %d, of path %s\n", id, fname);
       nav_btn[i] -> draw(jpegDrawCallback);
@@ -124,6 +124,33 @@ void draw_main_screen() {
         //   // }
         // A_DBG("Now drawing %d, of path %s", id, fname);
         buttons[i] -> draw(jpegDrawCallback);
+      }
+    }
+
+    if (xSemaphoreGive(xButtonsMutex) != pdTRUE) {
+      A_ERR("Failed to give buttons mutex");
+    }
+  }
+}
+//todo: clear screen in draw_main_screen fn
+void draw_folder_contents() {
+  clear_screen();
+  gfx->setCursor(0, 0);
+  draw_nav_btns();
+  // A_DBG("Drawing folder contents");
+  if (xButtonsMutex != NULL) {
+    if (xSemaphoreTake(xButtonsMutex, portMAX_DELAY) != pdTRUE){
+      A_ERR("Failed to take buttons mutex");
+    }
+
+    Sprite** folder_buttons = sprite_manager.getFolderButtons();
+    // A_DBG("Folder page is %d", sprite_manager.getFolderPage());
+    for(int i = 0; i < MAX_FOLDER_SIZE; ++i){ 
+      if (folder_buttons[i] != nullptr) {
+        // int id = folder_buttons[i] -> getId();
+        // char* fname = folder_buttons[i] -> getIconPath();
+        // A_DBG("Now drawing %d, of path %s", id, fname);
+        folder_buttons[i] -> draw(jpegDrawCallback);
       }
     }
 
@@ -193,12 +220,12 @@ bool init_icons(const char* icon_directory){
 }
 
 
-bool init_icons_from_config(const char* config_path){
+bool init_icons_from_config(const char* config_path, bool is_icon_folder){
   SdFile file;
   const int max_line_size = 100;
   char line[max_line_size], line_copy[max_line_size];
   size_t n = 0;
-  unsigned int id = 0;
+  unsigned int id = 0, folder_flag = 0;
   
   if (!sd.exists(config_path)) {
     A_ERR("File does not exist");
@@ -215,14 +242,16 @@ bool init_icons_from_config(const char* config_path){
 
   while ((n = file.fgets(line, sizeof(line))) > 0) {
     // Ensure we have at least one character.
-    if (n < 1) continue;
+    if (n < 1){
+      A_WRN("Empty line");
+      continue;
+    }
   
     if (line[n - 1] == '\n') {
       //remove endlines
       line[n-1] = '\0';
     }
   
-    
     // A_DBG("Line is %s", line);
 
     //get filename
@@ -243,19 +272,39 @@ bool init_icons_from_config(const char* config_path){
     //convert string key value to decimal value
     id = strtol(token, NULL, 10);
     if (id == 0L && strcmp(token, "0")) {
-      A_ERR("stroull failed for token conversion");
+      A_ERR("stroull failed for id token conversion");
       continue;
     }
-    A_DBG("filename is %s | id is %d", line_copy, id);
+    //get folder flag
+    token = strtok_r(NULL, " ", &save_ptr);
+
+    if (token == NULL) {
+      A_ERR("failed to extract folder flag. Wrong line format");
+      continue;
+    }
+
+    folder_flag = strtol(token, NULL, 10);
+    if (folder_flag == 0L && strcmp(token, "0")) {
+      A_ERR("stroull failed for dir flag token conversion");
+      continue;
+    }
+
+    // A_DBG("filename is %s | id is %d | folder flag is %d", line_copy, id, folder_flag);
 
     if (xButtonsMutex != NULL) {
       if (xSemaphoreTake(xButtonsMutex, portMAX_DELAY) != pdTRUE){
         A_ERR("Failed to take buttons mutex");
       }
 
-      // A_DBG("Took mutex");
-      Sprite* btn = sprite_manager.add_button(id, line_copy);
-      if (btn == NULL){
+      Sprite* btn = nullptr;
+      if (is_icon_folder) {
+        // A_DBG("Adding folder button");
+        btn = sprite_manager.add_folder_button(id, line_copy);
+      }else{
+        btn = sprite_manager.add_button(id, line_copy, folder_flag);
+      }
+
+      if (btn == nullptr){
         A_ERR("Button creation failed");
       }
 

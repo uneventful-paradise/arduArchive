@@ -46,6 +46,7 @@ is not easily determined whule note_activity is used for short (atomic like) ope
 void start_activity();
 void end_activity();
 void note_activity();
+bool reset_inactivity();
 
 void clock_callback(TimerHandle_t xTimer);
 

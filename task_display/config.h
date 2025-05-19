@@ -13,7 +13,7 @@
 #include <WiFi.h>
 #include "time.h"
 
-
+#define BASE_CONFIG_PATH "/configs/btn_config.txt"
 #define WIFI_SSID "DIGI-yWsT"
 #define WIFI_PWD "74F8ghZw"
 // #define WIFI_SSID "testesp32"
@@ -60,6 +60,7 @@
 #define BUTTON_DELAY 150
 #define BUTTON_WIDTH 85
 #define BUTTON_HEIGHT 85
+#define MAX_FOLDER_SIZE 15
 
 #define NAV_BTN_COUNT 3
 #define BUTTON_PREV 100
@@ -105,7 +106,7 @@
 #endif  // HAS_TEENSY_SDIO
 
 
-#define DEBUG 0
+#define DEBUG 1
 
 #define A_DBG(fmt, ...) do { if (DEBUG) { printf("[%s:%d]: " fmt "\n", __func__, __LINE__  __VA_OPT__(, ) __VA_ARGS__); } } while (0)
 // #define A_DBG(fmt, ...) { printf("[%s:%d]: " fmt "\n", __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__); }

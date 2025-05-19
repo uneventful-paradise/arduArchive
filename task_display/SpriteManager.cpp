@@ -13,6 +13,7 @@ SpriteManager::SpriteManager(Arduino_RPi_DPI_RGBPanel* GFX, const unsigned int D
   this -> buttons = (Sprite**)malloc(this -> btn_capacity * sizeof(Sprite*));
 
   this -> current_page = 0;
+  this -> folder_page = 0;
   this -> max_page = 0;
 
   this -> x_limit = BNT_PER_ROW * (BUTTON_WIDTH + BTN_OFFSET) + BTN_OFFSET;
@@ -28,23 +29,27 @@ SpriteManager::SpriteManager(Arduino_RPi_DPI_RGBPanel* GFX, const unsigned int D
 
   //!create function for init nav_buttons
   Sprite* btn_next = new Sprite();
-  btn_next -> set(600, 400, BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_NEXT);
-  btn_next -> setFilename("/85px/next.jpg");
+  btn_next -> set(250, 400, BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_NEXT);
+  btn_next -> setIconPath("/85px/next.jpg");
   btn_next -> setGFX(this -> gfx);
 
   Sprite* btn_prev = new Sprite();
-  btn_prev -> set(500, 400, BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_PREV);
-  btn_prev -> setFilename("/85px/prev.jpg");
+  btn_prev -> set(350, 400, BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_PREV);
+  btn_prev -> setIconPath("/85px/prev.jpg");
   btn_prev -> setGFX(this -> gfx);
 
   Sprite* btn_swap = new Sprite();
-  btn_swap -> set(700, 400, BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_SWAP);
-  btn_swap -> setFilename("/85px/swap.jpg");
+  btn_swap -> set(450, 400, BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_SWAP);
+  btn_swap -> setIconPath("/85px/swap.jpg");
   btn_swap -> setGFX(this -> gfx);
 
   navigation_buttons[0] = btn_prev;
   navigation_buttons[1] = btn_next;
   navigation_buttons[2] = btn_swap;
+
+   for (int i = 0; i < MAX_FOLDER_SIZE; ++i) {
+    this -> folder_buttons[i] = nullptr;
+  }
   A_DBG("sprite manager construction complete");
 }
 
@@ -67,17 +72,20 @@ int SpriteManager::get_id_by_coords(int x, int y){
   if (row < 0 || row >= rows_per_page) {
     return UNABLE;
   }
+  int final_id = (row * this -> btn_per_row + col);
+  if (!this->folder_page) {
+    final_id += (this -> btn_per_page * this -> current_page);
+  }
 
-  int final_id = (row * this -> btn_per_row + col) + (this -> btn_per_page * this -> current_page);
   A_DBG("Calculated id is %d", final_id);
-  if (final_id < 0 && final_id >= this -> btn_capacity) {
-    return final_id;
+  if (final_id < 0 || final_id >= this -> btn_capacity) {
+    return UNABLE;
   }
   // A_DBG("touch at (%d,%d) translates to col=%d, row=%d → id=%d", x, y, col, row, final_id);
   return final_id;
 }
 
-Sprite* SpriteManager::add_button(int id, char* filename){
+Sprite* SpriteManager::add_button(int id, char* filename, bool folder_flag){
   A_DBG("Adding button %d to array", id);
   
   if (this -> btn_count >= this -> max_capacity) {
@@ -144,20 +152,48 @@ Sprite* SpriteManager::add_button(int id, char* filename){
   int icon_x = (id % this -> btn_per_row) * (BUTTON_WIDTH + this -> btn_offset) + this -> btn_offset;
   int icon_y = row *(BUTTON_HEIGHT + this -> btn_offset) + this -> btn_offset;
 
-  new_btn -> set(icon_x, icon_y, BUTTON_WIDTH, BUTTON_HEIGHT, id);
+  new_btn -> set(icon_x, icon_y, BUTTON_WIDTH, BUTTON_HEIGHT, id, folder_flag);
   // A_DBG("Set button %d to (%d, %d)", id, icon_x, icon_y);
-  new_btn -> setFilename(filename);
+  new_btn -> setIconPath(filename);
   new_btn -> setGFX(gfx);
   
   A_DBG("Succesfully added button\n");
   return new_btn;
 }
+
+//folders have a hard button limit. id = 100*folder_button_id + button_id
+Sprite* SpriteManager::add_folder_button(int id, char* filename){
+  int adjusted_id = id%100;
+  A_DBG("Adding button %d to folder array", adjusted_id);
+
+  Sprite* new_btn = new Sprite();
+  //replace button if it takes up requested space
+  if (this->folder_buttons[adjusted_id] != nullptr) {
+    A_DBG("Deleting button for replacement");
+    delete this -> folder_buttons[adjusted_id];
+    this -> folder_buttons[adjusted_id] = nullptr;
+  }
+  this -> folder_buttons[adjusted_id] = new_btn;
+  A_DBG("Adding button of id %d and icon %s on position %d", id, filename, adjusted_id);
+
+  int row = (id % this -> btn_per_page) / this -> btn_per_row;
+  int icon_x = (id % this -> btn_per_row) * (BUTTON_WIDTH + this -> btn_offset) + this -> btn_offset;
+  int icon_y = row *(BUTTON_HEIGHT + this -> btn_offset) + this -> btn_offset;
+  //create folder button
+  new_btn -> set(icon_x, icon_y, BUTTON_WIDTH, BUTTON_HEIGHT, adjusted_id);
+  new_btn -> setIconPath(filename);
+  new_btn -> setGFX(gfx);
+  
+  A_DBG("Succesfully added button\n");
+  return new_btn;
+}
+
 //!UPDATE THESE TO SEARCH FOR THE ID IN THE LIST
 bool SpriteManager::update_button(int id, char* filename){
   if (id < 0 || id >= this->btn_capacity || this->buttons[id] == nullptr) {
     return false;
   }
-  this -> buttons[id] -> setFilename(filename);
+  this -> buttons[id] -> setIconPath(filename);
   return true;
 }
 
@@ -208,6 +244,16 @@ void SpriteManager::clear_buttons(){
     }
   }
   this -> btn_count = 0;
+}
+
+void SpriteManager::clear_folder_buttons(){
+  for (int i = 0; i < MAX_FOLDER_SIZE; ++i) {
+    if (this -> folder_buttons[i] != nullptr){
+      delete this -> folder_buttons[i];
+      this -> folder_buttons[i] = nullptr;
+      A_DBG("deleted folder button on pos %d", i);
+    }
+  }
 }
 
 void SpriteManager::switchPage(int code){
@@ -265,4 +311,16 @@ int SpriteManager::getMaxPage(){
 
 void SpriteManager::setMaxPage(int value){
   this -> max_page = value;
+}
+
+unsigned int SpriteManager::getFolderPage(){
+  return this -> folder_page;
+}
+
+void SpriteManager::setFolderPage(unsigned int value){
+  this -> folder_page = value;
+}
+
+Sprite** SpriteManager::getFolderButtons(){
+  return this -> folder_buttons;
 }

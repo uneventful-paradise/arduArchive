@@ -53,6 +53,29 @@ void note_activity()
   xTimerStop(clock_timer, 0);
 }
 
+bool reset_inactivity(){
+  UI_update update;
+  BaseType_t xStatus;
+  if (xTimerIsTimerActive(clock_timer) != pdFALSE) {
+      note_activity();
+      update.type = TIME_UPDATE;
+      //status to signal that main screen should be redrawn
+      update.status = 1;
+      strcpy(update.message, "Touch detected.");
+      xStatus = xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
+      if(xStatus != pdPASS){
+        A_ERR("Failed to send time in ui queue");
+      }
+      xTimerReset(inactivity_timer, 0);
+      // A_DBG("went from inactive to active");
+      xTimerReset(inactivity_timer, 0);
+      return true;
+    }
+  // reset inactivity timer on touch
+  xTimerReset(inactivity_timer, 0);
+  return false;
+}
+
 void clock_callback(TimerHandle_t xTimer)
 {
     BaseType_t xStatus;

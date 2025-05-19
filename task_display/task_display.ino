@@ -107,7 +107,7 @@ void setup() {
     nw_client = new NwClient(wfc, connection_event_group);
     current_client = (BaseClient*) nw_client;
 
-    if (!init_icons_from_config("/configs/btn_config.txt")) {
+    if (!init_icons_from_config(BASE_CONFIG_PATH)) {
       A_ERR("Icon read failed");
     }
 

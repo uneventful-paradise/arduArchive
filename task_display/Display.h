@@ -32,10 +32,12 @@ void clear_screen();
 
 void draw_nav_btns();
 
+void draw_folder_contents();
+
 void draw_main_screen();
 
 bool init_icons(const char* icon_directory);
 
-bool init_icons_from_config(const char* config_path);
+bool init_icons_from_config(const char* config_path, bool is_dir = false);
 
 #endif

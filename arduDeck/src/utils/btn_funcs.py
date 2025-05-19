@@ -20,7 +20,7 @@ def build_client_config_file(client_dir):
     file_contents = ""
     with button_lock:
         for button in BUTTON_LIST:
-            line = client_dir + "/" + button["image_path"].split('/')[-1] + " " + str(button["button_id"])
+            line = client_dir + "/" + button["image_path"].split('/')[-1] + " " + str(button["button_id"] + " " + "0")
             if file_contents == "":
                 file_contents += line
             else:

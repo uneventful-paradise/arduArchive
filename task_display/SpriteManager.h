@@ -7,6 +7,7 @@ class SpriteManager {
 private:
     Sprite** buttons;
     Sprite* navigation_buttons[NAV_BTN_COUNT];
+    Sprite* folder_buttons[MAX_FOLDER_SIZE];
     Arduino_RPi_DPI_RGBPanel* gfx;
 
     unsigned int btn_per_page;
@@ -16,6 +17,7 @@ private:
     unsigned int btn_capacity;
     unsigned int btn_offset;
     unsigned int btn_count;
+    unsigned int folder_page;
 
     unsigned int current_page;
     unsigned int max_page;
@@ -31,13 +33,17 @@ public:
         const unsigned int BTN_OFFSET);
 
     int get_id_by_coords(int x, int y);
-    Sprite* add_button(int id, char* filename);
+    Sprite* add_button(int id, char* filename, bool folder_flag = false);
+    Sprite* add_folder_button(int id, char* filename);
     bool update_button(int id, char* filename);
     bool delete_button(int id);
     void clear_buttons();
+    void clear_folder_buttons();
     void switchPage(int code);
     ~SpriteManager();
 
+    unsigned int getFolderPage();
+    void setFolderPage(unsigned int value);
     int getCurrentPage();
     void setCurrentPage(int value);
     int getMaxPage();
@@ -47,5 +53,6 @@ public:
     int getMaxBtns();
     Sprite** getButtons();
     Sprite** getNavButtons();
+    Sprite** getFolderButtons();
 };
 #endif
