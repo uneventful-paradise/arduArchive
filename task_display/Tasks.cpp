@@ -89,11 +89,10 @@ void touch_check_task(void* params) {
         int button_id = sprite_manager.get_id_by_coords(pos[0], pos[1]);
         A_DBG("Value is: %d\n", button_id);
 
-        if (button_id != UNABLE) {
+        if (button_id != UNABLE && sprite_manager.checkID(button_id)) {
           //creating a data packet to send command information to server
           Package_data data;
           Header_data header;
-          // Serial.printf("SENDING command for %s to server\n", paths[event.buttonId]);
           button_id += folder_page * 100;
 
           memset(data.contents, 0, sizeof(data.contents));
@@ -112,6 +111,8 @@ void touch_check_task(void* params) {
           if (xStatus != pdPASS) {
             vPrintString("touch_check_task failed to send data to the send_queue.\r\n");
           }  
+        } else {
+          A_WRN("Invalid button id");
         }
 
         if (xSemaphoreGive(xButtonsMutex) != pdTRUE){

@@ -1,7 +1,7 @@
 import random
 from src import basic_comms
 from src.utils.execute_funcs import *
-from src.utils.btn_funcs import *
+from src.utils.btn_funcs import BUTTON_LIST, button_lock, load_folder_buttons
 from src.client_model.base_client import BaseClient
 from src.utils.client_utils import get_client, swap_client, safe_read_all
 from src.utils.data_format import generate_gui_conn_update
@@ -28,12 +28,17 @@ def execute_command(current_client: BaseClient, command_id: int, request_content
     # print(ACT_DICT.keys())
     #check for button existence and validity
     with button_lock:
-        if not any(button["button_id"] == request_contents for button in BUTTON_LIST):
+        #folder command. load folder buttons
+        if request_contents > MAX_BUTTONS:
+            btn_list = load_folder_buttons(request_contents//100 - 1)
+        else:
+            btn_list = BUTTON_LIST
+        if not any(button["button_id"] == request_contents for button in btn_list):
             raise ValueError("Invalid command id")
 
         #get button actions
         actions = []
-        for button in BUTTON_LIST:
+        for button in btn_list:
             if button["button_id"] == request_contents:
                 actions = button["actions"]
                 break
@@ -139,7 +144,7 @@ def receive_request():
 
             if header_data.command_type == CONFIRMATION_FLAG:
                 ack_queue.put(package_data.contents)
-                logger.debug(f"put {readable_req_contents} in queue")
+                # logger.debug(f"put {readable_req_contents} in queue")
             elif header_data.command_type == CLIENT_SWAP:
                 logger.warning("Received request to swap client")
                 send_conf(current_client, header_data.command_id)

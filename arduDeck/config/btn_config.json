@@ -1,6 +1,7 @@
 [
   {
     "button_id": 0,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_PROCESS",
@@ -9,10 +10,11 @@
         ]
       }
     ],
-    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/adobe.jpg"
+    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/fii.jpg"
   },
   {
     "button_id": 1,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "TOGGLE_ACTIONS",
@@ -32,15 +34,22 @@
         ]
       }
     ],
-    "image_path": "media/icons/adobe.jpg"
+    "image_path": "media/icons/steam.jpg"
   },
   {
     "button_id": 2,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "HARD_KEY_PRESS",
         "command_args": [
           "dA+w500+dB+w500+uA+uB"
+        ]
+      },
+      {
+        "command_id": "SOFT_KEY_PRESS",
+        "command_args": [
+          "ptSalutMane"
         ]
       }
     ],
@@ -48,6 +57,7 @@
   },
   {
     "button_id": 3,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "HARD_KEY_PRESS",
@@ -56,10 +66,11 @@
         ]
       }
     ],
-    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/git_dark.jpg"
+    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/github.jpg"
   },
   {
     "button_id": 4,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "HARD_KEY_PRESS",
@@ -72,6 +83,7 @@
   },
   {
     "button_id": 5,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "HARD_KEY_PRESS",
@@ -84,6 +96,7 @@
   },
   {
     "button_id": 6,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "SOFT_KEY_PRESS",
@@ -104,10 +117,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/adobe.jpg"
+    "image_path": "media/icons/fii.jpg"
   },
   {
     "button_id": 7,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_PROCESS",
@@ -122,10 +136,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 8,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "SOFT_KEY_PRESS",
@@ -138,6 +153,7 @@
   },
   {
     "button_id": 9,
+    "folder_flag": 1,
     "actions": [
       {
         "command_id": "START_URL",
@@ -150,6 +166,7 @@
   },
   {
     "button_id": 10,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -168,6 +185,7 @@
   },
   {
     "button_id": 11,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_PROCESS",
@@ -180,6 +198,7 @@
   },
   {
     "button_id": 15,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -188,10 +207,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 16,
+    "folder_flag": 1,
     "actions": [
       {
         "command_id": "START_URL",
@@ -200,10 +220,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 17,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -212,10 +233,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 18,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -224,10 +246,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/firefox.jpg"
   },
   {
     "button_id": 19,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -236,10 +259,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 20,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -248,10 +272,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 21,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -260,10 +285,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 22,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -272,10 +298,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/firefox.jpg"
   },
   {
     "button_id": 24,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -284,10 +311,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 25,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -296,10 +324,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 26,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -308,10 +337,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/youtube.jpg"
   },
   {
     "button_id": 27,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -320,10 +350,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 28,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -332,10 +363,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/youtube.jpg"
   },
   {
     "button_id": 29,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -344,10 +376,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 30,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -356,10 +389,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 31,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -368,10 +402,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 32,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -380,10 +415,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/youtube.jpg"
   },
   {
     "button_id": 33,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -392,10 +428,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 34,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -404,10 +441,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 35,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -416,10 +454,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 36,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -428,10 +467,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 37,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -440,10 +480,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 38,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -452,10 +493,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 39,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -464,10 +506,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/youtube.jpg"
   },
   {
     "button_id": 40,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -476,10 +519,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 41,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -488,10 +532,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 42,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -500,10 +545,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 43,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -512,10 +558,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 44,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -524,15 +571,16 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 45,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_PROCESS",
         "command_args": [
-          "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE"
+          "C:/Program Files (x86)/Steam/steam.exe"
         ]
       },
       {
@@ -546,6 +594,7 @@
   },
   {
     "button_id": 46,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -554,10 +603,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 47,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -566,10 +616,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 48,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -578,10 +629,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 49,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -590,10 +642,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 50,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -602,10 +655,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 51,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -614,10 +668,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 52,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -626,10 +681,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 53,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -638,10 +694,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 54,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -650,10 +707,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 55,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -662,10 +720,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 56,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -674,10 +733,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 57,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -686,10 +746,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 58,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -698,10 +759,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 59,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -710,10 +772,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 60,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -722,10 +785,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 61,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -734,10 +798,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 62,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -746,10 +811,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 63,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -758,10 +824,11 @@
         ]
       }
     ],
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "button_id": 14,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -770,10 +837,11 @@
         ]
       }
     ],
-    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/gmail_dark.jpg"
+    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/arduino.jpg"
   },
   {
     "button_id": 13,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "START_URL",
@@ -782,6 +850,6 @@
         ]
       }
     ],
-    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/git_dark.jpg"
+    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/github.jpg"
   }
 ]

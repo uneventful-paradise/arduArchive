@@ -1,11 +1,19 @@
 #include "SpriteManager.h"
 
-SpriteManager::SpriteManager(Arduino_RPi_DPI_RGBPanel* GFX, const unsigned int DEFAULT_BTN, const unsigned int MAX_BTNS, const unsigned int BTN_PER_PAGE, const unsigned int BNT_PER_ROW, const unsigned int BTN_OFFSET){
+SpriteManager::SpriteManager(Arduino_RPi_DPI_RGBPanel* GFX, 
+  const unsigned int DEFAULT_BTN, 
+  const unsigned int MAX_BTNS, 
+  const unsigned int BTN_PER_PAGE, 
+  const unsigned int BNT_PER_ROW, 
+  const unsigned int BTN_VERTICAL_OFFSET, 
+  const unsigned int BTN_HORIZONTAL_OFFSET) {
+
   A_DBG("constructing sprite manager");
   this -> gfx = GFX;
   this -> btn_per_page = BTN_PER_PAGE;
   this -> btn_per_row = BNT_PER_ROW;
-  this -> btn_offset = BTN_OFFSET;
+  this -> btn_vertical_offset = BTN_VERTICAL_OFFSET;
+  this -> btn_horizontal_offset = BTN_HORIZONTAL_OFFSET;
   this -> max_capacity = MAX_BTNS;
 
   this -> btn_count = 0;
@@ -16,8 +24,8 @@ SpriteManager::SpriteManager(Arduino_RPi_DPI_RGBPanel* GFX, const unsigned int D
   this -> folder_page = 0;
   this -> max_page = 0;
 
-  this -> x_limit = BNT_PER_ROW * (BUTTON_WIDTH + BTN_OFFSET) + BTN_OFFSET;
-  this -> y_limit = BTN_PER_PAGE/BNT_PER_ROW * (BUTTON_HEIGHT + BTN_OFFSET) + BTN_OFFSET;
+  this -> x_limit = BNT_PER_ROW * (BUTTON_WIDTH + BTN_HORIZONTAL_OFFSET) + BTN_HORIZONTAL_OFFSET;
+  this -> y_limit = BTN_PER_PAGE/BNT_PER_ROW * (BUTTON_HEIGHT + BTN_VERTICAL_OFFSET) + BTN_VERTICAL_OFFSET;
 
   if (this -> buttons == NULL) {
     A_ERR("Error at allocating buttons array");
@@ -29,17 +37,17 @@ SpriteManager::SpriteManager(Arduino_RPi_DPI_RGBPanel* GFX, const unsigned int D
 
   //!create function for init nav_buttons
   Sprite* btn_next = new Sprite();
-  btn_next -> set(250, 400, BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_NEXT);
+  btn_next -> set(460, 400, 85, 85, BUTTON_NEXT);
   btn_next -> setIconPath("/85px/next.jpg");
   btn_next -> setGFX(this -> gfx);
 
   Sprite* btn_prev = new Sprite();
-  btn_prev -> set(350, 400, BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_PREV);
+  btn_prev -> set(260, 400, 85, 85, BUTTON_PREV);
   btn_prev -> setIconPath("/85px/prev.jpg");
   btn_prev -> setGFX(this -> gfx);
 
   Sprite* btn_swap = new Sprite();
-  btn_swap -> set(450, 400, BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_SWAP);
+  btn_swap -> set(360, 400, 85, 85, BUTTON_SWAP);
   btn_swap -> setIconPath("/85px/swap.jpg");
   btn_swap -> setGFX(this -> gfx);
 
@@ -55,14 +63,14 @@ SpriteManager::SpriteManager(Arduino_RPi_DPI_RGBPanel* GFX, const unsigned int D
 
 int SpriteManager::get_id_by_coords(int x, int y){
   if (x > this -> x_limit     ||
-      x < this -> btn_offset  ||
+      x < this -> btn_horizontal_offset  ||
       y > this -> y_limit     ||
-      y < this -> btn_offset) {
+      y < this -> btn_vertical_offset) {
     return UNABLE;
   }
   //shouldnt i add btn offset here?
-  int col = (x ) / (BUTTON_WIDTH + this -> btn_offset);
-  int row = (y ) / (BUTTON_HEIGHT + this -> btn_offset);
+  int col = (x ) / (BUTTON_WIDTH + this -> btn_horizontal_offset);
+  int row = (y ) / (BUTTON_HEIGHT + this -> btn_vertical_offset);
 
   if (col < 0 || col >= btn_per_row) {
     return UNABLE;
@@ -149,8 +157,8 @@ Sprite* SpriteManager::add_button(int id, char* filename, bool folder_flag){
   A_DBG("Adding button of id %d and icon %s on position %d", id, filename, id);
 
   int row = (id % this -> btn_per_page) / this -> btn_per_row;
-  int icon_x = (id % this -> btn_per_row) * (BUTTON_WIDTH + this -> btn_offset) + this -> btn_offset;
-  int icon_y = row *(BUTTON_HEIGHT + this -> btn_offset) + this -> btn_offset;
+  int icon_x = (id % this -> btn_per_row) * (BUTTON_WIDTH + this -> btn_horizontal_offset) + this -> btn_horizontal_offset;
+  int icon_y = row *(BUTTON_HEIGHT + this -> btn_vertical_offset) + this -> btn_vertical_offset;
 
   new_btn -> set(icon_x, icon_y, BUTTON_WIDTH, BUTTON_HEIGHT, id, folder_flag);
   // A_DBG("Set button %d to (%d, %d)", id, icon_x, icon_y);
@@ -164,7 +172,7 @@ Sprite* SpriteManager::add_button(int id, char* filename, bool folder_flag){
 //folders have a hard button limit. id = 100*folder_button_id + button_id
 Sprite* SpriteManager::add_folder_button(int id, char* filename){
   int adjusted_id = id%100;
-  A_DBG("Adding button %d to folder array", adjusted_id);
+  // A_DBG("Adding button %d of adjusted id %d to folder array", id, adjusted_id);
 
   Sprite* new_btn = new Sprite();
   //replace button if it takes up requested space
@@ -176,9 +184,9 @@ Sprite* SpriteManager::add_folder_button(int id, char* filename){
   this -> folder_buttons[adjusted_id] = new_btn;
   A_DBG("Adding button of id %d and icon %s on position %d", id, filename, adjusted_id);
 
-  int row = (id % this -> btn_per_page) / this -> btn_per_row;
-  int icon_x = (id % this -> btn_per_row) * (BUTTON_WIDTH + this -> btn_offset) + this -> btn_offset;
-  int icon_y = row *(BUTTON_HEIGHT + this -> btn_offset) + this -> btn_offset;
+  int row = (adjusted_id % this -> btn_per_page) / this -> btn_per_row;
+  int icon_x = (adjusted_id % this -> btn_per_row) * (BUTTON_WIDTH + this -> btn_horizontal_offset) + this -> btn_horizontal_offset;
+  int icon_y = row *(BUTTON_HEIGHT + this -> btn_vertical_offset) + this -> btn_vertical_offset;
   //create folder button
   new_btn -> set(icon_x, icon_y, BUTTON_WIDTH, BUTTON_HEIGHT, adjusted_id);
   new_btn -> setIconPath(filename);
@@ -311,6 +319,19 @@ int SpriteManager::getMaxPage(){
 
 void SpriteManager::setMaxPage(int value){
   this -> max_page = value;
+}
+
+bool SpriteManager::checkID(unsigned int id){
+  if (id < 0 || id > this -> max_capacity){
+    return false;
+  }
+  if (this -> folder_page > 0 && (this -> folder_buttons[id] == nullptr || id > MAX_FOLDER_SIZE)) {
+    return false;
+  }
+  if (this -> folder_page == 0 && this -> buttons[id] == nullptr) {
+    return false;
+  }
+  return true;
 }
 
 unsigned int SpriteManager::getFolderPage(){

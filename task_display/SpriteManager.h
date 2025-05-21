@@ -15,7 +15,8 @@ private:
     unsigned int max_capacity;
 
     unsigned int btn_capacity;
-    unsigned int btn_offset;
+    unsigned int btn_vertical_offset;
+    unsigned int btn_horizontal_offset;
     unsigned int btn_count;
     unsigned int folder_page;
 
@@ -30,7 +31,8 @@ public:
         const unsigned int MAX_BTN, 
         unsigned int BTN_PER_PAGE, 
         const unsigned int BNT_PER_ROW, 
-        const unsigned int BTN_OFFSET);
+        const unsigned int BTN_OFFSET,
+        const unsigned int BTN_HORIZONTAL_OFFSET);
 
     int get_id_by_coords(int x, int y);
     Sprite* add_button(int id, char* filename, bool folder_flag = false);
@@ -51,6 +53,7 @@ public:
     int getCapacity();
     int getCount();
     int getMaxBtns();
+    bool checkID(unsigned int id);
     Sprite** getButtons();
     Sprite** getNavButtons();
     Sprite** getFolderButtons();

@@ -146,8 +146,6 @@ def handle_upload(client: BaseClient, filename: str, client_location: str, clien
 
     # base_dir = os.path.dirname(os.path.abspath(__file__))
     # filename = os.path.join(base_dir, filename)
-    if isinstance(client, NetworkClient):
-        print("Salut sunt network client")
 
     try:
         if not os.path.exists(filename):

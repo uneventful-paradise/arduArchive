@@ -172,6 +172,30 @@ def apply_theme(root: tk.Tk | tk.Toplevel) -> None:
                    ]
                 }
             },
+            "TCheckbutton": {
+               "configure": {
+                   "background": SURFACE,  # panel-color fill
+                   "foreground": FG_PRIMARY,  # label text
+                   "font": BOLD_FONT,
+                   "padding": (4, 2),  # space around indicator+text
+                   "focuscolor": HIGHLIGHT,  # focus ring color
+                    },
+               "map": {
+                    "background": [
+                        ("active", BG_LIGHT),
+                        ("!active", SURFACE)
+                    ],
+                    "foreground": [
+                        ("disabled", FG_SECONDARY),
+                        ("selected", FG_PRIMARY)
+                    ],
+                    # color of the little tick/indicator when checked
+                    "indicatorcolor": [
+                        ("selected", ACCENT_BLUE),
+                        ("!selected", FG_SECONDARY)
+                    ]
+                },
+            }
         }
     )
     style.theme_use("DeepPurple")

@@ -4,6 +4,7 @@ arduDeck/media/*
 !arduDeck/media/icons/
 !arduDeck/media/icons/**
 !requirements.txt
+arduDeck/config/folder_configs/*
 
 # ignore Python virtual environments
 .idea

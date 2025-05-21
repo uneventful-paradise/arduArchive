@@ -28,7 +28,8 @@ SpriteManager sprite_manager = SpriteManager(gfx,
                                             MAX_SPRITE_COUNT,
                                             BUTTONS_PER_PAGE,
                                             BUTTONS_PER_ROW, 
-                                            BUTTON_OFFSET);
+                                            BUTTON_VERTICAL_OFFSET,
+                                            BUTTON_HORIZONTAL_OFFSET);
 
 static int jpegDrawCallback(JPEGDRAW *pDraw) {
   // Serial.printf("Draw pos = %d,%d. size = %d x %d\n", pDraw->x, pDraw->y, pDraw->iWidth, pDraw->iHeight);
