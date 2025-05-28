@@ -156,6 +156,7 @@ def receive_request():
 
         except ValueError as e:
             logger.error("read_all exception: %s. Clearing channel", e, exc_info=True)
+            logger.warning("Got contents: %s", req_contents.decode("utf-8"))
             current_client.clear_channel()
         except ConnectionResetError as e:
             logger.error("connection broken: %s", e, exc_info=True)

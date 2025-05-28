@@ -26,6 +26,7 @@ SemaphoreHandle_t xButtonsMutex = NULL;
 // SemaphoreHandle_t xClientMutex = NULL;
 SemaphoreHandle_t xConnEventGrpMutex = NULL;
 SemaphoreHandle_t xConnCheckMutex = NULL;
+SemaphoreHandle_t xTouchSemaphore = NULL;
 QueueHandle_t ui_updates_queue;
 
 TimerHandle_t clock_timer, inactivity_timer;
@@ -38,12 +39,20 @@ unsigned int client_cmd_id = 0;
 
 void start_activity()
 {
+  BaseType_t xStatus = xSemaphoreTake(xTouchSemaphore, pdMS_TO_TICKS(100));
+  if (xStatus != pdTRUE) {
+    A_WRN("Failed to take touch semaphore");
+  }
   xTimerStop(inactivity_timer, 0);
   xTimerStop(clock_timer, 0);
 }
 
 void end_activity()
 {
+  BaseType_t xStatus = xSemaphoreGive(xTouchSemaphore);
+  if (xStatus != pdTRUE) {
+    A_WRN("Failed to give touch semaphore");
+  }
   xTimerReset(inactivity_timer, 0);
 }
 
@@ -284,7 +293,7 @@ bool configure_timestamp(){
   }
 
   const char* ntpServer = "pool.ntp.org";
-  const long  gmtOffset_sec = 0;
+  const long  gmtOffset_sec = 2 * 3600; // GMT+2 offset in seconds
   const int   daylightOffset_sec = 3600;
 
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
@@ -307,7 +316,7 @@ bool update_timestamp(){
     return false;
   }
   // Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
-  if(!strftime(current_timestamp , timestamp_size, "%m-%d %H:%M:%S", &time_info)){
+  if(!strftime(current_timestamp , timestamp_size, "%H:%M:%S %b-%d ", &time_info)){
     A_DBG("Failed to write time\n");
     return false;
   }

@@ -100,6 +100,7 @@ void draw_nav_btns(){
 
 /*Draw main icon scene*/
 void draw_main_screen() {
+  clear_screen();
   gfx->setCursor(0, 0);
   draw_nav_btns();
   if (xButtonsMutex != NULL) {
@@ -316,4 +317,124 @@ bool init_icons_from_config(const char* config_path, bool is_icon_folder){
   }
   // file.close();
   return true;
+}
+
+bool swap_page(int page_code, unsigned int folder_page){
+  note_activity();
+  if (folder_page > 0){
+    A_DBG("User pressed a nav button in folder mode");
+    sprite_manager.clear_folder_buttons();
+    sprite_manager.setFolderPage(0);
+    draw_main_screen();
+    return false;
+  }
+  sprite_manager.switchPage(page_code);
+  if (sprite_manager.getMaxPage() > 0) {
+    draw_main_screen();
+  }
+  return true;
+}
+
+static bool prev_touched = false, touch_state = false;
+static int start_x = -1, start_y = -1, end_x = -1, end_y = -1;
+static unsigned long start_time;
+
+SwipeType track_swipe() {
+  BaseType_t xStatus = xSemaphoreTake(xTouchSemaphore, pdMS_TO_TICKS(100));
+  if (xStatus != pdTRUE) {
+    // A_WRN("Failed to take touch semaphore");
+    return SWIPE_FAIL;
+  }
+  
+  //track touch until break condition
+  ts.read();
+  touch_state = ts.isTouched;
+  // A_DBG("Touch state is %d, prev_touched is %d", touch_state, prev_touched);
+  //first touch of swipe
+  xStatus = xSemaphoreGive(xTouchSemaphore);
+  if (xStatus != pdTRUE) {
+    A_WRN("Failed to give touch semaphore");
+  }
+
+  if (touch_state && !prev_touched) {
+    prev_touched = true;
+    start_x = ts.points[0].x;
+    start_y = ts.points[0].y;
+    start_time = millis();
+    // A_DBG("Start of swipe at %d, %d, %lu", start_x, start_y, start_time);
+    return SWIPE_START;
+  } else if (touch_state && prev_touched) {
+    end_x = ts.points[0].x;
+    end_y = ts.points[0].y;
+    return SWIPE_TRACK;
+  } else if (!touch_state && prev_touched) {
+    end_x = ts.points[0].x;
+    end_y = ts.points[0].y;
+    prev_touched = false;
+    unsigned long end_time = millis();
+    // A_DBG("Swipe ending at %d, %d, %lu", end_x, end_y, end_time);
+    if (start_x != -1 && end_x != -1 && start_y != -1 && end_y != -1) {
+      SwipeType result = execute_swipe(start_x, start_y, end_x, end_y, start_time, end_time);
+      start_x = start_y = end_x = end_y = -1;
+      return result;
+    } else {
+      A_ERR("Invalid coordinates for swipe");
+    }
+  }
+  // vTaskDelay(pdMS_TO_TICKS(30));
+  return SWIPE_FAIL;
+}
+
+SwipeType execute_swipe(int sx, int sy, int ex, int ey, unsigned long st, unsigned long et) {
+  int dx = ex - sx, dy = ey - sy;
+  unsigned long dt = et - st;
+  if (dt < 100 || abs(dx) < 30) {
+    pos[0] = ex;
+    pos[1] = ey;
+    A_DBG("Screen pressed at %d, %d", pos[0], pos[1]);
+    return SwipeType::SCREEN_PRESS;
+  }
+  if (dt > 2000) {
+    //invalidate slow swipe
+    A_DBG("Swipe too slow, dt = %lu", dt);
+    return SwipeType::SWIPE_FAIL;
+  }
+  //swipe up to change mode?
+  unsigned int folder_page = sprite_manager.getFolderPage();
+  if (dx > 0) {
+    swap_page(BUTTON_PREV, folder_page);
+    A_DBG("Swiped left");
+    return SwipeType::SWIPE_SUCCESS;
+  } else if (dx < 0) {
+    swap_page(BUTTON_NEXT, folder_page);
+    A_DBG("Swiped right");
+    return SwipeType::SWIPE_SUCCESS;
+  } else {
+    A_WRN("bad delta for swipe");
+  }
+  return SwipeType::SWIPE_FAIL;
+}
+
+void draw_time(char *time_string, int x, int y, int size)
+{
+  char* save_ptr = NULL;
+  char* token;
+  token = strtok_r(time_string, " ", &save_ptr);
+  if(token == NULL){
+    A_ERR("failed to extract first time token.");
+    return;
+  }
+
+  // int month_day_size = (size > 0 ? size - 1 : 1);
+  // A_DBG("Drawing time at %d, %d with size %d", x, y, size);
+  gfx -> setCursor(x, y);
+  gfx -> setTextSize(size);
+  gfx -> setTextColor(WHITE);
+  gfx -> printf("%s ", token); // Print the first token (month-day)
+  gfx -> setTextSize(2);
+  int curs_x = gfx -> getCursorX();
+  int curs_y = gfx -> getCursorY();
+  gfx -> setCursor(curs_x, curs_y + 50); // Move cursor down for the next line
+  token = strtok_r(NULL, " ", &save_ptr);
+  gfx -> println(token);
 }

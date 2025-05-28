@@ -16,6 +16,7 @@ extern SemaphoreHandle_t xPrintMutex;
 extern SemaphoreHandle_t xButtonsMutex;
 extern SemaphoreHandle_t xConnEventGrpMutex;
 extern SemaphoreHandle_t xConnCheckMutex;
+extern SemaphoreHandle_t xTouchSemaphore;
 extern TimerHandle_t clock_timer, inactivity_timer;
 
 struct Header_data {

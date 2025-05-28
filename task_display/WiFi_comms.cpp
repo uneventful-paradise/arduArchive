@@ -1,6 +1,9 @@
 #include "WiFi_comms.h"
 
 WiFiClient wfc;
+WiFiServer wfs(80);
+WiFiClient logClient;
+bool wifi_init = false;
 
 void printWifiStatus() {
   A_DBG("wifi status?");
@@ -240,4 +243,27 @@ int handle_download(Package_data* pd) {
   // Serial.printf("package type does not match download format\n");
   A_ERR("package type does not match download format\n");
   return 0;
+}
+
+
+void initialize_wifi_logging(){
+  if (!wifi_init) {
+    while (WiFi.status() != WL_CONNECTED){
+      WiFi.begin();
+      A_DBG("Waiting to init wifi logging");
+      vTaskDelay(1000);
+    }
+    //wfs.begin(80);  // Start the server on port 80?
+    wfs.begin();
+    while(!wifi_init){
+      logClient = wfs.available();
+      if (logClient) {
+        A_DBG("Client connected from %s:%d\n", logClient.remoteIP().toString().c_str(), logClient.remotePort());
+        wifi_init = true;
+      } else {
+        A_DBG("Failed to connect to log server");
+        vTaskDelay(1000);  // Wait before retrying
+      }
+    }
+  }
 }

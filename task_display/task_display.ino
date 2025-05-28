@@ -67,7 +67,7 @@ void setup() {
       /*name - used only for debugging purposes*/
       "inactivity_timer",
       /*softawre timer's period in ticks*/
-      pdMS_TO_TICKS(300000),
+      pdMS_TO_TICKS(INACTIVITY_TIMEOUT),
       /*setting uxAutoReload to pdFALSE creates a one-shot timer*/
       pdFALSE,
       /*timer id - useful in case same callback is called by multiple timers*/
@@ -83,12 +83,17 @@ void setup() {
 
 
     /*Initializing mutexes*/
+    xTouchSemaphore = xSemaphoreCreateBinary();
+    if (xTouchSemaphore == NULL) {
+      A_ERR("Failed to create touch semaphore");
+    }
+
     xPrintMutex = xSemaphoreCreateMutex();
     if (xPrintMutex == NULL) {
       A_ERR("Failed to create print mutex!");
     }
+
     xButtonsMutex = xSemaphoreCreateMutex();
-    
     if (xButtonsMutex == NULL) {
       A_ERR("Failed to create buttons mutex");
     }

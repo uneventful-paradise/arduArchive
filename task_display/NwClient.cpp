@@ -31,11 +31,13 @@ void NwClient::wait_on_connection(){
 }
 
 void NwClient::initiate_connection(){
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(WIFI_SSID, WIFI_PWD);
-    //no WiFi connection established initially
-    this -> status = -2;
-    send_connection_status(this -> status);
+    if (WiFi.status() != WL_CONNECTED) {
+        WiFi.mode(WIFI_STA);
+        WiFi.begin(WIFI_SSID, WIFI_PWD);
+        //no WiFi connection established initially
+        this -> status = -2;
+        send_connection_status(this -> status);
+    }
     
     //Initial connection attempt
     A_DBG("Connecting to WiFi...");
@@ -49,7 +51,6 @@ void NwClient::initiate_connection(){
             this -> retries = 0;
             WiFi.begin(WIFI_SSID, WIFI_PWD);
         }
-        Serial.print(".");
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 
@@ -141,7 +142,7 @@ size_t NwClient::write_all(const uint8_t* data, size_t req_len){
 void NwClient::close(){
     A_DBG("Closing wifi client");
     this -> client.stop();
-    WiFi.disconnect();
+    // WiFi.disconnect();
 }
 
 void NwClient::mark_connected(){

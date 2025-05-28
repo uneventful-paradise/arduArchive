@@ -17,6 +17,7 @@ extern Arduino_ESP32RGBPanel *bus;
 extern Arduino_RPi_DPI_RGBPanel *gfx;
 extern TAMC_GT911 ts;
 extern SpriteManager sprite_manager;
+enum SwipeType { SWIPE_START, SWIPE_TRACK, SWIPE_SUCCESS, SCREEN_PRESS, SWIPE_FAIL}; 
 
 static int jpegDrawCallback(JPEGDRAW *pDraw);
 
@@ -39,5 +40,13 @@ void draw_main_screen();
 bool init_icons(const char* icon_directory);
 
 bool init_icons_from_config(const char* config_path, bool is_dir = false);
+
+bool swap_page(int page_code, unsigned int folder_page);
+
+SwipeType track_swipe();
+
+SwipeType execute_swipe(int sx, int sy, int ex, int ey, unsigned long st, unsigned long et);
+
+void draw_time(char* time_string, int x, int y, int size = 2);
 
 #endif

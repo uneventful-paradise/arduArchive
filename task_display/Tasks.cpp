@@ -32,9 +32,14 @@ void touch_check_task(void* params) {
   BaseType_t xStatus;
   Sprite** nav_btn = sprite_manager.getNavButtons();
   while (true) {
+    SwipeType swipe_res = track_swipe();
+    // Swipe command. Skip button press checks
+    if (swipe_res != SCREEN_PRESS) {
+      vTaskDelay(pdMS_TO_TICKS(30));
+      continue;
+    } else {
     //screen has been touched
-    if (get_pos() == 1) {
-
+    // if (get_pos() == 1) {
       //if clock timer is active, stop it and request to redraw main screen
       if (reset_inactivity()) {
         continue;
@@ -48,27 +53,16 @@ void touch_check_task(void* params) {
         if((nav_btn[i] != nullptr) && 
         (btn_id = nav_btn[i] -> checkTouch(pos[0], pos[1])) != UNABLE) {
           A_DBG("button is a nav button");
-
           if (btn_id == BUTTON_PREV || btn_id == BUTTON_NEXT) {
-              if (folder_page > 0){
-                A_DBG("User pressed a nav button in folder mode");
-                sprite_manager.clear_folder_buttons();
-                sprite_manager.setFolderPage(0);
-                clear_screen();
-                draw_main_screen();
-                break;
-              }
-              sprite_manager.switchPage(btn_id);
-              if (sprite_manager.getMaxPage() > 0) {
-                clear_screen();
-                draw_main_screen();
-              }
+            A_DBG("Swapping page via nav buttons");
+            swap_page(btn_id, folder_page);
           } else if (btn_id == BUTTON_SWAP) {
             swap_client_type();
           }
           break;
         }
       }
+
       if (btn_id != UNABLE){
         A_DBG("skipping cmd btn checks");
         continue;
@@ -139,7 +133,6 @@ void touch_check_task(void* params) {
     vTaskDelay(200 / portTICK_PERIOD_MS);
   }
 }
-
 
 /*This task displays updates on the screen based on the type and status arguments of the UI_update struct type.
 type = 0 -> file transfer
@@ -228,14 +221,12 @@ void update_screen_task(void* params) {
             sprite_manager.setFolderPage(0);
             draw_text(textX, textY, 3, WHITE, update.message);
             vTaskDelay(500 / portTICK_PERIOD_MS);
-            clear_screen();
             draw_main_screen();
           }
           break;
         }
         case REDRAW_COMMAND: {
           // A_DBG("case is redraw screen");
-          clear_screen();
           
           if (xButtonsMutex != NULL) {
             if (xSemaphoreTake(xButtonsMutex, portMAX_DELAY) != pdTRUE){
@@ -263,11 +254,12 @@ void update_screen_task(void* params) {
         }
         case TIME_UPDATE: {
           // A_DBG("case is time update");  
-          clear_screen();
           if (update.status == 1) {
             draw_main_screen();
           }else{
-            draw_text(textX, textY, 3, WHITE, update.message);
+            clear_screen();
+            // draw_text(textX, textY, 3, WHITE, update.message);
+            draw_time(update.message, textX, textY, 8);
           }
           break;
         }
@@ -287,6 +279,7 @@ void update_screen_task(void* params) {
 //!try event driven approach in case this fails to reestablish connection
 void establish_connection_task(void* params) {
   current_client -> initiate_connection();
+  // initialize_wifi_logging();
   // UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
   // A_DBG("stack high water mark (PRE-LOOP): %u\n", watermark);
 
@@ -536,7 +529,7 @@ void wifi_request_handling_task(void* params) {
   BaseType_t xStatus;
 
   int ack = 0;
-  while (1) {
+  while (true) {
     xStatus = xQueueReceive(wifi_request_queue, &data, portMAX_DELAY);
     ack = 0;
     if (xStatus == pdTRUE) {
