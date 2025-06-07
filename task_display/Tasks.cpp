@@ -47,26 +47,26 @@ void touch_check_task(void* params) {
       //find pressed button. first check nav buttons then action buttons
       // watermark = uxTaskGetStackHighWaterMark(NULL);
       // Serial.printf("touch_check_task stack high water mark: %u\n", watermark);
-      int btn_id = UNABLE;
+      // int btn_id = UNABLE;
       unsigned int folder_page = sprite_manager.getFolderPage();
-      for (int i = 0; i < NAV_BTN_COUNT; ++i){
-        if((nav_btn[i] != nullptr) && 
-        (btn_id = nav_btn[i] -> checkTouch(pos[0], pos[1])) != UNABLE) {
-          A_DBG("button is a nav button");
-          if (btn_id == BUTTON_PREV || btn_id == BUTTON_NEXT) {
-            A_DBG("Swapping page via nav buttons");
-            swap_page(btn_id, folder_page);
-          } else if (btn_id == BUTTON_SWAP) {
-            swap_client_type();
-          }
-          break;
-        }
-      }
+      // for (int i = 0; i < NAV_BTN_COUNT; ++i){
+      //   if((nav_btn[i] != nullptr) && 
+      //   (btn_id = nav_btn[i] -> checkTouch(pos[0], pos[1])) != UNABLE) {
+      //     A_DBG("button is a nav button");
+      //     if (btn_id == BUTTON_PREV || btn_id == BUTTON_NEXT) {
+      //       A_DBG("Swapping page via nav buttons");
+      //       swap_page(btn_id, folder_page);
+      //     } else if (btn_id == BUTTON_SWAP) {
+      //       swap_client_type();
+      //     }
+      //     break;
+      //   }
+      // }
 
-      if (btn_id != UNABLE){
-        A_DBG("skipping cmd btn checks");
-        continue;
-      }
+      // if (btn_id != UNABLE){
+      //   A_DBG("skipping cmd btn checks");
+      //   continue;
+      // }
       //!avoid maxdelay? does it make sense to allow multiple button presses?
       /* wait for task to acquire mutex before moving on
       As noted earlier in this book, indefinite time outs are not
@@ -163,7 +163,6 @@ void update_screen_task(void* params) {
   int textX = (screenWidth - textWidth) / 2;
   int textY = screenHeight / 2 - 20;
 
-  //todo : guard transfers against idle triggers
   while (true) {
     xStatus = xQueueReceive(ui_updates_queue, &update, portMAX_DELAY);
     if (xStatus == pdPASS) {
@@ -279,7 +278,7 @@ void update_screen_task(void* params) {
 //!try event driven approach in case this fails to reestablish connection
 void establish_connection_task(void* params) {
   current_client -> initiate_connection();
-  // initialize_wifi_logging();
+  initialize_wifi_logging();
   // UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
   // A_DBG("stack high water mark (PRE-LOOP): %u\n", watermark);
 
@@ -581,6 +580,12 @@ void wifi_request_handling_task(void* params) {
         if(xStatus != pdPASS){
           vPrintString("send_connection_status failed to send update to ui_updates_queue\r\n");
         }
+      } else if (data.header.command_type == CLIENT_SWAP) {
+        A_DBG("Received request to swap client type");
+        // ack = data.header.command_id;
+        // send_ack(ack);
+        swap_client_type();
+        continue;
       }
       // Serial.printf("[DEBUG] [wifi_request_handling] Sending ack value %d for message %u\n", ack, data.header.command_id);
       A_DBG("Sending ack value %d for message %u\n", ack, data.header.command_id);

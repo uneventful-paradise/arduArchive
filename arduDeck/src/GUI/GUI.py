@@ -5,13 +5,15 @@ import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
 from tkinter import filedialog, messagebox
-from src.server_params import MAX_BUTTONS, MAX_FOLDER_BUTTONS
+from src.client_model.network_client import NetworkClient
+from src.server_params import MAX_BUTTONS, MAX_FOLDER_BUTTONS, logger
 from src.utils.client_utils import get_client
-from src.basic_comms import logger
+from src.basic_comms import prepare_swap
 from src.utils.data_format import gui_queue
 from src.GUI.macro_rec import KeyRecorder, rec_callback
 from src.utils.btn_funcs import gui_upload, button_lock, soft_upload, CONFIG_FILE, FOLDER_CONFIG_PATH
 from src.GUI.themes import apply_theme, make_action_button, BASE
+from src.utils.serial_helper import check_port_presence
 
 #todo add id checking for add and update func
 
@@ -42,6 +44,21 @@ def immediate_update(btn_list : list, in_folder : bool = False, folder_list: lis
         soft_upload(btn_list=None, folder_list=folder_list, folder_config=folder_path)
     else:
         soft_upload(btn_list=btn_list)
+
+def gui_client_swap():
+    current_client = get_client()
+    if current_client is None or isinstance(current_client, NetworkClient) and current_client.sock is None:
+        messagebox.showerror(title="Swap Request Error",
+                             message="Cannot swap mode when client is uninitialized. Please try again later.")
+        logger.warning("Client is none, aborting swap")
+        return
+    else:
+        if isinstance(current_client, NetworkClient) and not check_port_presence():
+            logger.warning("Serial swap requested but cable not connected, aborting swap")
+            messagebox.showerror(title="Swap Request error",
+                                 message="Connect serial cable before requesting client type swap!")
+            return
+        prepare_swap(current_client)
 
 class StreamDeckGUI(tk.Tk):
     def __init__(self, button_list):
@@ -111,6 +128,7 @@ class StreamDeckGUI(tk.Tk):
         try:
             while True:
                 update = gui_queue.get_nowait()
+                # logger.debug(f"Got update: {update}")
                 if update.startswith("[FAIL]"):
                     fg = "red"
                 elif update.startswith("[OK]"):
@@ -150,13 +168,28 @@ class StreamDeckGUI(tk.Tk):
         #                                  command=self.add_button_window,
         #                                  style="Blue.TButton")
         # self.add_button_btn.pack(pady=5)
+        bottom_frame = ttk.Frame(self.left_frame, style="TFrame")
+        bottom_frame.pack(fill="x", padx=10, pady=(0, 10))
+        bottom_frame.grid_columnconfigure(0, weight=1)
+        bottom_frame.grid_columnconfigure(1, weight=0)
+        bottom_frame.grid_columnconfigure(2, weight=1)
+        container_frame = ttk.Frame(bottom_frame, style="TFrame")
+        container_frame.grid(row=0, column=1)
+
+        swap_btn = ttk.Button(
+            container_frame,
+            text="Swap Mode",
+            style="TButton",
+            command=gui_client_swap
+        )
+        swap_btn.pack(side="left")
 
         self.status_label = ttk.Label(
-            self.left_frame,
+            container_frame,
             text="Status: —",
             style="TLabel" #can be bordered too
         )
-        self.status_label.pack(padx=10, pady=(0, 10))
+        self.status_label.pack(side="left", padx=(10,0))
 
     def create_right_frame(self):
         # Configure right_frame to have two rows: one for the canvas (expandable) and one for the fixed upload button.

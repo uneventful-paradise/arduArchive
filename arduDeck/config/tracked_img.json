@@ -1,8 +1,5 @@
 [
   {
-    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/folder.jpg"
-  },
-  {
     "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/fii.jpg"
   },
   {
@@ -40,11 +37,5 @@
   },
   {
     "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/arduino.jpg"
-  },
-  {
-    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/youtube.jpg"
-  },
-  {
-    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/firefox.jpg"
   }
 ]

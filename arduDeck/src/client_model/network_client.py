@@ -31,32 +31,14 @@ class NetworkClient(BaseClient):
         generate_gui_conn_update("[FAIL]Network client disconnected.")
         self.sock = conn
         self.sock.settimeout(self.timeout)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
 
-    #alternative using nonblocking socket
-    # def is_socket_closed(sock: socket.socket) -> bool:
-    # # remember the original blocking mode
-    # orig_blocking = sock.getblocking()
-    # sock.setblocking(False)
-    # try:
-    #     # peek into the buffer without removing bytes
-    #     data = sock.recv(16, socket.MSG_PEEK)
-    #     if len(data) == 0:
-    #         # orderly shutdown: remote closed
-    #         return True
-    # except BlockingIOError:
-    #     # no data available right now → still open
-    #     return False
-    # except ConnectionResetError:
-    #     # reset by peer
-    #     return True
-    # except Exception:
-    #     logger.exception("Unexpected error checking socket state")
-    #     return False
-    # finally:
-    #     # restore the original mode
-    #     sock.setblocking(orig_blocking)
-    #
-    # return False
+        SIO_KEEPALIVE_VALS = 0x98000004
+        onoff = 1
+        idle_socket_timer = 5000  # 10 seconds before sending keepalive probes
+        socket_probe_interval = 1000  # 3 seconds between keepalive probes
+
+        self.sock.ioctl(SIO_KEEPALIVE_VALS, (onoff, idle_socket_timer, socket_probe_interval))
 
     def check_connection(self) -> bool:
         if self.sock is None:
@@ -74,10 +56,10 @@ class NetworkClient(BaseClient):
             try:
                 data = self.sock.recv(1, socket.MSG_PEEK)
             except BlockingIOError as e:
-                logger.exception(e)
+                logger.error("Blocking error.")
                 return True  # socket is open and reading from it would block
             except ConnectionResetError as e:
-                logger.exception(e)
+                logger.error("ConnectionResetError. Waiting for new connection")
                 return False
             except Exception as e:
                 logger.exception(e)
@@ -122,12 +104,7 @@ class NetworkClient(BaseClient):
             return data
 
         except (OSError, socket.error) as e:
-            logger.error("read_all exception: %s\nRestarting connection", e, exc_info=True)
-            try:
-                self.sock.close()
-            except (OSError, socket.error):
-                logger.error("Error at closing socket")
-            self.initiate_connection()
+            logger.error("read_all exception: %s", e)
             return b''
         except TimeoutError as e:
             #todo: handle this properly - inside the while?
@@ -156,5 +133,13 @@ class NetworkClient(BaseClient):
         return total_sent
 
     def close(self) -> None:
+        try:
+            self.sock.close()
+            self.sock = None
+        except (OSError, socket.error):
+            logger.error("Error closing socket - already closed or bad state")
         logger.warning("Closed network connection")
-        self.sock.close()
+
+    def reset_connection(self):
+        self.close()
+        self.initiate_connection()

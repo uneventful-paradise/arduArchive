@@ -3,7 +3,7 @@ from src import basic_comms
 from src.utils.execute_funcs import *
 from src.utils.btn_funcs import BUTTON_LIST, button_lock, load_folder_buttons
 from src.client_model.base_client import BaseClient
-from src.utils.client_utils import get_client, swap_client, safe_read_all
+from src.utils.client_utils import get_client, swap_client, swap_event, nw_client
 from src.utils.data_format import generate_gui_conn_update
 
 #FILENAME = "media/haskell-register.log"
@@ -59,6 +59,11 @@ def check_connection():
     last_connected = False
     client_uninitialized = True
     while True:
+        # event is clear -> swap has started. so we are now disconnected.
+        if not swap_event.is_set():
+            last_connected = False
+            swap_event.wait()
+
         current_client = get_client()
         if current_client is not None:
             now_connected = current_client.check_connection()
@@ -66,15 +71,20 @@ def check_connection():
                 client_name = current_client.__class__.__name__
                 generate_gui_conn_update(f"[OK]{client_name} connected.")
                 last_connected = True
+                client_uninitialized = False
             if not now_connected and last_connected:
                 client_name = current_client.__class__.__name__
                 generate_gui_conn_update(f"[FAIL]{client_name} disconnected.")
                 last_connected = False
-        elif client_uninitialized:
-            generate_gui_conn_update("[FAIL] Generic client disconnected.")
+                if not client_uninitialized and isinstance(current_client, NetworkClient) and nw_client.sock is not None:
+                    #prepare for new connect call from client. serial client cannot reset connection
+                    logger.warning("resetting dropped connection")
+                    nw_client.reset_connection()
+        else:
+            generate_gui_conn_update("[FAIL]Generic client disconnected.")
             last_connected = False
-            # logger.error('uninitialized client')
             client_uninitialized = True
+            # logger.error('uninitialized client')
             time.sleep(2)
         #yield
         time.sleep(0.2)
@@ -109,19 +119,22 @@ def handle_request():
 
 def receive_request():
     while True:
+        swap_event.wait()
         current_client = get_client()
         if current_client is None:
             logger.warning("Client is none")
-            time.sleep(0.2)
+            time.sleep(3)
+            continue
+        if not current_client.check_connection():
+            logger.warning("Client is not connected")
+            time.sleep(3)
             continue
 
         try:
-            # request = safe_read_all(current_client=current_client, req_len=HEADER_SIZE)
             request = current_client.read_all(HEADER_SIZE)
             if not request:
-                logger.error("read 0")
-                # current_client.close()
-                # logger.error("Client disconnected")
+                logger.error("Read 0 bytes. Connection dropped")
+                time.sleep(3)
                 continue
 
             # parse header
@@ -164,7 +177,6 @@ def receive_request():
             logger.exception(e)
 
 
-#TODO: ADD QUEUE FOR SENDING!!
 """Function to be called by the writer thread. It will deal with listening to and 
 performing user requests."""
 def handle_server_send():
@@ -212,4 +224,4 @@ def handle_server_send():
         elif user_input == "e":
             current_client.close()
         else:
-            logger.warning("vezi ca esti prost")
+            logger.warning("unrecognized")

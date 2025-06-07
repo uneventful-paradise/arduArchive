@@ -59,7 +59,7 @@ In the context of multiple connections this will require a synchronized variable
 or an id that increments regardless of the acknowledgement status.
 """
 
-def send_request(client: BaseClient, pd: PackageData):
+def send_request(client: BaseClient, pd: PackageData, should_wait:bool = True):
     # global server_cmd_id
     req_len = pd.header_data.length
     req_contents = pd.contents
@@ -97,7 +97,8 @@ def send_request(client: BaseClient, pd: PackageData):
                     req_contents.hex())
 
     client.write_all(packet)
-    # server_cmd_id+=1
+    if not should_wait:
+        return SUCCESSFUL_CONF
     result = check_ack(pd.header_data.command_id)
     retry_counter = 0
 
@@ -133,6 +134,23 @@ def send_conf(current_client: BaseClient, cmd_id: int):
                  len(req_contents),
                  hex(pd.header_data.crc_value),
                  req_contents.decode('utf-8'))
+
+def prepare_swap(current_client: BaseClient) -> bool:
+    swap_contents="server swap"
+    swap_pd = create_packet(command_type=CLIENT_SWAP,
+                            command_id=server_cmd_id.inc(),
+                            length=len(swap_contents),
+                            crc_value=0,
+                            contents=swap_contents)
+    try:
+        swap_res = send_request(client=current_client, pd=swap_pd, should_wait=False)
+    except RuntimeError as e:
+        logger.error("Connection not established. Aborted packet send")
+        return False
+
+    if swap_res == SUCCESSFUL_CONF:
+        logger.warning("SERVER TRIGGERED CLIENT SWAP.")
+    return True
 
 """Opens the upload source file and sends predefined sized chunks of data to client.
 

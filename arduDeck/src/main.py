@@ -10,16 +10,16 @@ def start_server():
     MAX_CLIENTS = 5
     threads = []
 
-    set_client(nw_client)
-    current_client = get_client()
-    current_client.initiate_connection()
-    print('finished client setup and starting up threads')
 
     conn_thread = threading.Thread(target=check_connection, args=(), daemon=True)
     conn_thread.start()
     port_monitoring_thread = threading.Thread(target=monitor_port_connection, args=(), daemon=True)
     port_monitoring_thread.start()
 
+    set_client(nw_client)
+    current_client = get_client()
+    current_client.initiate_connection()
+    print('finished client setup and starting up threads')
     # threads.append(conn_thread)
     listener_thread = threading.Thread(target=receive_request, args=(), daemon=True)
     threads.append(listener_thread)

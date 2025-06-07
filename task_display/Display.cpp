@@ -102,7 +102,7 @@ void draw_nav_btns(){
 void draw_main_screen() {
   clear_screen();
   gfx->setCursor(0, 0);
-  draw_nav_btns();
+  // draw_nav_btns();
   if (xButtonsMutex != NULL) {
     if (xSemaphoreTake(xButtonsMutex, portMAX_DELAY) != pdTRUE){
       A_ERR("Failed to take buttons mutex");
@@ -138,7 +138,7 @@ void draw_main_screen() {
 void draw_folder_contents() {
   clear_screen();
   gfx->setCursor(0, 0);
-  draw_nav_btns();
+  // draw_nav_btns();
   // A_DBG("Drawing folder contents");
   if (xButtonsMutex != NULL) {
     if (xSemaphoreTake(xButtonsMutex, portMAX_DELAY) != pdTRUE){

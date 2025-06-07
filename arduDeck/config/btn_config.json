@@ -22,13 +22,13 @@
           {
             "command_id": "START_URL",
             "command_args": [
-              "https://cloudconvert.com/jpg-converter"
+              "https://www.dw.com/ro/focus/s-10575"
             ]
           },
           {
             "command_id": "START_URL",
             "command_args": [
-              "https://www.dw.com/ro/focus/s-10575"
+              "https://cloudconvert.com/jpg-converter"
             ]
           }
         ]
@@ -62,7 +62,7 @@
       {
         "command_id": "HARD_KEY_PRESS",
         "command_args": [
-          "dLEFT_CTRL+dR+w500+r"
+          "dKEY_LALT+dKEY_TAB+w500+r"
         ]
       }
     ],
@@ -75,7 +75,7 @@
       {
         "command_id": "HARD_KEY_PRESS",
         "command_args": [
-          "dLEFT_GUI+dr+w500+r"
+          "dKEY_LWIN+dr+w500+r+pSalut,frate"
         ]
       }
     ],
@@ -841,7 +841,7 @@
   },
   {
     "button_id": 13,
-    "folder_flag": 0,
+    "folder_flag": 1,
     "actions": [
       {
         "command_id": "START_URL",

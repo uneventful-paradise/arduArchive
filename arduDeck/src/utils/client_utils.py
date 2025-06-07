@@ -5,6 +5,10 @@ from src.client_model.serial_client import SerialClient
 from src.server_params import *
 
 client_lock = threading.Lock()
+#Event object for thread sync. event is set -> keep looping
+#event is clear -> swap has been initiated. wait until it is set again
+swap_event = threading.Event()
+swap_event.set()
 
 client: BaseClient = None
 nw_client = NetworkClient(host=HOST, port=PORT, timeout=10.0)
@@ -35,6 +39,7 @@ def get_client() -> BaseClient:
         return client
 
 def swap_client():
+    swap_event.clear()
     current_client = get_client()
     if isinstance(current_client, NetworkClient):
         current_client.close()
@@ -44,3 +49,4 @@ def swap_client():
         set_client(nw_client)
         nw_client.initiate_connection()
         sr_client.close()
+    swap_event.set()

@@ -13,7 +13,7 @@
 #include <WiFi.h>
 #include "time.h"
 
-#define INACTIVITY_TIMEOUT 10000  // 5 minutes - 300.000 ms
+#define INACTIVITY_TIMEOUT 100000  // 5 minutes - 300.000 ms
 #define BASE_CONFIG_PATH "/configs/btn_config.txt"
 #define WIFI_SSID "DIGI-yWsT"
 #define WIFI_PWD "74F8ghZw"
@@ -57,7 +57,7 @@
 #define MAX_SPRITE_COUNT 64
 #define BUTTONS_PER_PAGE 15
 #define BUTTONS_PER_ROW 5
-#define BUTTON_VERTICAL_OFFSET 20
+#define BUTTON_VERTICAL_OFFSET 40
 #define BUTTON_HORIZONTAL_OFFSET 45
 #define BUTTON_DELAY 150
 #define BUTTON_WIDTH 100
@@ -108,11 +108,12 @@
 #endif  // HAS_TEENSY_SDIO
 
 
-#define DEBUG 1
+#define DEBUG 0
 
 extern WiFiClient logClient;
 //  if (logClient && logClient.connected()) logClient.printf("[%s:%d]: " fmt "\r\n", __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__)\;
 #define A_DBG(fmt, ...) do { \
+    if (logClient && logClient.connected()) logClient.printf("[%s:%d]: " fmt "\r\n", __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__); \
     if (DEBUG) { \
         printf("[%s:%d]: " fmt "\n", __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__);\
     } \

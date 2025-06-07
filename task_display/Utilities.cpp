@@ -267,7 +267,7 @@ void hard_press(char* sequence) {
       case 'w':{
         delay(code);
 
-        A_DBG("delay selected for %ld\n", code);
+        A_DBG("delay selected for %ld ms\n", code);
         break;
       }
       case 'r':{
