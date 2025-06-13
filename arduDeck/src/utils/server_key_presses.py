@@ -2,8 +2,9 @@ import ctypes
 import time
 from src.server_params import logger
 from config.server_key_codes import key_scancodes, key_vkcodes
-SendInput = ctypes.windll.user32.SendInput
-
+# SendInput = ctypes.windll.user32.SendInput
+awareness = ctypes.c_int()
+ctypes.windll.shcore.SetProcessDpiAwareness(2)
 # C struct redefinitions 
 LONG = ctypes.c_long
 DWORD = ctypes.c_ulong
@@ -104,25 +105,16 @@ def Keyboard(code, flags=0):
 
 def Hardware(message, parameter=0):
     return Input(HardwareInput(message, parameter))
-# Actuals Functions
 
+def MoveMouse(x, y):
+    extra = ctypes.c_ulong(0)
+    ii_ = _INPUTunion()
+    x = int(x*(65536/ctypes.windll.user32.GetSystemMetrics(0))+1)
+    y = int(y*(65536/ctypes.windll.user32.GetSystemMetrics(1))+1)
+    ii_.mi = MOUSEINPUT(x, y, 0, 0x0001, 0, ctypes.pointer(extra))
+    cmd = INPUT(ctypes.c_ulong(0), ii_)
+    ctypes.windll.user32.SendInput(1, ctypes.pointer(cmd), ctypes.sizeof(cmd))
 
-def KeybdInput(code, flags):
-    return KEYBDINPUT(code, code, flags, 0, None)
-
-def HardwareInput(message, parameter):
-    return HARDWAREINPUT(message & 0xFFFFFFFF,
-                         parameter & 0xFFFF,
-                         parameter >> 16 & 0xFFFF)
-
-def Mouse(flags, x=0, y=0, data=0):
-    return Input(MouseInput(flags, x, y, data))
-
-def Keyboard(code, flags=0):
-    return Input(KeybdInput(code, flags))
-
-def Hardware(message, parameter=0):
-    return Input(HardwareInput(message, parameter))
 
 ################################################################################
 
@@ -286,10 +278,10 @@ class Mouse:
     def move_mouse(self, pos):
         """move the mouse to the specified coordinates"""
         (x, y) = pos
-        #TODO: old pos is wrong also wrong mouse scaling
+
         old_pos = self.get_position()
-        # x =  x if (x != -1) else old_pos[0]
-        # y =  y if (y != -1) else old_pos[1]
+        x =  x if (x != -1) else old_pos[0]
+        y =  y if (y != -1) else old_pos[1]
         self._do_event(self.MOUSEEVENTF_MOVE + self.MOUSEEVENTF_ABSOLUTE, x, y, 0, 0)
         # ctypes.windll.user32.SetCursorPos(x, y)
 
@@ -316,4 +308,10 @@ class Mouse:
         """get mouse position"""
         # return win32api.GetCursorPos()
         point = POINT()
-        return ctypes.windll.user32.GetCursorPos(ctypes.pointer(point))
+        return ctypes.windll.user32.GetCursorPos(ctypes.byref(point))
+
+
+# mouse = Mouse()
+# mouse.move_mouse((1900, 0))
+# ctypes.windll.user32.SetCursorPos(1900, 0)
+# MoveMouse(1700, 0)

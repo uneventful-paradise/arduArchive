@@ -12,7 +12,8 @@ with open(CONFIG_FILE, "r") as f:
 """Start a new process using python subprocesses.
 It starts the process in a nonblocking manner using `Popen`
 so the server is still responsive during this time"""
-def start_process(client, cmd_id, file_path):
+def start_process(client, cmd_id, args):
+    file_path = args[0]
     command = subprocess.Popen([file_path])
     logger.debug("START_PROCESS %d successful", cmd_id)
     #todo find a way to get popen result without blocking - use threads?
@@ -37,7 +38,8 @@ def start_process(client, cmd_id, file_path):
 
 """Opens a new tab or a new browser instance if none is running currently.
 This can be performed using shell but is unsafe and not recommended"""
-def start_url(client, cmd_id, url):
+def start_url(client, cmd_id, args):
+    url = args[0]
     if webbrowser.open_new_tab(url):
         logger.debug("Start_url %d successful", cmd_id)
     else:
@@ -56,37 +58,54 @@ pVALUE            - print VALUE string
 Keyboard modifiers (special keys like ALT, ESCAPE etc.) have codes assigned in the
 KEY_CODES config file.
 """
-def hard_key_press(client, cmd_id, key_sequence):
+def hard_key_press(client, cmd_id, args):
+    key_sequence = args[0]
     keys = key_sequence.split("+")
     new_keys = []
     for key in keys:
         #get command prefix and argument
-        value = key[1:]
-        cmd_prefix = key[0]
+        value = key[2:]
+        cmd_prefix = key[:2]
         # print(value)
-        if cmd_prefix == 'p':                       #just a paste command leave as is
+        # paste and release commands remain unchanged
+        if cmd_prefix in ("pt", "ra"):
             new_keys.append(key)
             continue
+        #user gave key code. no conversion needed
+        if cmd_prefix == "wt":
+            try:
+                new_val = int(float(value)*1000)
+            except ValueError:
+                logger.error("Failed to convert value for delay command")
+            else:
+                new_keys.append(cmd_prefix+str(new_val))
+            finally:
+                continue
         if value.isdigit():
             new_keys.append(key)
-        else:
+        #converting special keys or characters
+        elif cmd_prefix in ('sd', 'kd', 'su', 'ku'):
             if len(value) == 1:                     #regular key
                 logger.debug("regular key %s", value)
-                key = cmd_prefix + str(ord(value))  #get asii decimal value of key
+                key = cmd_prefix + str(ord(value))  #get ascii decimal value of key
                 new_keys.append(key)
             elif len(value) > 1:                    #special key
                 logger.debug("special key %s", value)
                 key_code = ""
                 #get the assigned key code from the config file
                 for elem in KEY_CODES["keys"]:
-                    if elem["key_name"] == value:
-                        key_code = cmd_prefix + str(elem["key_code"])
-                        logger.debug("special key is %s o length %d", key_code, len(key_code))
-                        new_keys.append(key_code)
-                if key_code == "":
-                    logger.warning("key code not found in config %d", key_code)
-            else:                                       #singular character command
-                new_keys.append(key)
+                    try:
+                        if elem["key_name"] == value:
+                            key_code = cmd_prefix + str(elem["key_code"])
+                            logger.debug("special key is %s of length %d", key_code, len(key_code))
+                            new_keys.append(key_code)
+                    except (KeyError, IndexError):
+                        logger.warning("key code not found in config %d", key_code)
+            else:
+                logger.error("bad length")
+        # singular character command
+        else:
+            new_keys.append(key)
 
     hexed_string = '+'.join(new_keys)
     pd = create_packet(command_type=MACRO_COMMAND,
@@ -101,7 +120,8 @@ def hard_key_press(client, cmd_id, key_sequence):
         logger.error("Unexpected response")
 
 mouse = Mouse()
-def soft_key_press(client, cmd_id, key_sequence):
+def soft_key_press(client, cmd_id, args):
+    key_sequence = args[0]
     pressed_keys = []
     keys = key_sequence.split("+")
 
@@ -155,12 +175,23 @@ def soft_key_press(client, cmd_id, key_sequence):
             pass
     logger.debug(f"Finished soft key press of id {cmd_id}")
 
+def toggle_actions(client: BaseClient, cmd_id: int, args):
+    actions = args
+    logger.debug("toggle actions are: %s", str(actions))
+    exec_act = actions.pop(0)
+    logger.debug("executing first action of id %s", exec_act["command_id"])
+    ACT_DICT[exec_act["command_id"]](client, cmd_id, exec_act["command_args"])
+    logger.debug("rotating arguments")
+    actions.append(exec_act)
+    logger.debug("Successful toggle action of id %d", cmd_id)
+
 #maps the commands to executing functions
 ACT_DICT = {
     "START_PROCESS": start_process,
     "START_URL": start_url,
     "HARD_KEY_PRESS": hard_key_press,
     "SOFT_KEY_PRESS": soft_key_press,
+    "TOGGLE_ACTIONS": toggle_actions,
 }
 
 # path = path.rstrip('\r\n')

@@ -27,14 +27,14 @@ void setup() {
   delay(1000);
   touch_init();
   delay(300);
-  
+  // Init Display
+  USB.begin();
+  Mouse.begin();
+  Keyboard.begin();
+  Consumer.begin();
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PWD);
-  // Init Display
   gfx->begin();
-
-  Keyboard.begin();
-  USB.begin();
 
   SPI.begin(SD_SCK, SD_MISO, SD_MOSI);
   if (!sd.begin(SdSpiConfig(SD_CS, SHARED_SPI, SD_SCK_MHZ(50)))) {
@@ -50,20 +50,54 @@ void setup() {
       delay(3000);
     }
   } else {
+    /*Initializing timers*/
+    clock_timer = xTimerCreate(
+      /*name - used only for debugging purposes*/
+      "clock_timer",
+      /*softawre timer's period in ticks*/
+      pdMS_TO_TICKS(1000),
+      /*setting uxAutoReload to pdTRUE creates an auto-reload timer*/
+      pdTRUE,
+      /*timer id - useful in case same callback is called by multiple timers*/
+      0,
+      /*callback function*/
+      clock_callback);
+
+      inactivity_timer = xTimerCreate(
+      /*name - used only for debugging purposes*/
+      "inactivity_timer",
+      /*softawre timer's period in ticks*/
+      pdMS_TO_TICKS(INACTIVITY_TIMEOUT),
+      /*setting uxAutoReload to pdFALSE creates a one-shot timer*/
+      pdFALSE,
+      /*timer id - useful in case same callback is called by multiple timers*/
+      0,
+      /*callback function*/
+      inactivity_callback);
+
+    if (clock_timer == NULL or inactivity_timer == NULL) {
+      A_ERR("Failed to start timers");
+    }
+    //start the inactivity timer
+    xTimerStart(inactivity_timer, 0);
+
+
     /*Initializing mutexes*/
+    xTouchSemaphore = xSemaphoreCreateBinary();
+    if (xTouchSemaphore == NULL) {
+      A_ERR("Failed to create touch semaphore");
+    }
+
     xPrintMutex = xSemaphoreCreateMutex();
     if (xPrintMutex == NULL) {
       A_ERR("Failed to create print mutex!");
     }
+
     xButtonsMutex = xSemaphoreCreateMutex();
-    
     if (xButtonsMutex == NULL) {
       A_ERR("Failed to create buttons mutex");
     }
-    // xClientMutex = xSemaphoreCreateMutex();
-    // if (xClientMutex == NULL){
-    //   A_ERR("Failed to create xClientMutex mutex");
-    // }
+
     xConnCheckMutex = xSemaphoreCreateMutex();
     if (xConnCheckMutex == NULL){
       A_ERR("Failed to create xConnCheckMutex mutex");
@@ -78,7 +112,7 @@ void setup() {
     nw_client = new NwClient(wfc, connection_event_group);
     current_client = (BaseClient*) nw_client;
 
-    if (!init_icons_from_config("/configs/btn_config.txt")) {
+    if (!init_icons_from_config(BASE_CONFIG_PATH)) {
       A_ERR("Icon read failed");
     }
 

@@ -1,60 +1,18 @@
 import struct
 import binascii
 import queue
-
-from src.client_model.base_client import BaseClient
-import threading
-
-from src.client_model.network_client import NetworkClient
-from src.client_model.serial_client import SerialClient
-from src.utils.data_format import HeaderData, PackageData
 from src.server_params import *
 from src.utils.atomic_int import AtomicInteger
+from src.client_model.base_client import BaseClient
+from src.client_model.network_client import NetworkClient
+from src.utils.data_format import HeaderData, PackageData
 
 server_cmd_id = AtomicInteger(0)
-client_lock = threading.Lock()
-
-client: BaseClient = None
-nw_client = NetworkClient(HOST, PORT)
-sr_client = SerialClient(port='COM5', baudrate=115200, timeout=1.0)
-
-def read_all(client: BaseClient, req_len: int) -> bytes:
-    with client_lock:
-        return client.read_all(req_len)
-
-def write_all(client: BaseClient, data: bytes):
-    with client_lock:
-        client.write_all(data)
 
 def create_packet(command_type: int, command_id: int, length:int, crc_value: int, contents: any) -> PackageData:
     hd = HeaderData(command_type=command_type, command_id=command_id, length=length, crc_value=crc_value)
     pd = PackageData(header_data=hd, contents=contents)
     return pd
-
-def set_client(new_client: BaseClient):
-    global client
-    with client_lock:
-        if client is not None:
-            # client.close()
-            client = None
-        client = new_client
-    logger.debug("Successfully swapped client")
-
-def get_client() -> BaseClient:
-    with client_lock:
-        return client
-
-def swap_client():
-    current_client = get_client()
-    if isinstance(current_client, NetworkClient):
-        current_client.close()
-        set_client(sr_client)
-        sr_client.initiate_connection()
-    elif isinstance(current_client, SerialClient):
-        set_client(nw_client)
-        nw_client.initiate_connection()
-        sr_client.close()
-
 
 """In the context of data transfers the server sends a packet then
 waits for confirmation before sending the next one. The queue is used to
@@ -101,7 +59,7 @@ In the context of multiple connections this will require a synchronized variable
 or an id that increments regardless of the acknowledgement status.
 """
 
-def send_request(client: BaseClient, pd: PackageData):
+def send_request(client: BaseClient, pd: PackageData, should_wait:bool = True):
     # global server_cmd_id
     req_len = pd.header_data.length
     req_contents = pd.contents
@@ -139,7 +97,8 @@ def send_request(client: BaseClient, pd: PackageData):
                     req_contents.hex())
 
     client.write_all(packet)
-    # server_cmd_id+=1
+    if not should_wait:
+        return SUCCESSFUL_CONF
     result = check_ack(pd.header_data.command_id)
     retry_counter = 0
 
@@ -156,7 +115,7 @@ def send_request(client: BaseClient, pd: PackageData):
     # server_cmd_id = pd.header_data.command_id + 1
     return result
 
-def send_conf(client: BaseClient, cmd_id: int):
+def send_conf(current_client: BaseClient, cmd_id: int):
     hd = HeaderData(command_type=CONFIRMATION_FLAG, command_id=cmd_id, length=len(str(cmd_id)), crc_value=0)
     req_contents = str(cmd_id).encode('utf-8')
     pd = PackageData(hd, req_contents)
@@ -168,13 +127,30 @@ def send_conf(client: BaseClient, cmd_id: int):
                          pd.header_data.length,
                          pd.header_data.crc_value) + req_contents
 
-    client.write_all(packet)
+    current_client.write_all(packet)
     logger.debug("SENT packet of type %d, id %d, size %d, CRC %s\n%s\n",
                  pd.header_data.command_type,
                  pd.header_data.command_id,
                  len(req_contents),
                  hex(pd.header_data.crc_value),
                  req_contents.decode('utf-8'))
+
+def prepare_swap(current_client: BaseClient) -> bool:
+    swap_contents="server swap"
+    swap_pd = create_packet(command_type=CLIENT_SWAP,
+                            command_id=server_cmd_id.inc(),
+                            length=len(swap_contents),
+                            crc_value=0,
+                            contents=swap_contents)
+    try:
+        swap_res = send_request(client=current_client, pd=swap_pd, should_wait=False)
+    except RuntimeError as e:
+        logger.error("Connection not established. Aborted packet send")
+        return False
+
+    if swap_res == SUCCESSFUL_CONF:
+        logger.warning("SERVER TRIGGERED CLIENT SWAP.")
+    return True
 
 """Opens the upload source file and sends predefined sized chunks of data to client.
 
@@ -188,8 +164,6 @@ def handle_upload(client: BaseClient, filename: str, client_location: str, clien
 
     # base_dir = os.path.dirname(os.path.abspath(__file__))
     # filename = os.path.join(base_dir, filename)
-    if isinstance(client, NetworkClient):
-        print("Salut sunt network client")
 
     try:
         if not os.path.exists(filename):

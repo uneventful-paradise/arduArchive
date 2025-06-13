@@ -1,7 +1,7 @@
-import logging
-import datetime
 import os
 import sys
+import logging
+import datetime
 
 os.makedirs("logs", exist_ok=True)
 logger = logging.getLogger(__name__)
@@ -10,7 +10,7 @@ log_filename = datetime.datetime.now().strftime("logs/log_%Y-%m-%d_%H-%M-%S.log"
 # Configure logger
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s [%(levelname)s] [%(funcName)s] %(message)s',
+    format='%(asctime)s [%(levelname)s] [%(funcName)s] [%(filename)s:%(lineno)d] %(message)s',
     datefmt="%m-%d %H:%M:%S",
     handlers=[
         logging.FileHandler(log_filename),
@@ -42,3 +42,4 @@ HOST = "0.0.0.0"
 PORT = 65432
 
 MAX_BUTTONS = 64
+MAX_FOLDER_BUTTONS = 15

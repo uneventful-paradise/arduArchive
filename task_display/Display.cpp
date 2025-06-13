@@ -28,7 +28,8 @@ SpriteManager sprite_manager = SpriteManager(gfx,
                                             MAX_SPRITE_COUNT,
                                             BUTTONS_PER_PAGE,
                                             BUTTONS_PER_ROW, 
-                                            BUTTON_OFFSET);
+                                            BUTTON_VERTICAL_OFFSET,
+                                            BUTTON_HORIZONTAL_OFFSET);
 
 static int jpegDrawCallback(JPEGDRAW *pDraw) {
   // Serial.printf("Draw pos = %d,%d. size = %d x %d\n", pDraw->x, pDraw->y, pDraw->iWidth, pDraw->iHeight);
@@ -89,7 +90,7 @@ void draw_nav_btns(){
   for(int i = 0; i < NAV_BTN_COUNT; ++i){ 
     if(nav_btn[i] != nullptr){
       int id = nav_btn[i] -> getId();
-      char* fname = nav_btn[i] -> getFilename();
+      char* fname = nav_btn[i] -> getIconPath();
   
       // A_DBG("Now drawing %d, of path %s\n", id, fname);
       nav_btn[i] -> draw(jpegDrawCallback);
@@ -99,8 +100,9 @@ void draw_nav_btns(){
 
 /*Draw main icon scene*/
 void draw_main_screen() {
+  clear_screen();
   gfx->setCursor(0, 0);
-  draw_nav_btns();
+  // draw_nav_btns();
   if (xButtonsMutex != NULL) {
     if (xSemaphoreTake(xButtonsMutex, portMAX_DELAY) != pdTRUE){
       A_ERR("Failed to take buttons mutex");
@@ -124,6 +126,33 @@ void draw_main_screen() {
         //   // }
         // A_DBG("Now drawing %d, of path %s", id, fname);
         buttons[i] -> draw(jpegDrawCallback);
+      }
+    }
+
+    if (xSemaphoreGive(xButtonsMutex) != pdTRUE) {
+      A_ERR("Failed to give buttons mutex");
+    }
+  }
+}
+//todo: clear screen in draw_main_screen fn
+void draw_folder_contents() {
+  clear_screen();
+  gfx->setCursor(0, 0);
+  // draw_nav_btns();
+  // A_DBG("Drawing folder contents");
+  if (xButtonsMutex != NULL) {
+    if (xSemaphoreTake(xButtonsMutex, portMAX_DELAY) != pdTRUE){
+      A_ERR("Failed to take buttons mutex");
+    }
+
+    Sprite** folder_buttons = sprite_manager.getFolderButtons();
+    // A_DBG("Folder page is %d", sprite_manager.getFolderPage());
+    for(int i = 0; i < MAX_FOLDER_SIZE; ++i){ 
+      if (folder_buttons[i] != nullptr) {
+        // int id = folder_buttons[i] -> getId();
+        // char* fname = folder_buttons[i] -> getIconPath();
+        // A_DBG("Now drawing %d, of path %s", id, fname);
+        folder_buttons[i] -> draw(jpegDrawCallback);
       }
     }
 
@@ -193,12 +222,12 @@ bool init_icons(const char* icon_directory){
 }
 
 
-bool init_icons_from_config(const char* config_path){
+bool init_icons_from_config(const char* config_path, bool is_icon_folder){
   SdFile file;
   const int max_line_size = 100;
   char line[max_line_size], line_copy[max_line_size];
   size_t n = 0;
-  unsigned int id = 0;
+  unsigned int id = 0, folder_flag = 0;
   
   if (!sd.exists(config_path)) {
     A_ERR("File does not exist");
@@ -215,14 +244,16 @@ bool init_icons_from_config(const char* config_path){
 
   while ((n = file.fgets(line, sizeof(line))) > 0) {
     // Ensure we have at least one character.
-    if (n < 1) continue;
+    if (n < 1){
+      A_WRN("Empty line");
+      continue;
+    }
   
     if (line[n - 1] == '\n') {
       //remove endlines
       line[n-1] = '\0';
     }
   
-    
     // A_DBG("Line is %s", line);
 
     //get filename
@@ -243,19 +274,39 @@ bool init_icons_from_config(const char* config_path){
     //convert string key value to decimal value
     id = strtol(token, NULL, 10);
     if (id == 0L && strcmp(token, "0")) {
-      A_ERR("stroull failed for token conversion");
+      A_ERR("stroull failed for id token conversion");
       continue;
     }
-    A_DBG("filename is %s | id is %d", line_copy, id);
+    //get folder flag
+    token = strtok_r(NULL, " ", &save_ptr);
+
+    if (token == NULL) {
+      A_ERR("failed to extract folder flag. Wrong line format");
+      continue;
+    }
+
+    folder_flag = strtol(token, NULL, 10);
+    if (folder_flag == 0L && strcmp(token, "0")) {
+      A_ERR("stroull failed for dir flag token conversion");
+      continue;
+    }
+
+    // A_DBG("filename is %s | id is %d | folder flag is %d", line_copy, id, folder_flag);
 
     if (xButtonsMutex != NULL) {
       if (xSemaphoreTake(xButtonsMutex, portMAX_DELAY) != pdTRUE){
         A_ERR("Failed to take buttons mutex");
       }
 
-      // A_DBG("Took mutex");
-      Sprite* btn = sprite_manager.add_button(id, line_copy);
-      if (btn == NULL){
+      Sprite* btn = nullptr;
+      if (is_icon_folder) {
+        // A_DBG("Adding folder button");
+        btn = sprite_manager.add_folder_button(id, line_copy);
+      }else{
+        btn = sprite_manager.add_button(id, line_copy, folder_flag);
+      }
+
+      if (btn == nullptr){
         A_ERR("Button creation failed");
       }
 
@@ -266,4 +317,124 @@ bool init_icons_from_config(const char* config_path){
   }
   // file.close();
   return true;
+}
+
+bool swap_page(int page_code, unsigned int folder_page){
+  note_activity();
+  if (folder_page > 0){
+    A_DBG("User pressed a nav button in folder mode");
+    sprite_manager.clear_folder_buttons();
+    sprite_manager.setFolderPage(0);
+    draw_main_screen();
+    return false;
+  }
+  sprite_manager.switchPage(page_code);
+  if (sprite_manager.getMaxPage() > 0) {
+    draw_main_screen();
+  }
+  return true;
+}
+
+static bool prev_touched = false, touch_state = false;
+static int start_x = -1, start_y = -1, end_x = -1, end_y = -1;
+static unsigned long start_time;
+
+SwipeType track_swipe() {
+  BaseType_t xStatus = xSemaphoreTake(xTouchSemaphore, pdMS_TO_TICKS(100));
+  if (xStatus != pdTRUE) {
+    // A_WRN("Failed to take touch semaphore");
+    return SWIPE_FAIL;
+  }
+  
+  //track touch until break condition
+  ts.read();
+  touch_state = ts.isTouched;
+  // A_DBG("Touch state is %d, prev_touched is %d", touch_state, prev_touched);
+  //first touch of swipe
+  xStatus = xSemaphoreGive(xTouchSemaphore);
+  if (xStatus != pdTRUE) {
+    A_WRN("Failed to give touch semaphore");
+  }
+
+  if (touch_state && !prev_touched) {
+    prev_touched = true;
+    start_x = ts.points[0].x;
+    start_y = ts.points[0].y;
+    start_time = millis();
+    // A_DBG("Start of swipe at %d, %d, %lu", start_x, start_y, start_time);
+    return SWIPE_START;
+  } else if (touch_state && prev_touched) {
+    end_x = ts.points[0].x;
+    end_y = ts.points[0].y;
+    return SWIPE_TRACK;
+  } else if (!touch_state && prev_touched) {
+    end_x = ts.points[0].x;
+    end_y = ts.points[0].y;
+    prev_touched = false;
+    unsigned long end_time = millis();
+    // A_DBG("Swipe ending at %d, %d, %lu", end_x, end_y, end_time);
+    if (start_x != -1 && end_x != -1 && start_y != -1 && end_y != -1) {
+      SwipeType result = execute_swipe(start_x, start_y, end_x, end_y, start_time, end_time);
+      start_x = start_y = end_x = end_y = -1;
+      return result;
+    } else {
+      A_ERR("Invalid coordinates for swipe");
+    }
+  }
+  // vTaskDelay(pdMS_TO_TICKS(30));
+  return SWIPE_FAIL;
+}
+
+SwipeType execute_swipe(int sx, int sy, int ex, int ey, unsigned long st, unsigned long et) {
+  int dx = ex - sx, dy = ey - sy;
+  unsigned long dt = et - st;
+  if (dt < 100 || abs(dx) < 30) {
+    pos[0] = ex;
+    pos[1] = ey;
+    A_DBG("Screen pressed at %d, %d", pos[0], pos[1]);
+    return SwipeType::SCREEN_PRESS;
+  }
+  if (dt > 2000) {
+    //invalidate slow swipe
+    A_DBG("Swipe too slow, dt = %lu", dt);
+    return SwipeType::SWIPE_FAIL;
+  }
+  //swipe up to change mode?
+  unsigned int folder_page = sprite_manager.getFolderPage();
+  if (dx > 0) {
+    swap_page(BUTTON_PREV, folder_page);
+    A_DBG("Swiped left");
+    return SwipeType::SWIPE_SUCCESS;
+  } else if (dx < 0) {
+    swap_page(BUTTON_NEXT, folder_page);
+    A_DBG("Swiped right");
+    return SwipeType::SWIPE_SUCCESS;
+  } else {
+    A_WRN("bad delta for swipe");
+  }
+  return SwipeType::SWIPE_FAIL;
+}
+
+void draw_time(char *time_string, int x, int y, int size)
+{
+  char* save_ptr = NULL;
+  char* token;
+  token = strtok_r(time_string, " ", &save_ptr);
+  if(token == NULL){
+    A_ERR("failed to extract first time token.");
+    return;
+  }
+
+  // int month_day_size = (size > 0 ? size - 1 : 1);
+  // A_DBG("Drawing time at %d, %d with size %d", x, y, size);
+  gfx -> setCursor(x, y);
+  gfx -> setTextSize(size);
+  gfx -> setTextColor(WHITE);
+  gfx -> printf("%s ", token); // Print the first token (month-day)
+  gfx -> setTextSize(2);
+  int curs_x = gfx -> getCursorX();
+  int curs_y = gfx -> getCursorY();
+  gfx -> setCursor(curs_x, curs_y + 50); // Move cursor down for the next line
+  token = strtok_r(NULL, " ", &save_ptr);
+  gfx -> println(token);
 }

@@ -1,0 +1,52 @@
+import threading
+from src.client_model.base_client import BaseClient
+from src.client_model.network_client import NetworkClient
+from src.client_model.serial_client import SerialClient
+from src.server_params import *
+
+client_lock = threading.Lock()
+#Event object for thread sync. event is set -> keep looping
+#event is clear -> swap has been initiated. wait until it is set again
+swap_event = threading.Event()
+swap_event.set()
+
+client: BaseClient = None
+nw_client = NetworkClient(host=HOST, port=PORT, timeout=10.0)
+sr_client = SerialClient(port='COM5', baudrate=115200, timeout=10.0)
+
+def safe_read_all(current_client: BaseClient, req_len: int) -> bytes:
+    with client_lock:
+        return current_client.read_all(req_len)
+
+def safe_write_all(current_client: BaseClient, data: bytes):
+    with client_lock:
+        current_client.write_all(data)
+
+def set_client(new_client: BaseClient):
+    global client
+    with client_lock:
+        if client is not None:
+            # client.close()
+            client = None
+        client = new_client
+    logger.debug("Successfully set client")
+
+def get_client() -> BaseClient:
+    global client
+    with client_lock:
+        if client is None:
+            logger.debug("Client is not set")
+        return client
+
+def swap_client():
+    swap_event.clear()
+    current_client = get_client()
+    if isinstance(current_client, NetworkClient):
+        current_client.close()
+        set_client(sr_client)
+        sr_client.initiate_connection()
+    elif isinstance(current_client, SerialClient):
+        set_client(nw_client)
+        nw_client.initiate_connection()
+        sr_client.close()
+    swap_event.set()

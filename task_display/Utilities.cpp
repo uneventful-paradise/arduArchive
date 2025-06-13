@@ -18,6 +18,8 @@ const uint32_t PROGMEM crc_table[16] = {
 };
 
 USBHIDKeyboard Keyboard;
+USBHIDMouse Mouse;
+USBHIDConsumerControl Consumer;
 
 QueueHandle_t send_queue;
 QueueHandle_t conf_queue;
@@ -26,10 +28,86 @@ SemaphoreHandle_t xButtonsMutex = NULL;
 // SemaphoreHandle_t xClientMutex = NULL;
 SemaphoreHandle_t xConnEventGrpMutex = NULL;
 SemaphoreHandle_t xConnCheckMutex = NULL;
-
+SemaphoreHandle_t xTouchSemaphore = NULL;
 QueueHandle_t ui_updates_queue;
 
+TimerHandle_t clock_timer, inactivity_timer;
+const int timestamp_size = 30;
+char current_timestamp[timestamp_size];
+bool configured_timestamp = false;
+struct tm time_info;
+
 unsigned int client_cmd_id = 0;
+
+void start_activity()
+{
+  BaseType_t xStatus = xSemaphoreTake(xTouchSemaphore, pdMS_TO_TICKS(100));
+  if (xStatus != pdTRUE) {
+    A_WRN("Failed to take touch semaphore");
+  }
+  xTimerStop(inactivity_timer, 0);
+  xTimerStop(clock_timer, 0);
+}
+
+void end_activity()
+{
+  BaseType_t xStatus = xSemaphoreGive(xTouchSemaphore);
+  if (xStatus != pdTRUE) {
+    A_WRN("Failed to give touch semaphore");
+  }
+  xTimerReset(inactivity_timer, 0);
+}
+
+void note_activity()
+{
+  xTimerReset(inactivity_timer, 0);
+  xTimerStop(clock_timer, 0);
+}
+
+bool reset_inactivity(){
+  UI_update update;
+  BaseType_t xStatus;
+  if (xTimerIsTimerActive(clock_timer) != pdFALSE) {
+      note_activity();
+      update.type = TIME_UPDATE;
+      //status to signal that main screen should be redrawn
+      update.status = 1;
+      strcpy(update.message, "Touch detected.");
+      xStatus = xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
+      if(xStatus != pdPASS){
+        A_ERR("Failed to send time in ui queue");
+      }
+      xTimerReset(inactivity_timer, 0);
+      // A_DBG("went from inactive to active");
+      xTimerReset(inactivity_timer, 0);
+      return true;
+    }
+  // reset inactivity timer on touch
+  xTimerReset(inactivity_timer, 0);
+  return false;
+}
+
+void clock_callback(TimerHandle_t xTimer)
+{
+    BaseType_t xStatus;
+    if (update_timestamp()){
+        // A_DBG("Updated timestamp to %s", current_timestamp);
+        UI_update update;
+        update.type = TIME_UPDATE;
+        update.status = 0;
+        strcpy(update.message, current_timestamp);
+        xStatus = xQueueSend(ui_updates_queue, &update, portMAX_DELAY);
+        if (xStatus != pdPASS){
+            A_ERR("Failed to send time in ui queue");
+        }
+    }
+}
+
+void inactivity_callback(TimerHandle_t xTimer){
+  //inactivity detected. start clock timer to send ui updates
+  A_DBG("Entering inactivity");
+  xTimerStart(clock_timer, 0);
+}
 
 unsigned long crc_update(unsigned long crc, byte data) {
   byte tbl_idx;
@@ -144,105 +222,130 @@ Raw variation of the library function.
 */
 void hard_press(char* sequence) {
   //first split the string by '+' using thread safe strtok
-  char* save_ptr = sequence;
-  char* token;
+  char* save_ptr = NULL;
+  char* token = NULL;
+  char cmd_prefix[3];
 
   token = strtok_r(sequence, "+", &save_ptr);
 
   while (token) {
-    //get command type
-    char event = token[0];
+    //get command type. prefix has a fixed length of 2 characters
+    strncpy(cmd_prefix, token, 2);
+    cmd_prefix[2] = '\0';  // null-terminate the string
+    A_DBG("Event is %s\n", cmd_prefix);
     //char* pEnd;
-    // printf("%s\n", token);
 
-    unsigned long long int code = 0;
-    if (strlen(token) > 1) {
+    unsigned long int code = 0;
+    if (strlen(token) > 2) {
       //convert string key value to decimal value
-      code = strtoull(token + 1, NULL, 10);
+      code = strtoul(token + 2, NULL, 10);
       if (code == 0L) {
-        A_ERR("stroull failed for token conversion");
+        A_ERR("stroull failed for token %s conversion", token);
+      } else {
+        A_DBG("Token is %s Code value is %lu\n", token, code);
       }
     }
     //perform the appropriate action given the command type
-    switch (event) {
-      case 'u':{
-        char c = code;
-        if (code >= 128) {
-          Keyboard.releaseRaw(code);
-        } else {
-          Keyboard.release(code);
-        }
-
-        A_DBG("key_up selected for %c\n", c);
-        // log(log_msg);
-        break;
-      }
-      case 'd':{
-        char c = code;
-        if (code >= 128) {
-          Keyboard.pressRaw(code);
-        } else {
-          Keyboard.press(code);
-        }
-
-        A_DBG("key_down selected for %c\n", c);
-        break;
-      }
-      case 'w':{
-        delay(code);
-
-        A_DBG("delay selected for %ld\n", code);
-        break;
-      }
-      case 'r':{
-        Keyboard.releaseAll();
-
-        A_DBG("release all selected\n");
-        break;
-      }
-      case 'p':{
-        Keyboard.printf(token + 1);
-        A_DBG("print selected\n");
-        break;
-      }
+    if (!strcmp(cmd_prefix, "ku")) {
+      char c = code;
+      Keyboard.release(code);
+      A_DBG("regular key_up selected for char %c\n", c);
     }
+    else if (!strcmp(cmd_prefix, "kd")) {
+      char c = code;
+      Keyboard.press(code);
+      A_DBG("regular key_down selected for char %c\n", c);
+    }
+    else if (!strcmp(cmd_prefix, "su")) {
+      char c = code;
+      Keyboard.releaseRaw(code);
+      A_DBG("special key_up selected for code %lu\n", code);
+    }
+    else if (!strcmp(cmd_prefix, "sd")) {
+      char c = code;
+      Keyboard.pressRaw(code);
+      A_DBG("special key_down selected for code %lu\n", code);
+    }
+    else if (!strcmp(cmd_prefix, "cu")) {
+      Consumer.release();
+      A_DBG("mouse button up selected for code %lu\n", code);
+    } 
+    else if (!strcmp(cmd_prefix, "cd")) {
+      Consumer.press(code);
+      A_DBG("mouse button down selected for code %lu\n", code);
+    }
+    else if (!strcmp(cmd_prefix, "mm")) {
+      int x = 0, y = 0;
+      if (sscanf(token, "mm(%d,%d)", &x, &y) == 2) {
+        A_DBG("Mouse move to coords x = %d, y = %d\n", x, y);
+        x*=3, y*=3; //scale the mouse movement to a more usable value
+        while (x || y) {
+          int partial_move_x = x > 127 ? 127 : (x < -127 ? -127 : x);
+          int partial_move_y = y > 127 ? 127 : (y < -127 ? -127 : y);
+          Mouse.move(partial_move_x, partial_move_y);
+          x -= partial_move_x;
+          y -= partial_move_y;
+        }
+      } else {
+        A_ERR("Failed to parse mouse move coordinates from %s", token);
+      }
+    } 
+    else if (!strcmp(cmd_prefix, "wt")) {
+      delay(code);
+      A_DBG("delay selected for %lu ms\n", code);
+    } 
+    else if (!strcmp(cmd_prefix, "ra")) {
+      Keyboard.releaseAll();
+      A_DBG("release all selected\n");
+    } 
+    else if (!strcmp(cmd_prefix, "pt")) {
+      Keyboard.printf(token + 2);
+
+      A_DBG("print selected\n");
+    } 
+    else {
+      A_WRN("Unknown command prefix: %s", cmd_prefix);
+    }
+
     token = strtok_r(NULL, "+", &save_ptr);
   }
 }
 
-bool configured_timestamp = false;
-struct tm time_info;
-
-void configure_timestamp() {
-  if (WiFi.status() != WL_CONNECTED) {
-    A_DBG("Not connected to network. Failed to fetch current time\n");
+bool configure_timestamp(){
+  if(WiFi.status() != WL_CONNECTED){
+    A_WRN("Not connected to network. Failed to fetch current time\n");
+    return false;
   }
 
   const char* ntpServer = "pool.ntp.org";
-  const long gmtOffset_sec = 0;
-  const int daylightOffset_sec = 3600;
+  const long  gmtOffset_sec = 2 * 3600; // GMT+2 offset in seconds
+  const int   daylightOffset_sec = 3600;
 
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 
-  A_DBG("Updated time info\n");
+  A_DBG("Fetched time from ntp\n");
+  return true;
 }
 
-const int timestamp_size = 30;
-char current_timestamp[timestamp_size];
+bool update_timestamp(){
+  if(!configured_timestamp){
+    if(configure_timestamp()){
+      configured_timestamp = true;
+    }else{
+      return false;
+    }
+  }
 
-bool update_timestamp() {
-  if (!getLocalTime(&time_info)) {
-    A_ERR("Failed to update time");
+  if(!getLocalTime(&time_info)){
+    A_WRN("Failed to update time");
     return false;
   }
   // Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
-  if (!strftime(current_timestamp, timestamp_size, "%m-%d %H:%M:%S", &time_info)) {
-    A_ERR("Failed to write time\n");
-    return true;
-  } else {
-    A_DBG("Succesfully wrote time %s\n", current_timestamp);
+  if(!strftime(current_timestamp , timestamp_size, "%H:%M:%S %b-%d ", &time_info)){
+    A_DBG("Failed to write time\n");
     return false;
   }
+  return true;
 }
 
 /*Send an update struct instance to the ui_updates_queue
@@ -266,11 +369,11 @@ void send_connection_status(int change){
       break;
     }
     case 0:{
-      temp_text = "Awaiting client connection.";
+      temp_text = "Awaiting server connection.";
       break;
     }
     case 1:{
-      temp_text = "Client Connected.";
+      temp_text = "Server Connected.";
       break;
     }
     default:{

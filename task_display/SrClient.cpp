@@ -8,16 +8,24 @@ SrClient::~SrClient(){
 // wait for serial port to connect. Needed for native USB
 // serial.begin has already been called in .ino . maybe end and begin?
 void SrClient::initiate_connection(){
-    // this -> serial.flush();
-    // this -> serial.begin(115200);
-    // while (!(this->serial)) {
-    //     vTaskDelay(500 / portTICK_PERIOD_MS); 
-    // }
-    delay(1000);
+    this -> status = 0;
     send_connection_status(this -> status);
-    this->serial.printf("\nserial_start\n");
+    BaseType_t xStatus;
+    const TickType_t xTicksToWait = pdMS_TO_TICKS(2000);
+    Package_data pd;
+    while(true){
+        this->serial.printf("\nserial_start\n");
+        xStatus = xQueueReceive(conf_queue, &pd, xTicksToWait);
+        if(xStatus != pdFAIL){
+            break;
+        }
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+    delay(1000);
+    this->status = 1;
+    send_connection_status(this -> status);
 }
-//does nothing, serial is always conencted?
+//does nothing, serial is always connected? could send pings periodically
 void SrClient::wait_on_connection(){
 
 }

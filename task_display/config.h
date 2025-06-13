@@ -5,6 +5,8 @@
 // #include <SD.h>
 #include "JpegFunc.h"
 #include <USBHIDKeyboard.h>
+#include <USBHIDMouse.h>
+#include <USBHIDConsumerControl.h>
 #include <SPI.h>
 #include <Wire.h>
 
@@ -13,10 +15,14 @@
 #include <WiFi.h>
 #include "time.h"
 
-
+#define INACTIVITY_TIMEOUT 100000  // 5 minutes - 300.000 ms
+#define BASE_CONFIG_PATH "/configs/btn_config.txt"
 #define WIFI_SSID "DIGI-yWsT"
 #define WIFI_PWD "74F8ghZw"
+// #define WIFI_SSID "testesp32"
+// #define WIFI_PWD "javabanana"
 #define SERVER_IP "192.168.100.63"
+// #define SERVER_IP "192.168.152.30"
 #define PORT 65432
 #define CHUNK_SIZE 2048
 #define HEADER_SIZE 16  //unsigned int cmd_type | unsigned int cmd_id | unsigned int length | unsigned int crc_value
@@ -31,6 +37,7 @@
 #define REDRAW_COMMAND 6
 #define CONNECTION_CHECK 7
 #define CLIENT_SWAP 8
+#define TIME_UPDATE 9
 
 #define TOUCH_SDA 17
 #define TOUCH_SCL 18
@@ -53,10 +60,12 @@
 #define MAX_SPRITE_COUNT 64
 #define BUTTONS_PER_PAGE 15
 #define BUTTONS_PER_ROW 5
-#define BUTTON_OFFSET 15
+#define BUTTON_VERTICAL_OFFSET 40
+#define BUTTON_HORIZONTAL_OFFSET 45
 #define BUTTON_DELAY 150
-#define BUTTON_WIDTH 85
-#define BUTTON_HEIGHT 85
+#define BUTTON_WIDTH 100
+#define BUTTON_HEIGHT 100
+#define MAX_FOLDER_SIZE 15
 
 #define NAV_BTN_COUNT 3
 #define BUTTON_PREV 100
@@ -104,7 +113,13 @@
 
 #define DEBUG 0
 
-#define A_DBG(fmt, ...) do { if (DEBUG) { printf("[%s:%d]: " fmt "\n", __func__, __LINE__  __VA_OPT__(, ) __VA_ARGS__); } } while (0)
+extern WiFiClient logClient;
+//  if (logClient && logClient.connected()) logClient.printf("[%s:%d]: " fmt "\r\n", __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__)\;
+#define A_DBG(fmt, ...) do { \
+    if (DEBUG) { \
+        printf("[%s:%d]: " fmt "\n", __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__);\
+    } \
+} while (0)
 // #define A_DBG(fmt, ...) { printf("[%s:%d]: " fmt "\n", __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__); }
 // {update_timestamp(); printf("[%s:%s:%d]: " fmt "\n", current_timestamp, __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__);}
 

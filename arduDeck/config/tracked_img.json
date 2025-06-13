@@ -1,21 +1,21 @@
 [
   {
-    "image_path": "media/icons/white_pycharm.jpg"
-  },
-  {
-    "image_path": "media/icons/adobe.jpg"
+    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/fii.jpg"
   },
   {
     "image_path": "media/icons/steam.jpg"
   },
   {
-    "image_path": "media/icons/obs.jpg"
+    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/github.jpg"
   },
   {
     "image_path": "media/icons/vscode.jpg"
   },
   {
-    "image_path": "media/icons/word.jpg"
+    "image_path": "media/icons/fii.jpg"
+  },
+  {
+    "image_path": "media/icons/spotify.jpg"
   },
   {
     "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/steam.jpg"
@@ -27,6 +27,15 @@
     "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/obs.jpg"
   },
   {
-    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/white_pycharm.jpg"
+    "image_path": "media/icons/firefox.jpg"
+  },
+  {
+    "image_path": "media/icons/youtube.jpg"
+  },
+  {
+    "image_path": "media/icons/obs.jpg"
+  },
+  {
+    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/arduino.jpg"
   }
 ]

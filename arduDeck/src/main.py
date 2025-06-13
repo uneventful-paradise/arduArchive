@@ -1,37 +1,26 @@
-#TODO: retest/build connection checking loop
-from src.basic_comms import set_client, get_client, nw_client, sr_client
-from src.client_model.base_client import BaseClient
-from src.client_model.network_client import NetworkClient
-from src.client_model.serial_client import SerialClient
-from src.server_comms import receive_request, handle_server_send, handle_request
-from src.GUI.GUI import StreamDeckGUI
-from server_params import logger
 import threading
-from utils.btn_funcs import BUTTON_LIST
-import socket
-
+from src.server_params import logger
+from src.GUI.GUI import StreamDeckGUI
+from src.utils.btn_funcs import BUTTON_LIST
+from src.utils.client_utils import set_client, get_client, nw_client, sr_client
+from src.server_comms import receive_request, handle_server_send, handle_request, check_connection
+from src.utils.serial_helper import monitor_port_connection
 
 def start_server():
     MAX_CLIENTS = 5
     threads = []
 
-    # s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # # s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    # s.bind((HOST, PORT))
-    # s.listen(5)
-    # while True:
-    #     logger.debug("waiting for clients")
-    #     conn, addr = s.accept()
-    #     logger.debug("Connected by %s", addr)
+
+    conn_thread = threading.Thread(target=check_connection, args=(), daemon=True)
+    conn_thread.start()
+    port_monitoring_thread = threading.Thread(target=monitor_port_connection, args=(), daemon=True)
+    port_monitoring_thread.start()
 
     set_client(nw_client)
     current_client = get_client()
     current_client.initiate_connection()
-        # addr = "ceva"
-        # set_client(new_client)
-        # current_client = get_client()
-
-
+    print('finished client setup and starting up threads')
+    # threads.append(conn_thread)
     listener_thread = threading.Thread(target=receive_request, args=(), daemon=True)
     threads.append(listener_thread)
     sender_thread = threading.Thread(target=handle_server_send, args=(), daemon=True)
