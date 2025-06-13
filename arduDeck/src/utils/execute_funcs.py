@@ -64,32 +64,48 @@ def hard_key_press(client, cmd_id, args):
     new_keys = []
     for key in keys:
         #get command prefix and argument
-        value = key[1:]
-        cmd_prefix = key[0]
+        value = key[2:]
+        cmd_prefix = key[:2]
         # print(value)
-        if cmd_prefix == 'p':                       #just a paste command leave as is
+        # paste and release commands remain unchanged
+        if cmd_prefix in ("pt", "ra"):
             new_keys.append(key)
             continue
+        #user gave key code. no conversion needed
+        if cmd_prefix == "wt":
+            try:
+                new_val = int(float(value)*1000)
+            except ValueError:
+                logger.error("Failed to convert value for delay command")
+            else:
+                new_keys.append(cmd_prefix+str(new_val))
+            finally:
+                continue
         if value.isdigit():
             new_keys.append(key)
-        else:
+        #converting special keys or characters
+        elif cmd_prefix in ('sd', 'kd', 'su', 'ku'):
             if len(value) == 1:                     #regular key
                 logger.debug("regular key %s", value)
-                key = cmd_prefix + str(ord(value))  #get asii decimal value of key
+                key = cmd_prefix + str(ord(value))  #get ascii decimal value of key
                 new_keys.append(key)
             elif len(value) > 1:                    #special key
                 logger.debug("special key %s", value)
                 key_code = ""
                 #get the assigned key code from the config file
                 for elem in KEY_CODES["keys"]:
-                    if elem["key_name"] == value:
-                        key_code = cmd_prefix + str(elem["key_code"])
-                        logger.debug("special key is %s o length %d", key_code, len(key_code))
-                        new_keys.append(key_code)
-                if key_code == "":
-                    logger.warning("key code not found in config %d", key_code)
-            else:                                       #singular character command
-                new_keys.append(key)
+                    try:
+                        if elem["key_name"] == value:
+                            key_code = cmd_prefix + str(elem["key_code"])
+                            logger.debug("special key is %s of length %d", key_code, len(key_code))
+                            new_keys.append(key_code)
+                    except (KeyError, IndexError):
+                        logger.warning("key code not found in config %d", key_code)
+            else:
+                logger.error("bad length")
+        # singular character command
+        else:
+            new_keys.append(key)
 
     hexed_string = '+'.join(new_keys)
     pd = create_packet(command_type=MACRO_COMMAND,
@@ -167,7 +183,7 @@ def toggle_actions(client: BaseClient, cmd_id: int, args):
     ACT_DICT[exec_act["command_id"]](client, cmd_id, exec_act["command_args"])
     logger.debug("rotating arguments")
     actions.append(exec_act)
-    logger.debug("Succesful toggle action of id %d", cmd_id)
+    logger.debug("Successful toggle action of id %d", cmd_id)
 
 #maps the commands to executing functions
 ACT_DICT = {

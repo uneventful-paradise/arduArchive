@@ -34,163 +34,167 @@
     },
     {
       "key_name": "KEY_LEFT",
-      "key_code": 216
+      "key_code": 80
     },
     {
       "key_name": "KEY_DOWN",
-      "key_code": 217
+      "key_code": 81
     },
     {
       "key_name": "KEY_UP",
-      "key_code": 218
+      "key_code": 82
     },
     {
       "key_name": "KEY_RIGHT",
-      "key_code": 215
+      "key_code": 79
     },
     {
       "key_name": "KEY_BACKSPACE",
-      "key_code": 178
+      "key_code": 42
     },
     {
       "key_name": "KEY_TAB",
-      "key_code": 179
+      "key_code": 43
     },
     {
       "key_name": "KEY_ENTER",
-      "key_code": 176
+      "key_code": 40
     },
     {
       "key_name": "KEY_ESCAPE",
-      "key_code": 177
+      "key_code": 41
     },
     {
       "key_name": "KEY_INSERT",
-      "key_code": 209
+      "key_code": 73
     },
     {
       "key_name": "KEY_DELETE",
-      "key_code": 212
+      "key_code": 76
     },
     {
       "key_name": "KEY_PAGEDOWN",
-      "key_code": 214
+      "key_code": 78
     },
     {
       "key_name": "KEY_PAGEUP",
-      "key_code": 211
+      "key_code": 75
     },
     {
       "key_name": "KEY_END",
-      "key_code": 213
+      "key_code": 77
+    },
+    {
+      "key_name": "KEY_PRINT_SCREEN",
+      "key_code": 70
     },
     {
       "key_name": "KEY_HOME",
-      "key_code": 210
+      "key_code": 74
     },
     {
       "key_name": "KEY_CAPSLOCK",
-      "key_code": 193
+      "key_code": 57
     },
     {
       "key_name": "KEY_F1",
-      "key_code": 194
+      "key_code": 58
     },
     {
       "key_name": "KEY_F2",
-      "key_code": 195
+      "key_code": 59
     },
     {
       "key_name": "KEY_F3",
-      "key_code": 196
+      "key_code": 60
     },
     {
       "key_name": "KEY_F4",
-      "key_code": 197
+      "key_code": 61
     },
     {
       "key_name": "KEY_F5",
-      "key_code": 198
+      "key_code": 62
     },
     {
       "key_name": "KEY_F6",
-      "key_code": 199
+      "key_code": 63
     },
     {
       "key_name": "KEY_F7",
-      "key_code": 200
+      "key_code": 64
     },
     {
       "key_name": "KEY_F8",
-      "key_code": 201
+      "key_code": 65
     },
     {
       "key_name": "KEY_F9",
-      "key_code": 202
+      "key_code": 66
     },
     {
       "key_name": "KEY_F10",
-      "key_code": 203
+      "key_code": 67
     },
     {
       "key_name": "KEY_F11",
-      "key_code": 204
+      "key_code": 68
     },
     {
       "key_name": "KEY_F12",
-      "key_code": 205
+      "key_code": 69
     },
     {
       "key_name": "KEY_F13",
-      "key_code": 240
+      "key_code": 104
     },
     {
       "key_name": "KEY_F14",
-      "key_code": 241
+      "key_code": 105
     },
     {
       "key_name": "KEY_F15",
-      "key_code": 242
+      "key_code": 106
     },
     {
       "key_name": "KEY_F16",
-      "key_code": 243
+      "key_code": 107
     },
     {
       "key_name": "KEY_F17",
-      "key_code": 244
+      "key_code": 108
     },
     {
       "key_name": "KEY_F18",
-      "key_code": 245
+      "key_code": 109
     },
     {
       "key_name": "KEY_F19",
-      "key_code": 246
+      "key_code": 110
     },
     {
       "key_name": "KEY_F20",
-      "key_code": 247
+      "key_code": 111
     },
     {
       "key_name": "KEY_F21",
-      "key_code": 248
+      "key_code": 112
     },
     {
       "key_name": "KEY_F22",
-      "key_code": 249
+      "key_code": 113
     },
     {
       "key_name": "KEY_F23",
-      "key_code": 250
+      "key_code": 114
     },
     {
       "key_name": "KEY_F24",
-      "key_code": 251
+      "key_code": 115
     },
     {
       "key_name": "KEY_VOLUME_MUTE",
-      "key_code": 239
+      "key_code": 226
     }
   ]
 }

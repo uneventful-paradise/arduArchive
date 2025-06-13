@@ -18,6 +18,8 @@ const uint32_t PROGMEM crc_table[16] = {
 };
 
 USBHIDKeyboard Keyboard;
+USBHIDMouse Mouse;
+USBHIDConsumerControl Consumer;
 
 QueueHandle_t send_queue;
 QueueHandle_t conf_queue;
@@ -220,68 +222,91 @@ Raw variation of the library function.
 */
 void hard_press(char* sequence) {
   //first split the string by '+' using thread safe strtok
-  char* save_ptr = sequence;
-  char* token;
+  char* save_ptr = NULL;
+  char* token = NULL;
+  char cmd_prefix[3];
 
   token = strtok_r(sequence, "+", &save_ptr);
 
   while (token) {
-    //get command type
-    char event = token[0];
+    //get command type. prefix has a fixed length of 2 characters
+    strncpy(cmd_prefix, token, 2);
+    cmd_prefix[2] = '\0';  // null-terminate the string
+    A_DBG("Event is %s\n", cmd_prefix);
     //char* pEnd;
-    // printf("%s\n", token);
 
-    unsigned long long int code = 0;
-    if (strlen(token) > 1) {
+    unsigned long int code = 0;
+    if (strlen(token) > 2) {
       //convert string key value to decimal value
-      code = strtoull(token + 1, NULL, 10);
+      code = strtoul(token + 2, NULL, 10);
       if (code == 0L) {
-        A_ERR("stroull failed for token conversion");
+        A_ERR("stroull failed for token %s conversion", token);
+      } else {
+        A_DBG("Token is %s Code value is %lu\n", token, code);
       }
     }
     //perform the appropriate action given the command type
-    switch (event) {
-      case 'u':{
-        char c = code;
-        if (code >= 128) {
-          Keyboard.releaseRaw(code);
-        } else {
-          Keyboard.release(code);
-        }
-
-        A_DBG("key_up selected for %c\n", c);
-        // log(log_msg);
-        break;
-      }
-      case 'd':{
-        char c = code;
-        if (code >= 128) {
-          Keyboard.pressRaw(code);
-        } else {
-          Keyboard.press(code);
-        }
-
-        A_DBG("key_down selected for %c\n", c);
-        break;
-      }
-      case 'w':{
-        delay(code);
-
-        A_DBG("delay selected for %ld ms\n", code);
-        break;
-      }
-      case 'r':{
-        Keyboard.releaseAll();
-
-        A_DBG("release all selected\n");
-        break;
-      }
-      case 'p':{
-        Keyboard.printf(token + 1);
-        A_DBG("print selected\n");
-        break;
-      }
+    if (!strcmp(cmd_prefix, "ku")) {
+      char c = code;
+      Keyboard.release(code);
+      A_DBG("regular key_up selected for char %c\n", c);
     }
+    else if (!strcmp(cmd_prefix, "kd")) {
+      char c = code;
+      Keyboard.press(code);
+      A_DBG("regular key_down selected for char %c\n", c);
+    }
+    else if (!strcmp(cmd_prefix, "su")) {
+      char c = code;
+      Keyboard.releaseRaw(code);
+      A_DBG("special key_up selected for code %lu\n", code);
+    }
+    else if (!strcmp(cmd_prefix, "sd")) {
+      char c = code;
+      Keyboard.pressRaw(code);
+      A_DBG("special key_down selected for code %lu\n", code);
+    }
+    else if (!strcmp(cmd_prefix, "cu")) {
+      Consumer.release();
+      A_DBG("mouse button up selected for code %lu\n", code);
+    } 
+    else if (!strcmp(cmd_prefix, "cd")) {
+      Consumer.press(code);
+      A_DBG("mouse button down selected for code %lu\n", code);
+    }
+    else if (!strcmp(cmd_prefix, "mm")) {
+      int x = 0, y = 0;
+      if (sscanf(token, "mm(%d,%d)", &x, &y) == 2) {
+        A_DBG("Mouse move to coords x = %d, y = %d\n", x, y);
+        x*=3, y*=3; //scale the mouse movement to a more usable value
+        while (x || y) {
+          int partial_move_x = x > 127 ? 127 : (x < -127 ? -127 : x);
+          int partial_move_y = y > 127 ? 127 : (y < -127 ? -127 : y);
+          Mouse.move(partial_move_x, partial_move_y);
+          x -= partial_move_x;
+          y -= partial_move_y;
+        }
+      } else {
+        A_ERR("Failed to parse mouse move coordinates from %s", token);
+      }
+    } 
+    else if (!strcmp(cmd_prefix, "wt")) {
+      delay(code);
+      A_DBG("delay selected for %lu ms\n", code);
+    } 
+    else if (!strcmp(cmd_prefix, "ra")) {
+      Keyboard.releaseAll();
+      A_DBG("release all selected\n");
+    } 
+    else if (!strcmp(cmd_prefix, "pt")) {
+      Keyboard.printf(token + 2);
+
+      A_DBG("print selected\n");
+    } 
+    else {
+      A_WRN("Unknown command prefix: %s", cmd_prefix);
+    }
+
     token = strtok_r(NULL, "+", &save_ptr);
   }
 }

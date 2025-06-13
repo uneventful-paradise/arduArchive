@@ -4,6 +4,7 @@ import json
 from config.server_key_codes import key_vkcodes
 from pynput import mouse, keyboard
 from pynput.keyboard import KeyCode
+from src.server_params import logger
 
 vk_to_name = {vk: name for name, vk in key_vkcodes.items()}
 #TODO detect additional mouse buttons
@@ -90,9 +91,9 @@ class KeyRecorder(tk.Toplevel):
                     't': t,
                     'dt': delta
                 })
+            logger.debug(f'Pointer moved to ({x}, {y}); it was ({self.last_x},{self.last_y})')
             self.last_x = x
             self.last_y = y
-            print('Pointer moved to {}; it was {}'.format(x, y))
         #use time.perf_counter()
         self.last_time = t
 

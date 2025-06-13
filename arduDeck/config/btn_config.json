@@ -22,13 +22,13 @@
           {
             "command_id": "START_URL",
             "command_args": [
-              "https://www.dw.com/ro/focus/s-10575"
+              "https://cloudconvert.com/jpg-converter"
             ]
           },
           {
             "command_id": "START_URL",
             "command_args": [
-              "https://cloudconvert.com/jpg-converter"
+              "https://www.dw.com/ro/focus/s-10575"
             ]
           }
         ]
@@ -57,12 +57,12 @@
   },
   {
     "button_id": 3,
-    "folder_flag": 1,
+    "folder_flag": 0,
     "actions": [
       {
         "command_id": "HARD_KEY_PRESS",
         "command_args": [
-          "dKEY_LALT+dKEY_TAB+w500+r"
+          "mm(-1290,0)"
         ]
       }
     ],
@@ -153,12 +153,12 @@
   },
   {
     "button_id": 9,
-    "folder_flag": 0,
+    "folder_flag": 1,
     "actions": [
       {
-        "command_id": "START_URL",
+        "command_id": "SOFT_KEY_PRESS",
         "command_args": [
-          "www.bing.com"
+          "kdKEY_LWIN+wt0.917+kdKEY_M+wt0.1+kuKEY_M+wt0.065+kuKEY_LWIN+wt0.159+mm(418, 210)+wt1.08+mm(408, 232)+wt0.3+mm(399, 254)+wt0.04+mm(391, 279)+wt0.035+mm(382, 311)+wt0.021+mm(375, 343)+wt0.02+mm(369, 378)+wt0.016+mm(366, 399)+wt0.004+mm(365, 420)+wt0.01+mm(363, 443)+wt0.01+mm(363, 465)+wt0.006+mm(363, 489)+wt0.011+mm(361, 514)+wt0.004+mm(358, 538)+wt0.01+mm(357, 562)+wt0.006+mm(354, 583)+wt0.01+mm(352, 604)+wt0.01+mm(350, 641)+wt0.016+mm(347, 677)+wt0.014+mm(343, 706)+wt0.016+mm(341, 729)+wt0.023+mm(340, 708)+wt0.239+mm(336, 687)+wt0.06+mdKEY_LBUTTON@(336, 686)+wt1.944+mm(314, 685)+wt0.246+mm(292, 685)+wt0.04+mm(270, 684)+wt0.04+mm(249, 684)+wt0.046+mm(227, 683)+wt0.07+mm(205, 681)+wt0.095+mm(184, 679)+wt0.15+mm(162, 678)+wt0.219+muKEY_LBUTTON@(143, 678)+wt0.288"
         ]
       }
     ],
@@ -169,15 +169,37 @@
     "folder_flag": 0,
     "actions": [
       {
-        "command_id": "START_URL",
+        "command_id": "TOGGLE_ACTIONS",
         "command_args": [
-          "www.x.com"
+          {
+            "command_id": "START_URL",
+            "command_args": [
+              "www.gmail.com"
+            ]
+          },
+          {
+            "command_id": "START_URL",
+            "command_args": [
+              "www.x.com"
+            ]
+          }
         ]
       },
       {
-        "command_id": "START_URL",
+        "command_id": "TOGGLE_ACTIONS",
         "command_args": [
-          "www.gmail.com"
+          {
+            "command_id": "START_URL",
+            "command_args": [
+              "www.firefox.com"
+            ]
+          },
+          {
+            "command_id": "START_URL",
+            "command_args": [
+              "www.discord.com"
+            ]
+          }
         ]
       }
     ],
@@ -827,19 +849,6 @@
     "image_path": "media/icons/spotify.jpg"
   },
   {
-    "button_id": 14,
-    "folder_flag": 0,
-    "actions": [
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "www.gmail.com"
-        ]
-      }
-    ],
-    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/arduino.jpg"
-  },
-  {
     "button_id": 13,
     "folder_flag": 1,
     "actions": [
@@ -851,5 +860,18 @@
       }
     ],
     "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/github.jpg"
+  },
+  {
+    "button_id": 14,
+    "folder_flag": 0,
+    "actions": [
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "www.google.com"
+        ]
+      }
+    ],
+    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/arduino.jpg"
   }
 ]

@@ -9,6 +9,8 @@ extern SdFat sd;
 extern SdFile file_obj;
 
 extern USBHIDKeyboard Keyboard;
+extern USBHIDMouse Mouse;
+extern USBHIDConsumerControl Consumer;
 
 extern QueueHandle_t send_queue;
 extern QueueHandle_t conf_queue;

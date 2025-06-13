@@ -5,6 +5,8 @@
 // #include <SD.h>
 #include "JpegFunc.h"
 #include <USBHIDKeyboard.h>
+#include <USBHIDMouse.h>
+#include <USBHIDConsumerControl.h>
 #include <SPI.h>
 #include <Wire.h>
 
@@ -20,6 +22,7 @@
 // #define WIFI_SSID "testesp32"
 // #define WIFI_PWD "javabanana"
 #define SERVER_IP "192.168.100.63"
+// #define SERVER_IP "192.168.152.30"
 #define PORT 65432
 #define CHUNK_SIZE 2048
 #define HEADER_SIZE 16  //unsigned int cmd_type | unsigned int cmd_id | unsigned int length | unsigned int crc_value
@@ -113,7 +116,6 @@
 extern WiFiClient logClient;
 //  if (logClient && logClient.connected()) logClient.printf("[%s:%d]: " fmt "\r\n", __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__)\;
 #define A_DBG(fmt, ...) do { \
-    if (logClient && logClient.connected()) logClient.printf("[%s:%d]: " fmt "\r\n", __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__); \
     if (DEBUG) { \
         printf("[%s:%d]: " fmt "\n", __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__);\
     } \

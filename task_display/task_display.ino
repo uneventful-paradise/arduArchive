@@ -27,14 +27,14 @@ void setup() {
   delay(1000);
   touch_init();
   delay(300);
-  
+  // Init Display
+  USB.begin();
+  Mouse.begin();
+  Keyboard.begin();
+  Consumer.begin();
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PWD);
-  // Init Display
   gfx->begin();
-
-  Keyboard.begin();
-  USB.begin();
 
   SPI.begin(SD_SCK, SD_MISO, SD_MOSI);
   if (!sd.begin(SdSpiConfig(SD_CS, SHARED_SPI, SD_SCK_MHZ(50)))) {

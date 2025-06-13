@@ -12,12 +12,12 @@ from src.basic_comms import prepare_swap
 from src.utils.data_format import gui_queue
 from src.GUI.macro_rec import KeyRecorder, rec_callback
 from src.utils.btn_funcs import gui_upload, button_lock, soft_upload, CONFIG_FILE, FOLDER_CONFIG_PATH
-from src.GUI.themes import apply_theme, make_action_button, BASE
+from src.GUI.themes import apply_theme, make_action_button, BASE, SURFACE
 from src.utils.serial_helper import check_port_presence
-
+import copy
 #todo add id checking for add and update func
 
-COMMAND_TYPES = ["SOFT_KEY_PRESS", "HARD_KEY_PRESS",  "START_URL", "START_PROCESS"]
+COMMAND_TYPES = ["SOFT_KEY_PRESS", "HARD_KEY_PRESS",  "START_URL", "START_PROCESS", "TOGGLE_ACTIONS"]
 
 
 def get_folder_path(btn_info):
@@ -223,14 +223,14 @@ class StreamDeckGUI(tk.Tk):
         self.info_frame.bind("<Configure>", lambda event: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
         self.canvas.bind("<Configure>", lambda event: self.canvas.itemconfig(self.canvas_window, width=event.width))
 
-
-        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+        self.canvas.bind("<Enter>", lambda e: self.canvas.bind_all("<MouseWheel>", lambda ev: self.canvas.yview_scroll(int(-1*(ev.delta/120)), "units")))
+        self.canvas.bind("<Leave>", lambda e: self.canvas.unbind_all("<MouseWheel>"))
         # Create the upload button in a fixed row (row 1) of right_frame.
         self.upload_btn = ttk.Button(self.right_frame, text="Upload Changes", command=self.upload_changes, style="TButton")
         self.upload_btn.grid(row=1, column=0, columnspan=2, sticky="ew", padx=5, pady=5)
 
-    def _on_mousewheel(self, event):
-        self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+    # def _on_mousewheel(self, event, canvas):
+    #     canvas.yview_scroll(int(-1*(event.delta/120)), "units")
 
     def create_button_grid(self):
         # Clear previous grid if it exists
@@ -418,9 +418,9 @@ class StreamDeckGUI(tk.Tk):
 
     def action_window(self, btn_info, action=None):
         win = tk.Toplevel(self)
-        # self._last_add_win = win
+        self._last_add_win = win
         win.title("Add Action")
-        win.geometry("800x500")
+        win.geometry("900x600")
         win.transient(self)
         win.grab_set()
         # win.focus_force()
@@ -468,6 +468,89 @@ class StreamDeckGUI(tk.Tk):
                   command=lambda: proc_var.set(filedialog.askopenfilename(
                       title="Select EXE", filetypes=[("EXE", "*.exe"), ("All", "*.*")]) or "")
                   ).pack(padx=5)
+        # TOGGLE_ACTIONS tab
+        toggle_frame = ttk.Frame(notebook)
+        toggle_canvas = tk.Canvas(toggle_frame, background=SURFACE, bd=0, highlightthickness=0)
+        toggle_scroll = ttk.Scrollbar(toggle_frame, orient="vertical", command=toggle_canvas.yview,
+                                      style="Vertical.TScrollbar")
+        toggle_inner = ttk.Frame(toggle_canvas, style="TFrame")
+
+        notebook.add(toggle_frame, text="TOGGLE_ACTIONS")
+
+        # lay out canvas + scrollbar
+        toggle_scroll.pack(side="right", fill="y")
+        toggle_canvas.pack(side="left", fill="both", expand=True)
+
+        # embed the inner frame in the canvas
+        canvas_window = toggle_canvas.create_window((0, 0), window=toggle_inner, anchor="nw")
+
+        toggle_canvas.bind("<Enter>", lambda e: toggle_canvas.bind_all(
+            "<MouseWheel>", lambda ev: toggle_canvas.yview_scroll(int(-1*(ev.delta/120)), "units")
+        ))
+        toggle_canvas.bind("<Leave>", lambda e: toggle_canvas.unbind_all("<MouseWheel>"))
+
+        def on_frame_configure(event):
+            toggle_canvas.configure(scrollregion=toggle_canvas.bbox("all"))
+
+        toggle_inner.bind("<Configure>", on_frame_configure)
+
+        # let the canvas grow with the tab
+        def on_canvas_configure(event):
+            toggle_canvas.itemconfig(canvas_window, width=event.width)
+
+        toggle_canvas.bind("<Configure>", on_canvas_configure)
+
+        def load_selected_actions():
+            preselected_items = []
+            if action is None or action["command_id"] != "TOGGLE_ACTIONS":
+                return preselected_items
+
+            child_actions = action["command_args"]
+            preselected_items = child_actions
+            return preselected_items
+
+        with button_lock:
+            actions = btn_info.setdefault("actions", [])
+
+        selected_actions = load_selected_actions()
+        removed_actions = []
+        selectable_actions = actions + selected_actions
+        # logger.debug("actions = %r, selected = %r, removed = %r", actions, selected_actions, removed_actions)
+        for act in selectable_actions:
+            if act is action:
+                continue
+            if act in selected_actions:
+                default_val = 1
+            else:
+                default_val = 0
+
+            var = tk.IntVar(value=act.get("enabled", default_val))
+
+            def _on_toggle(a=act, v=var):
+                selected = bool(v.get())
+
+                if selected and a not in selected_actions:
+                    selected_actions.append(a)
+                    if a in removed_actions:
+                        removed_actions.remove(a)
+
+                elif not selected and a in selected_actions:
+                    selected_actions.remove(a)
+                    if a not in removed_actions:
+                        removed_actions.append(a)
+
+                else:
+                    pass
+                # logger.debug("selected = %r, removed = %r", selected_actions, removed_actions)
+
+            cb = ttk.Checkbutton(
+                toggle_inner,
+                text=f"{act["command_id"]}: {act['command_args']}",
+                variable=var,
+                command=_on_toggle,
+                style="TCheckbutton"
+            )
+            cb.pack(anchor="w", padx=5, pady=2)
 
         # bottom buttons
         btn_frame = ttk.Frame(container, style="Right.TFrame")
@@ -480,7 +563,10 @@ class StreamDeckGUI(tk.Tk):
             except ValueError:
                 tab_index = 0
             notebook.select(tab_index)
-            existing_args = action.get("command_args", [""])[0]
+            try:
+                existing_args = action.get("command_args", [""])[0]
+            except IndexError:
+                existing_args = []
             if tab_index == 0:
                 soft_text.insert("1.0", existing_args)
             elif tab_index == 1:
@@ -492,6 +578,12 @@ class StreamDeckGUI(tk.Tk):
 
         btn_frame = ttk.Frame(container, style="Right.TFrame")
         btn_frame.pack(fill="x", pady=10)
+        for col in (0, 5):
+            if col == 0 or col == 5:
+                weight = 1
+            else:
+                weight = 0
+            btn_frame.grid_columnconfigure(col, weight=weight)
 
         def save_action():
             sel = notebook.index(notebook.select())
@@ -502,6 +594,18 @@ class StreamDeckGUI(tk.Tk):
                 args = [hard_entry.get()]
             elif sel == 2:
                 args = [url_entry.get()]
+            elif sel == 4:
+                # logger.debug("selected = %r, removed = %r, old = %r", selected_actions, removed_actions, btn_info["actions"])
+                args = copy.deepcopy(selected_actions)
+                with button_lock:
+                    old_actions = btn_info["actions"]
+                    for a in removed_actions:
+                        if a not in old_actions:
+                            old_actions.append(a)
+
+                    for a in selected_actions:
+                        if a in old_actions:
+                            old_actions.remove(a)
             else:
                 args = [proc_var.get()]
 
@@ -511,8 +615,8 @@ class StreamDeckGUI(tk.Tk):
                 action["command_args"] = args
             else:
                 # Add new
-                actions = btn_info.setdefault("actions", [])
-                actions.append({
+                new_action = btn_info.setdefault("actions", [])
+                new_action.append({
                     "command_id": cmd_type,
                     "command_args": args
                 })
@@ -521,20 +625,35 @@ class StreamDeckGUI(tk.Tk):
             self.on_button_click(btn_info)
             win.destroy()
 
-        ttk.Button(btn_frame, text="Save" if action else "Add Action", command=save_action, style="TButton").pack(
-            side="left", padx=15)
+        ttk.Button(btn_frame, text="Save" if action else "Add Action", command=save_action, style="TButton").grid(
+            row = 0, column = 1, padx=25)
         # ttk.Button(btn_frame, text="Done", command=win.destroy, style="TButton").pack(side="right", padx=15)
 
         if action:
             def remove_action():
-                with button_lock:
-                    btn_info["actions"].remove(action)
-                    immediate_update(self.button_list, self.in_folder, self.folder_list, get_folder_path(btn_frame))
+                btn_info["actions"].remove(action)
+                immediate_update(self.button_list, self.in_folder, self.folder_list, get_folder_path(btn_info=btn_info))
                 self.on_button_click(btn_info)
                 win.destroy()
 
-            ttk.Button(btn_frame, text="Delete", command=remove_action, style="TButton").pack(side="right", padx=15)
+            ttk.Button(btn_frame, text="Delete", command=remove_action, style="TButton").grid(row=0, column=2, padx=25)
 
+        def move_action(direction:int):
+            try:
+                idx = btn_info["actions"].index(action)
+                n = len(actions)
+                target_idx = (idx + direction) % n
+                logger.debug("idx will be %d", target_idx)
+
+                temp = btn_info["actions"][target_idx]
+                btn_info["actions"][target_idx] = btn_info["actions"][idx]
+                btn_info["actions"][idx] = temp
+
+                self.on_button_click(btn_info)
+            except ValueError:
+                logger.error("action is not present in action list")
+        ttk.Button(btn_frame, text="Move up", command= lambda:move_action(direction=-1), style="TButton").grid(row=0, column=3, padx=25, pady = 10)
+        ttk.Button(btn_frame, text="Move up", command=lambda:move_action(direction=1), style="TButton").grid(row=0, column=4, padx=25)
     def macro_rec_window(self):
         mrw = KeyRecorder(self, rec_callback)
 

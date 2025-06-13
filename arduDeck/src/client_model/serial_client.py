@@ -174,7 +174,7 @@ class SerialClient(BaseClient):
                 sent = self.serial.write(data[total_sent:])
                 self.serial.flush()
                 if sent == 0:
-                    logger.exception("Serial write timed out")
+                    logger.error("Serial write failed")
                     break
                     # raise RuntimeError("Serial port write timed out")
                 total_sent += sent
@@ -183,6 +183,7 @@ class SerialClient(BaseClient):
             if not self.check_connection():
                 self.connected = False
                 self.serial.close()
+                logger.warning("Connection interrupted. closing socket")
                 # self.initiate_connection()
         except TypeError as e:
             logger.exception(e)
