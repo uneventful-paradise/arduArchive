@@ -1,6 +1,7 @@
 import subprocess
 import webbrowser
 import json
+import shlex
 
 from src.basic_comms import *
 from src.utils.server_key_presses import *
@@ -13,9 +14,9 @@ with open(CONFIG_FILE, "r") as f:
 It starts the process in a nonblocking manner using `Popen`
 so the server is still responsive during this time"""
 def start_process(client, cmd_id, args):
-    file_path = args[0]
-    command = subprocess.Popen([file_path])
-    logger.debug("START_PROCESS %d successful", cmd_id)
+    # file_path = args[0]
+    # command = subprocess.Popen([file_path])
+    # logger.debug("START_PROCESS %d successful", cmd_id)
     #todo find a way to get popen result without blocking - use threads?
 
     # try:
@@ -35,6 +36,55 @@ def start_process(client, cmd_id, args):
     #     logger.debug("START_PROCESS %d successful", cmd_id)
     # thread = threading.Thread(target=process_worker, args=(cmd_id, file_path))
 
+    script = args[0]
+    raw_args = args[1:]
+    _, ext = os.path.splitext(script.lower())
+
+    script_args = []
+    for token in raw_args:
+        script_args += shlex.split(token)
+
+    if ext == ".py":
+        cmd = [sys.executable, script, *script_args]
+        shell = False
+
+    elif ext in (".bat", ".cmd"):
+        # cmd.exe /c will run the batch and then exit
+        cmd = ["cmd.exe", "/c", script, *script_args]
+        shell = False
+
+    elif ext == ".ps1":
+        cmd = [
+            "powershell.exe",
+            "-NoProfile",
+            "-ExecutionPolicy", "Bypass",
+            "-File", script,
+            *script_args
+        ]
+        shell = False
+
+    elif ext == ".exe":
+        # native executable
+        cmd = [script, *script_args]
+        shell = False
+
+    else:
+        # Let the shell figure it out (via file‐assoc)
+        cmd = [script, *script_args]
+        shell = True
+
+    # On Windows, pop up an immediate console window
+    creation_flags = subprocess.CREATE_NEW_CONSOLE
+
+    try:
+        subprocess.Popen(
+            cmd,
+            shell=shell,
+            creationflags=creation_flags
+        )
+        logger.debug("START_SCRIPT %d launched: %r", cmd_id, cmd)
+    except Exception:
+        logger.exception("Failed to launch script %r", script)
 
 """Opens a new tab or a new browser instance if none is running currently.
 This can be performed using shell but is unsafe and not recommended"""
@@ -58,6 +108,7 @@ pVALUE            - print VALUE string
 Keyboard modifiers (special keys like ALT, ESCAPE etc.) have codes assigned in the
 KEY_CODES config file.
 """
+#todo send these in chunks
 def hard_key_press(client, cmd_id, args):
     key_sequence = args[0]
     keys = key_sequence.split("+")
@@ -170,9 +221,15 @@ def soft_key_press(client, cmd_id, args):
             event_pos = info[1]
             pos = (tuple(int(x) for x in event_pos.strip("()").split(',')))
             mouse.release_button(pos, btn_value)
-        elif cmd_prefix == 'ms':
-            #TODO: implement scrolling
-            pass
+        elif cmd_prefix in ('mv', 'mh'):
+            if cmd_prefix == 'mv':
+                vert = int(value)
+                horiz = 0
+            else:
+                vert = 0
+                horiz = int(value)
+            mouse.scroll(vertical=vert, horizontal=horiz)
+
     logger.debug(f"Finished soft key press of id {cmd_id}")
 
 def toggle_actions(client: BaseClient, cmd_id: int, args):

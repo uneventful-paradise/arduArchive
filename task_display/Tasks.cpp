@@ -39,7 +39,6 @@ void touch_check_task(void* params) {
       continue;
     } else {
     //screen has been touched
-    // if (get_pos() == 1) {
       //if clock timer is active, stop it and request to redraw main screen
       if (reset_inactivity()) {
         continue;
@@ -235,7 +234,12 @@ void update_screen_task(void* params) {
         case TIME_UPDATE: {
           // A_DBG("case is time update");  
           if (update.status == 1) {
-            draw_main_screen();
+            unsigned int folder_page = sprite_manager.getFolderPage();
+            if (folder_page > 0) {
+              draw_folder_contents();
+            } else {
+              draw_main_screen();
+            }
           }else{
             clear_screen();
             // draw_text(textX, textY, 3, WHITE, update.message);
@@ -259,7 +263,7 @@ void update_screen_task(void* params) {
 //!try event driven approach in case this fails to reestablish connection
 void establish_connection_task(void* params) {
   current_client -> initiate_connection();
-  // initialize_wifi_logging();
+  initialize_wifi_logging();
   // UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
   // A_DBG("stack high water mark (PRE-LOOP): %u\n", watermark);
 

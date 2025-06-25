@@ -4,7 +4,7 @@ from src.server_params import logger
 import serial
 import serial.tools.list_ports
 import time
-SERIAL_PORT = 'COM5'
+SERIAL_PORT = 'COM5' #or com4
 
 def handle_port_change(new_connection:bool):
     logger.warning("DETECTED PORT CHANGE")

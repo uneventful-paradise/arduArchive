@@ -41,9 +41,10 @@
     "folder_flag": 0,
     "actions": [
       {
-        "command_id": "HARD_KEY_PRESS",
+        "command_id": "START_PROCESS",
         "command_args": [
-          "dA+w500+dB+w500+uA+uB"
+          "C:\\Windows\\System32\\notepad.exe",
+          ""
         ]
       },
       {
@@ -60,9 +61,10 @@
     "folder_flag": 0,
     "actions": [
       {
-        "command_id": "HARD_KEY_PRESS",
+        "command_id": "START_PROCESS",
         "command_args": [
-          "mm(-1290,0)"
+          "C:/uni/an3sem1/arduino/arduDeck/testing/scripts/list_commits/list_commits.py",
+          "--folder ./ --days 2"
         ]
       }
     ],
@@ -73,9 +75,28 @@
     "folder_flag": 0,
     "actions": [
       {
-        "command_id": "HARD_KEY_PRESS",
+        "command_id": "START_PROCESS",
         "command_args": [
-          "dKEY_LWIN+dr+w500+r+pSalut,frate"
+          "C:/uni/an3sem1/arduino/arduDeck/testing/scripts/open_ide/open-ide-at-path.ps1",
+          "./"
+        ]
+      },
+      {
+        "command_id": "SOFT_KEY_PRESS",
+        "command_args": [
+          "wt3.859+kdKEY_LWIN+wt0.65+kdKEY_UP+wt0.095+kuKEY_UP+wt0.556+kdKEY_LEFT+wt0.136+kuKEY_LEFT+wt0.31+kuKEY_LWIN"
+        ]
+      },
+      {
+        "command_id": "START_URL",
+        "command_args": [
+          "https://stackoverflow.com/questions/71303585/efficient-text-wrapping-for-variable-window-sizes-in-tkinter"
+        ]
+      },
+      {
+        "command_id": "SOFT_KEY_PRESS",
+        "command_args": [
+          "wt2.914+kdKEY_LWIN+wt0.166+kdKEY_UP+wt0.085+kuKEY_UP+wt0.501+kdKEY_RIGHT+wt0.115+kuKEY_RIGHT+wt0.25+kuKEY_LWIN"
         ]
       }
     ],
@@ -121,22 +142,17 @@
   },
   {
     "button_id": 7,
-    "folder_flag": 0,
+    "folder_flag": 1,
     "actions": [
       {
         "command_id": "START_PROCESS",
         "command_args": [
-          "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE"
-        ]
-      },
-      {
-        "command_id": "START_URL",
-        "command_args": [
-          "https://github.com/uneventful-paradise/arduArchive/tree/main"
+          "C:/uni/an3sem1/arduino/arduDeck/testing/scripts/open_apps/open_apps_script.ps1",
+          "spotify"
         ]
       }
     ],
-    "image_path": "media/icons/spotify.jpg"
+    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/spotify.jpg"
   },
   {
     "button_id": 8,
@@ -853,9 +869,9 @@
     "folder_flag": 1,
     "actions": [
       {
-        "command_id": "START_URL",
+        "command_id": "SOFT_KEY_PRESS",
         "command_args": [
-          "www.google.com"
+          "mm(564, 167)+wt0.004+mm(585, 167)+wt0.032+mm(606, 169)+wt0.012+mm(629, 171)+wt0.012+mm(650, 172)+wt0.007+mm(675, 173)+wt0.008+mm(698, 174)+wt0.007+mm(721, 174)+wt0.007+mm(743, 175)+wt0.007+mm(765, 175)+wt0.009+mm(788, 175)+wt0.007+mm(809, 175)+wt0.01+mm(830, 174)+wt0.012+mm(851, 173)+wt0.016+mv1+wt1.325+mv1+wt0.554+mv1+wt0.554+mv1+wt0.429+mv1+wt0.358+mv1+wt0.132+mv-1+wt0.539+mv-1+wt0.259+mv-1+wt0.238+mv-1+wt0.192+mv-1+wt0.211+mv-1+wt0.031"
         ]
       }
     ],
@@ -868,10 +884,23 @@
       {
         "command_id": "START_URL",
         "command_args": [
-          "www.google.com"
+          "https://www.crunchyroll.com/watch/G7PU4MZ1G/the-journeys-end"
+        ]
+      },
+      {
+        "command_id": "START_PROCESS",
+        "command_args": [
+          "C:/uni/an3sem1/arduino/arduDeck/testing/scripts/workspace_scripts/theatre_mode_script/theatre_mode_script.ps1",
+          ""
+        ]
+      },
+      {
+        "command_id": "SOFT_KEY_PRESS",
+        "command_args": [
+          "wt2+mm(565, 165)+wt0.388+kdKEY_LWIN+wt1.343+kdKEY_UP+wt0.135+kuKEY_UP+wt0.075+kuKEY_LWIN+wt0.245+mm(586, 169)+wt0.591+mm(607, 178)+wt0.017+mm(628, 189)+wt0.014+mm(650, 202)+wt0.011+mm(672, 216)+wt0.012+mm(693, 228)+wt0.011+mm(716, 242)+wt0.012+mm(737, 255)+wt0.015+mm(758, 266)+wt0.021+mdKEY_LBUTTON@(771, 274)+wt0.161+muKEY_LBUTTON@(771, 274)+wt0.126+kdKEY_F+wt0.465+kuKEY_F+wt0.11+mm(777, 287)+wt1.358+mdKEY_LBUTTON@(777, 292)+wt0.043+muKEY_LBUTTON@(777, 292)+wt0.114"
         ]
       }
     ],
-    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/arduino.jpg"
+    "image_path": "C:/uni/an3sem1/arduino/arduDeck/media/icons/tv.jpg"
   }
 ]

@@ -134,7 +134,7 @@ void draw_main_screen() {
     }
   }
 }
-//todo: clear screen in draw_main_screen fn
+
 void draw_folder_contents() {
   clear_screen();
   gfx->setCursor(0, 0);
@@ -399,13 +399,22 @@ SwipeType execute_swipe(int sx, int sy, int ex, int ey, unsigned long st, unsign
     A_DBG("Swipe too slow, dt = %lu", dt);
     return SwipeType::SWIPE_FAIL;
   }
-  //swipe up to change mode?
+  //todo: dont swap page if timer is active
   unsigned int folder_page = sprite_manager.getFolderPage();
   if (dx > 0) {
+    //if inactivity timer is active, reset it and skip the swipe
+    if (reset_inactivity()) {
+      A_DBG("Resetting inactivity timer on left swipe");
+      return SwipeType::SWIPE_FAIL;
+    }
     swap_page(BUTTON_PREV, folder_page);
     A_DBG("Swiped left");
     return SwipeType::SWIPE_SUCCESS;
   } else if (dx < 0) {
+    if (reset_inactivity()) {
+      A_DBG("Resetting inactivity timer on right swipe");
+      return SwipeType::SWIPE_FAIL;
+    }
     swap_page(BUTTON_NEXT, folder_page);
     A_DBG("Swiped right");
     return SwipeType::SWIPE_SUCCESS;

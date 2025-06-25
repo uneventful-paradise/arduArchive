@@ -13,6 +13,7 @@ arduDeck/config/folder_configs/*
 .venv2/
 venv/
 env/
+testing/
 
 # ignore Python bytecode caches
 __pycache__/

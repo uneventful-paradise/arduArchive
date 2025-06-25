@@ -190,18 +190,21 @@ class KeyRecorder(tk.Toplevel):
     def on_scroll(self, x, y, dx, dy):
         if not self.recording:
             return False
-        # t = time.time()
-        # delta = float(t - self.last_time)
-        self.history.append({
-            'type': 'MOUSE_SCROLL',
-            'y': y,
-            # 't': t,
-            # 'dt': delta
-        })
-        # self.last_time = t
-        print('Scrolled {} at {}; it was {}'.format(
-            'down' if dy < 0 else 'up',
-            x, y))
+        t = time.time()
+        delta = float(t - self.last_time)
+        if delta > 0.0:
+            self.history.append({
+                'type': 'MOUSE_SCROLL',
+                'dx': dx,
+                'dy': dy,
+                't': t,
+                'dt': delta
+            })
+            # self.last_time = t
+            print('Scrolled {} at {}'.format(
+                'down' if dy < 0 else 'up',
+                dy))
+            self.last_time = t
 
     def on_key_down(self, key):
         if key == keyboard.Key.ctrl_r:
@@ -341,24 +344,26 @@ class KeyRecorder(tk.Toplevel):
         for ev in self.history:
             seq = ''
             if ev['type'] == 'KEY_PRESS':
-                seq = 'kd' + ev['key_name'] + '+wt' + str(round(ev['dt'],3))
+                seq = 'wt' + str(round(ev['dt'],3)) + '+kd' + ev['key_name']
             elif ev['type'] == 'KEY_RELEASE':
-                seq = 'ku' + ev['key_name'] + '+wt' + str(round(ev['dt'],3))
+                seq = 'wt' + str(round(ev['dt'],3)) + '+ku' + ev['key_name']
             elif ev['type'] == 'MOUSE_PRESS':
                 #first move to that position then press the key
-                seq = 'md' + ev['key_name'] + '@' + str((ev['x'], ev['y'])) + '+wt' + str(round(ev['dt'],3))
+                seq = 'wt' + str(round(ev['dt'],3)) + '+md' + ev['key_name'] + '@' + str((ev['x'], ev['y']))
             elif ev['type'] == 'MOUSE_RELEASE':
-                seq = 'mu' + ev['key_name'] + '@' + str((ev['x'], ev['y'])) + '+wt' + str(round(ev['dt'],3))
+                seq = 'wt' + str(round(ev['dt'],3)) + '+mu' + ev['key_name'] + '@' + str((ev['x'], ev['y']))
             elif ev['type'] == 'MOUSE_MOVE':
-                seq = 'mm'+ str((ev['x'], ev['y'])) + '+wt' + str(round(ev['dt'],3))
+                seq = 'wt' + str(round(ev['dt'],3)) + '+mm'+ str((ev['x'], ev['y']))
             elif ev['type'] == 'MOUSE_SCROLL':
-                seq = 'ms' + str(ev['y'])
+                value = '+mv' + str(ev['dy']) if ev['dy'] else '+mh' + str(ev['dx'])
+                seq = 'wt' + str(round(ev['dt'],3)) + value
             else:
-                print("Error during macro string building")
+                logger.error("Error during macro string building")
                 continue
             segments.append(seq)
 
         return '+'.join(segments)
+
 def rec_callback(json_str, macro_string):
     print("Final combo JSON:")
     print(macro_string)

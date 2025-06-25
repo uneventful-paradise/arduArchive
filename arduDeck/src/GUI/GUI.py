@@ -394,8 +394,11 @@ class StreamDeckGUI(tk.Tk):
             with button_lock:
                 btn_info["image_path"] = new_path
             self.on_button_click(btn_info)
+            immediate_update(self.button_list, self.in_folder, self.folder_list, get_folder_path(btn_info))
             change_log_file = get_folder_path(btn_info)
             self.add_to_changelog(change_log_file)
+            logger.debug(f"image_path for {btn_info['button_id']} is {new_path}")
+            self.create_button_grid()
 
     def _start_macro_record(self, target_text_widget):
 
@@ -460,14 +463,23 @@ class StreamDeckGUI(tk.Tk):
         # START_PROCESS tab
         proc_frame = ttk.Frame(notebook)
         notebook.add(proc_frame, text="START_PROCESS")
-        ttk.Label(proc_frame, text="Executable path:", anchor="w", style="TLabel").pack(anchor="w", padx=5, pady=(5, 0))
+        ttk.Label(proc_frame, text="Script/exe path:", anchor="w", style="TLabel").pack(anchor="w", padx=5, pady=(5, 0))
         proc_var = tk.StringVar()
         proc_entry = tk.Entry(proc_frame, textvariable=proc_var, font=('Arial', 10, 'bold'))
         proc_entry.pack(fill="x", padx=5, pady=5)
+        py_exts = r"*.py  *.py3 *.pyc  *.pyo  *.pyw  *.pyx  *.pyd  *.pxd  *.pyi  *.pyi  *.pyz  *.pywz *.rpy  *.pyde *.pyp  *.pyt  *.xpy  *.ipynb"
         ttk.Button(proc_frame, text="Browse…", style="TButton",
                   command=lambda: proc_var.set(filedialog.askopenfilename(
-                      title="Select EXE", filetypes=[("EXE", "*.exe"), ("All", "*.*")]) or "")
+                      title="Select EXE", filetypes=[("EXE", "*.exe"),
+                                                     ("Python file", py_exts),
+                                                     ("Powershell script", "*ps1"),
+                                                     ("All", "*.*")]) or "")
                   ).pack(padx=5)
+        ttk.Label(proc_frame, text="Arguments for script separated by spaces:", anchor="w", style="TLabel").pack(anchor="w", padx=5, pady=(5, 0))
+        args_var = tk.StringVar()
+        args_entry = tk.Entry(proc_frame, textvariable=args_var, font=('Arial', 10, 'bold'))
+        args_entry.pack(fill="x", padx=5, pady=5)
+
         # TOGGLE_ACTIONS tab
         toggle_frame = ttk.Frame(notebook)
         toggle_canvas = tk.Canvas(toggle_frame, background=SURFACE, bd=0, highlightthickness=0)
@@ -564,17 +576,21 @@ class StreamDeckGUI(tk.Tk):
                 tab_index = 0
             notebook.select(tab_index)
             try:
-                existing_args = action.get("command_args", [""])[0]
+                args = action.get("command_args", [""])
+                main_arg = args[0]
+                runtime_args = args[1:]
             except IndexError:
-                existing_args = []
+                main_arg = []
+                runtime_args = []
             if tab_index == 0:
-                soft_text.insert("1.0", existing_args)
+                soft_text.insert("1.0", main_arg)
             elif tab_index == 1:
-                hard_entry.insert(0, existing_args)
+                hard_entry.insert(0, main_arg)
             elif tab_index == 2:
-                url_entry.insert(0, existing_args)
+                url_entry.insert(0, main_arg)
             else:
-                proc_var.set(existing_args)
+                proc_var.set(main_arg)
+                args_var.set(" ".join(runtime_args))
 
         btn_frame = ttk.Frame(container, style="Right.TFrame")
         btn_frame.pack(fill="x", pady=10)
@@ -589,14 +605,14 @@ class StreamDeckGUI(tk.Tk):
             sel = notebook.index(notebook.select())
             cmd_type = COMMAND_TYPES[sel]
             if sel == 0:
-                args = [soft_text.get("1.0", "end-1c")]
+                new_args = [soft_text.get("1.0", "end-1c")]
             elif sel == 1:
-                args = [hard_entry.get()]
+                new_args = [hard_entry.get()]
             elif sel == 2:
-                args = [url_entry.get()]
+                new_args = [url_entry.get()]
             elif sel == 4:
                 # logger.debug("selected = %r, removed = %r, old = %r", selected_actions, removed_actions, btn_info["actions"])
-                args = copy.deepcopy(selected_actions)
+                new_args = copy.deepcopy(selected_actions)
                 with button_lock:
                     old_actions = btn_info["actions"]
                     for a in removed_actions:
@@ -607,21 +623,24 @@ class StreamDeckGUI(tk.Tk):
                         if a in old_actions:
                             old_actions.remove(a)
             else:
-                args = [proc_var.get()]
+                new_main_arg = [proc_var.get()]
+                new_rt_args = [args_var.get()]
+                new_args = new_main_arg + new_rt_args
 
             if action:
                 # Edit in place
                 action["command_id"] = cmd_type
-                action["command_args"] = args
+                action["command_args"] = new_args
             else:
                 # Add new
                 new_action = btn_info.setdefault("actions", [])
                 new_action.append({
                     "command_id": cmd_type,
-                    "command_args": args
+                    "command_args": new_args
                 })
             # soft_upload(self.button_list)
             immediate_update(self.button_list, self.in_folder, self.folder_list, get_folder_path(btn_info))
+            # self.add_to_changelog(get_folder_path(btn_info))
             self.on_button_click(btn_info)
             win.destroy()
 
@@ -643,7 +662,7 @@ class StreamDeckGUI(tk.Tk):
                 idx = btn_info["actions"].index(action)
                 n = len(actions)
                 target_idx = (idx + direction) % n
-                logger.debug("idx will be %d", target_idx)
+                # logger.debug("idx will be %d", target_idx)
 
                 temp = btn_info["actions"][target_idx]
                 btn_info["actions"][target_idx] = btn_info["actions"][idx]
@@ -653,7 +672,8 @@ class StreamDeckGUI(tk.Tk):
             except ValueError:
                 logger.error("action is not present in action list")
         ttk.Button(btn_frame, text="Move up", command= lambda:move_action(direction=-1), style="TButton").grid(row=0, column=3, padx=25, pady = 10)
-        ttk.Button(btn_frame, text="Move up", command=lambda:move_action(direction=1), style="TButton").grid(row=0, column=4, padx=25)
+        ttk.Button(btn_frame, text="Move down", command=lambda:move_action(direction=1), style="TButton").grid(row=0, column=4, padx=25)
+
     def macro_rec_window(self):
         mrw = KeyRecorder(self, rec_callback)
 
@@ -695,10 +715,10 @@ class StreamDeckGUI(tk.Tk):
         def add_new_button():
             try:
                 bid = int(button_id_var.get())
-                if self.in_folder and bid >= MAX_BUTTONS:
+                if self.in_folder and bid >= MAX_FOLDER_BUTTONS:
                     messagebox.showerror("Error", f"Button ID must be ≤ {MAX_FOLDER_BUTTONS}")
                     return
-                elif bid >= max_allowed:
+                elif bid >= max_allowed or bid >= MAX_BUTTONS:
                     messagebox.showerror("Error", f"Button ID must be ≤ {max_allowed}")
                     return
             except ValueError:

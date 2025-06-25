@@ -10,8 +10,8 @@ from src.utils.data_format import generate_gui_conn_update
 #FILENAME = "media/tw.txt"
 # FILENAME = "media/pdfs/rtos.pdf"
 # FILENAME = "media/pdfs/com.pdf"
-# FILENAME = "media/images/landscape.jpg"
-FILENAME = "media/images/wanda.jpg"
+FILENAME = "media/images/landscape.jpg"
+# FILENAME = "media/images/wanda.jpg"
 # FILENAME = "media/txts/haskell-register.log"
 # FILENAME = "testing/long_ipsum.txt"
 DEFAULT_CLIENT_DOWNLOAD_FOLDER = "/init_icons"
@@ -160,7 +160,7 @@ def receive_request():
                 # logger.debug(f"put {readable_req_contents} in queue")
             elif header_data.command_type == CLIENT_SWAP:
                 logger.warning("Received request to swap client")
-                send_conf(current_client, header_data.command_id)
+                send_conf(current_client, server_cmd_id.inc())
                 swap_client()
             else:
                 # logger.debug(f"put a pd in queue")

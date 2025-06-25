@@ -134,9 +134,10 @@ def apply_theme(root: tk.Tk | tk.Toplevel) -> None:
                     },
             },
             "TNotebook": {
-              "configure": {
-                   "background": SURFACE,
-                   "tabmargins": [2, 2, 2, 0],
+                "configure": {
+                    "tabposition" : "wn",
+                    "background": SURFACE,
+                    "tabmargins": [2, 2, 2, 0],
                                                  # space around the tab area
                     }
                 },
@@ -144,6 +145,7 @@ def apply_theme(root: tk.Tk | tk.Toplevel) -> None:
                "configure": {
                    "padding": [12, 6],  # x/y padding inside each tab
                    "font": BOLD_FONT,
+                   "width": 20
                     },
                "map": {
                    "background": [("selected", BASE)],

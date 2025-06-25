@@ -60,6 +60,7 @@ void end_activity()
 
 void note_activity()
 {
+  A_DBG("Reset inactivity timer");
   xTimerReset(inactivity_timer, 0);
   xTimerStop(clock_timer, 0);
 }
@@ -77,9 +78,6 @@ bool reset_inactivity(){
       if(xStatus != pdPASS){
         A_ERR("Failed to send time in ui queue");
       }
-      xTimerReset(inactivity_timer, 0);
-      // A_DBG("went from inactive to active");
-      xTimerReset(inactivity_timer, 0);
       return true;
     }
   // reset inactivity timer on touch

@@ -138,7 +138,7 @@ int handle_download(Package_data* pd) {
     /*Send an update to screen*/
     update.type = START_DOWNLOAD;
     update.status = 0;
-    if (sprintf(update.message, "Starting download") < 0) {
+    if (sprintf(update.message, "Downloading contents") < 0) {
       // Serial.println("Update message creation failed");
       A_ERR("Update message creation failed");
     }

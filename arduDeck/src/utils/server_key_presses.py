@@ -252,14 +252,20 @@ class Mouse:
     MOUSEEVENTF_MIDDLEDOWN = 0x0020 # middle button down
     MOUSEEVENTF_MIDDLEUP = 0x0040 # middle button up
     MOUSEEVENTF_WHEEL = 0x0800 # wheel button rolled
+    MOUSEEVENTF_HWHEEL = 0x01000 #OX1000 by default? - horizontal wheel
+    WHEEL_DELTA = 120
     MOUSEEVENTF_ABSOLUTE = 0x8000 # absolute move
     SM_CXSCREEN = 0
     SM_CYSCREEN = 1
 
     def _do_event(self, flags, x_pos, y_pos, data, extra_info):
         """generate a mouse event"""
-        x_calc = int(65536 * x_pos / ctypes.windll.user32.GetSystemMetrics(self.SM_CXSCREEN)) + 1
-        y_calc = int(65536 * y_pos / ctypes.windll.user32.GetSystemMetrics(self.SM_CYSCREEN)) + 1
+        if flags & (self.MOUSEEVENTF_WHEEL | self.MOUSEEVENTF_HWHEEL):
+            # For wheel messages the coordinates are ignored
+            x_calc = y_calc = 0
+        else:
+            x_calc = int(65536 * x_pos / ctypes.windll.user32.GetSystemMetrics(self.SM_CXSCREEN)) + 1
+            y_calc = int(65536 * y_pos / ctypes.windll.user32.GetSystemMetrics(self.SM_CYSCREEN)) + 1
         return ctypes.windll.user32.mouse_event(flags, x_calc, y_calc, data, extra_info)
 
     def _get_button_value(self, button_name, button_up=False):
@@ -310,8 +316,25 @@ class Mouse:
         point = POINT()
         return ctypes.windll.user32.GetCursorPos(ctypes.byref(point))
 
+    def scroll(self, vertical=1, horizontal=0):
+        """
+        Scroll the wheel.
 
+        `lines`      Positive → up,   negative → down   (vertical axis)
+        `horizontal` Positive → right, negative → left  (horizontal axis)
+        Either argument may be 0.
+        """
+        if vertical:
+            delta = int(vertical) * self.WHEEL_DELTA
+            print(f"delta is {delta}")
+            self._do_event(self.MOUSEEVENTF_WHEEL, 0, 0, delta, 0)
+
+        # horizontal
+        if horizontal:
+            delta = int(horizontal) * self.WHEEL_DELTA
+            self._do_event(self.MOUSEEVENTF_HWHEEL, 0, 0, delta, 0)
 # mouse = Mouse()
 # mouse.move_mouse((1900, 0))
 # ctypes.windll.user32.SetCursorPos(1900, 0)
 # MoveMouse(1700, 0)
+# mouse.scroll(lines=2, horizontal=1)

@@ -15,13 +15,13 @@
 #include <WiFi.h>
 #include "time.h"
 
-#define INACTIVITY_TIMEOUT 100000  // 5 minutes - 300.000 ms
+#define INACTIVITY_TIMEOUT 10000  // 5 minutes - 300.000 ms
 #define BASE_CONFIG_PATH "/configs/btn_config.txt"
 #define WIFI_SSID "DIGI-yWsT"
 #define WIFI_PWD "74F8ghZw"
 // #define WIFI_SSID "testesp32"
 // #define WIFI_PWD "javabanana"
-#define SERVER_IP "192.168.100.63"
+#define SERVER_IP "192.168.100.7"
 // #define SERVER_IP "192.168.152.30"
 #define PORT 65432
 #define CHUNK_SIZE 2048
@@ -116,6 +116,7 @@
 extern WiFiClient logClient;
 //  if (logClient && logClient.connected()) logClient.printf("[%s:%d]: " fmt "\r\n", __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__)\;
 #define A_DBG(fmt, ...) do { \
+    if (logClient && logClient.connected()) logClient.printf("[%s:%d]: " fmt "\r\n", __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__);\
     if (DEBUG) { \
         printf("[%s:%d]: " fmt "\n", __func__, __LINE__ __VA_OPT__(, ) __VA_ARGS__);\
     } \

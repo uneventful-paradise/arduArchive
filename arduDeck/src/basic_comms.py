@@ -31,9 +31,12 @@ succeeded `INCORRECT_VALUE` in case of need of a resend (e.g. corrupted packet
 and `STOP_ACTION` in case of a client_sided error that means a continuous transfer
 must be stopped.
 """
-#TODO: add timeout in case client never sends acknowledgement
+
 def check_ack(req_id):
-    ack = ack_queue.get()
+    try:
+        ack = ack_queue.get(timeout=ACK_TIMEOUT)
+    except queue.Empty:
+        return STOP_ACTION
     #? should i call task_done() here?
     if int(ack) == req_id:
         logger.debug("ack successful for req_id %d\n", req_id)
@@ -44,7 +47,14 @@ def check_ack(req_id):
     elif int(ack) == STOP_ACTION:
         return STOP_ACTION
     else:
-        logger.warning("ACK got unexpected value %d while expecting %d/%d\n", int(ack), req_id, server_cmd_id.value)
+        logger.warning("ACK got unexpected value %d while expecting %d. current server index value is%d\n", int(ack), req_id, server_cmd_id.value)
+        try:
+            logger.debug("clearing the queue to reset ack process")
+            while True:
+                elem = ack_queue.get_nowait()
+                logger.debug("queue element: %d", int(elem))
+        except queue.Empty:
+            pass
         return STOP_ACTION
 
 """Compose a protocol compliant message and send it to the client.
@@ -224,6 +234,7 @@ def handle_upload(client: BaseClient, filename: str, client_location: str, clien
             #stop transfer in case of error
             if send_res == STOP_ACTION:
                 logger.error("Received request to end UPLOAD by ack flag")
+                file_obj.close()
                 break
     except ValueError as e:
         logger.exception(e)
